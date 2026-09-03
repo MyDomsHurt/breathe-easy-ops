@@ -72,16 +72,39 @@
     const provider = new firebase.auth.GoogleAuthProvider();
     provider.setCustomParameters({ prompt: "select_account" });
 
+    function useRedirectSignIn() {
+      var standalone = false;
+      try {
+        standalone = window.matchMedia("(display-mode: standalone)").matches
+          || window.navigator.standalone === true;
+      } catch (e) {}
+      var ios = /iPad|iPhone|iPod/.test(navigator.userAgent)
+        || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      return standalone || ios;
+    }
+
+    auth.getRedirectResult().catch(function (err) {
+      if (!err) return;
+      console.error(err);
+      setError(err.message || "Sign-in failed. Try again.");
+    });
+
     const btn = document.getElementById("btnGoogle");
     if (btn) {
       btn.addEventListener("click", function () {
         setError("");
         btn.disabled = true;
-        auth
-          .signInWithPopup(provider)
+        var start = useRedirectSignIn()
+          ? auth.signInWithRedirect(provider)
+          : auth.signInWithPopup(provider);
+        start
           .catch(function (err) {
             console.error(err);
-            setError(err.message || "Sign-in failed. Try again.");
+            var code = err && err.code;
+            if (!useRedirectSignIn() && (code === "auth/popup-blocked" || code === "auth/cancelled-popup-request")) {
+              return auth.signInWithRedirect(provider);
+            }
+            setError((err && err.message) || "Sign-in failed. Try again.");
           })
           .finally(function () {
             btn.disabled = false;

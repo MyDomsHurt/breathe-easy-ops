@@ -1,4 +1,4 @@
-import { DISTRICTS, JOB_TYPES, TEAMS, TODAY } from './config.js';
+import { DISTRICTS, JOB_TYPES, TEAMS } from './config.js';
 import { addDays, formatDay, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, pad, parseISO, shortTime, workWeekDays } from './utils.js';
 import { allJobs, getJob, importExistingJobs, redo, removeJob, reorderStack, resetDemo, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js';
 import { startScheduleAuth } from './auth.js';
@@ -6,6 +6,13 @@ import { hasTimeConflict, jobsForTeamDay, nextStackOrder } from './capacity.js';
 import { renderDayBoard, renderWeekBoard } from './board.js';
 import { closeBooking, openBooking } from './booking.js';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js';
+
+function calendarToday() {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+const TODAY = calendarToday();
 
 const state = {
   view: 'board',

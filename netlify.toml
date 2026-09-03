@@ -5,3 +5,9 @@
 [build]
   command = "rm -rf td/shared && mkdir -p td/shared && cp -R shared/. td/shared/"
   publish = "td"
+
+# Chrome Install requires a JSON manifest MIME type, not octet-stream.
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"

@@ -184,6 +184,7 @@ Sources: `td/data/jobs.json`, `jobs_part_*.json`, `jobs-sample.json`.
 ## What this slice does not do
 
 - Does not switch `/schedule` or `/td` onto this record
-- Does not add a live job store
 - Does not sync Google Sheets
 - Does not change booking UX or TD UX
+
+The store that will hold these records later is [`store.js`](store.js) (see [`store.md`](store.md)). It is not wired into either UI yet.

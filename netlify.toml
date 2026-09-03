@@ -1,0 +1,7 @@
+# breathe-easy-dashboard (https://breathe-easy-dashboard.netlify.app/)
+# Publish /td only. Never publish the repo root (that would serve /schedule as TD).
+# Copy shared/ into the publish tree so live-jobs.js can load Firestore.
+
+[build]
+  command = "rm -rf td/shared && mkdir -p td/shared && cp -R shared/. td/shared/"
+  publish = "td"

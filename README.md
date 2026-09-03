@@ -49,6 +49,12 @@ Or serve the repo root and open `/schedule/` and `/td/`. Relative paths inside e
 - A booking made in `/schedule` does **not** appear in `/td`.
 - Firebase in `/td` is the existing Google sign-in (and dashboard) wiring. It is **not** the live job store.
 
+## Job record
+
+The canonical job both faces will share later is defined in [`shared/job-model.md`](shared/job-model.md). [`shared/job.js`](shared/job.js) maps today’s `/schedule` and `/td` jobs into that shape.
+
+Neither app imports it yet. Booking UX and TD UX are unchanged.
+
 ## Next work
 
 1. **Shared live job store** — one job record both UIs can share. Scheduling App writes; Technician Dashboard reads.

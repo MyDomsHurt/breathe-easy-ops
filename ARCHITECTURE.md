@@ -43,7 +43,8 @@ Each strip must still be able to carry:
 
 Also keep the fields both UIs already use to place a job on that grid: `date`, `week`, `team_lead`, `team_members`, `district`, `job_type` / `is_return`.
 
-Reference snapshot of the current prototype shape: `schedule/data/job-shape.json`.
+Canonical record (not wired into either app yet): [`shared/job-model.md`](shared/job-model.md) and mapper [`shared/job.js`](shared/job.js).
+Old snapshots: `schedule/data/job-shape.json`, `td/data/jobs.json`.
 
 ## Out of scope until a later prompt
 

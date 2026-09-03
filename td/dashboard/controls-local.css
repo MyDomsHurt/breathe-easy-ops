@@ -1,0 +1,117 @@
+/* Signed-in layout: login gate must not occupy page flow */
+[hidden] {
+  display: none !important;
+}
+
+.login-gate,
+#login-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  height: auto;
+  margin: 0;
+}
+
+body.auth-pending .login-gate,
+body.auth-pending #login-gate {
+  display: flex !important;
+}
+
+body.auth-ready #login-gate,
+body.auth-ready .login-gate,
+#login-gate[hidden] {
+  display: none !important;
+  min-height: 0 !important;
+  height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none;
+}
+
+body.auth-ready main.main,
+body.auth-ready .main {
+  margin-top: 0;
+  min-height: 0;
+}
+
+/* Row 1: brand, Schedule | Performance, account */
+header.be-shell {
+  flex: 0 0 auto;
+}
+header.be-shell .be-shell-inner {
+  flex-wrap: nowrap;
+}
+
+/* Row 2: Full Team, technicians, Competition — wrap, never clip */
+header.be-shell .be-page-nav {
+  width: 100%;
+  overflow: visible;
+}
+header.be-shell .be-page-nav .nav-links,
+header.be-shell .nav-links {
+  display: flex;
+  flex-wrap: wrap;
+  overflow: visible;
+  overflow-x: visible;
+  justify-content: flex-start;
+  flex: none;
+  width: 100%;
+  min-width: 0;
+}
+header.be-shell .nav-links a,
+header.be-shell .nav-links .nav-compete {
+  flex: 0 0 auto;
+}
+header.be-shell .nav-links a[href="#/team"] {
+  order: -1;
+}
+@media (max-width: 768px) {
+  header.be-shell .be-page-nav .nav-links,
+  header.be-shell .nav-links {
+    flex-wrap: wrap;
+    overflow-x: visible;
+    justify-content: flex-start;
+  }
+  header.be-shell .be-brand {
+    flex-shrink: 1;
+    min-width: 0;
+  }
+  header.be-shell .be-brand-ctx {
+    display: none;
+  }
+  header.be-shell .be-user {
+    flex-shrink: 0;
+  }
+}
+
+/* Schedule button — clear on light Performance nav */
+.be-sched-btn{
+  display:inline-flex;
+  align-items:center;
+  flex-shrink:0;
+  padding:8px 14px;
+  border-radius:10px;
+  font-size:0.85rem;
+  font-weight:800;
+  text-decoration:none;
+  color:#fff;
+  background:#0d9488;
+  border:1px solid #0f766e;
+  box-shadow:0 2px 8px rgba(13,148,136,.25);
+  white-space:nowrap;
+}
+.be-sched-btn:hover{
+  background:#14b8a6;
+  color:#fff;
+}
+@media (max-width:640px){
+  .be-sched-btn{
+    padding:7px 11px;
+    font-size:12px;
+  }
+}

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Breathe-Easy · Live Schedule</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              500: '#0ea5e9',
+              600: '#0284c7',
+              700: '#0369a1',
+              800: '#075985',
+              900: '#0c4a6e'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/app.css?v=11" />
+  <link rel="stylesheet" href="css/be-shell.css?v=3" />
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen" style="font-family:'Libre Franklin',system-ui,sans-serif">
+
+  <div id="loginScreen" class="min-h-screen flex items-center justify-center px-4">
+    <div class="w-full max-w-sm">
+      <div class="text-center mb-8">
+        <div class="inline-flex w-14 h-14 rounded-2xl bg-brand-800 text-white items-center justify-center font-bold text-xl mb-3">BE</div>
+        <h1 class="text-xl font-semibold text-slate-800">Live Schedule</h1>
+        <p class="text-sm text-slate-500 mt-1">Breathe-Easy · sign in to view today's jobs</p>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
+        <div id="loginError" class="hidden text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2"></div>
+        <button id="btnGoogle" type="button"
+                class="w-full flex items-center justify-center gap-3 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 font-semibold rounded-lg py-3 text-sm transition shadow-sm">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+          </svg>
+          Sign in with Google
+        </button>
+        <p class="text-xs text-center text-slate-400">Only authorised Breathe-Easy accounts can access Live Schedule.</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="appRoot" class="hidden">
+  <header class="be-shell" id="be-shell">
+    <div class="be-shell-inner">
+      <a class="be-brand" href="./">Breathe-Easy <span class="be-brand-ctx">· Live Schedule</span></a>
+      <nav class="be-switch" id="be-app-switch" aria-label="Switch app">
+        <span class="active">Schedule</span>
+        <a href="dashboard/">Performance</a>
+      </nav>
+      <div class="be-user">
+        <button type="button" id="userMenuBtn" class="be-acct-btn" aria-label="Account" aria-haspopup="true" aria-expanded="false">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="8" r="3.25" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M5.5 19c.8-3.1 3.3-5 6.5-5s5.7 1.9 6.5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </button>
+        <div id="userMenu" class="be-acct-menu hidden" role="menu">
+          <div id="userChip" class="be-acct-name hidden"></div>
+          <button id="logoutBtn" type="button" role="menuitem">Sign out</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div id="techRangeBar" class="bg-white border-b border-slate-200 sticky z-40">
+    <div class="tech-bar-inner">
+      <div class="tech-bar-row tech-bar-tech">
+        <label class="sr-only" for="techTeamSelect">Technician</label>
+        <select id="techTeamSelect" class="tech-select" aria-label="Technician"></select>
+        <div id="densityToggle" class="density-seg" role="group" aria-label="Card density">
+          <button type="button" id="densityCompact">Compact</button>
+          <button type="button" id="densityDetailed">Detailed</button>
+        </div>
+      </div>
+      <div class="tech-bar-row range-seg" role="group" aria-label="Timeframe">
+        <button type="button" data-range="today" class="range-btn bg-brand-600 text-white">Today</button>
+        <button type="button" data-range="this_week" class="range-btn bg-slate-100 text-slate-700">This Week</button>
+        <button type="button" data-range="next_week" class="range-btn bg-slate-100 text-slate-700">Next Week</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 py-5">
+    <main>
+      <div class="flex items-center justify-between mb-4">
+        <h2 id="viewTitle" class="font-semibold text-lg">All Jobs</h2>
+      </div>
+      <div id="jobsContainer" class="space-y-6"></div>
+      <div id="emptyState" class="hidden text-center py-12 px-4">
+        <p id="emptyMessage" class="text-base font-medium text-slate-600">No jobs in this view</p>
+        <div id="emptyActions" class="mt-4 flex flex-col gap-2 max-w-xs mx-auto"></div>
+      </div>
+    </main>
+  </div>
+  <div id="modal" class="fixed inset-0 hidden">
+    <div class="absolute inset-0 bg-black/50" id="modalBackdrop"></div>
+    <div class="absolute inset-x-4 top-10 bottom-10 md:inset-x-auto md:left-1/2 md:-translate-x-1/2 md:w-full md:max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+      <div class="bg-brand-800 text-white px-5 py-4 flex items-start justify-between">
+        <div>
+          <h3 id="modalTitle" class="font-semibold text-lg"></h3>
+          <p id="modalSub" class="text-sm text-brand-100 mt-0.5"></p>
+        </div>
+        <button id="modalClose" class="text-white/80 hover:text-white text-2xl leading-none">×</button>
+      </div>
+      <div id="modalBody" class="p-5 overflow-y-auto flex-1 text-sm space-y-3"></div>
+    </div>
+  </div>
+  </div>
+  <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-auth-compat.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/app.js?v=10"></script>
+  <script src="js/shell-ui.js?v=2"></script>
+  <script src="js/unit-stats.js"></script>
+  <script src="js/app-nav.js"></script>
+</body>
+</html>

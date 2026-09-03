@@ -1,0 +1,21 @@
+{
+  "job_id": "2026-08-19-josh-1",
+  "date": "2026-08-19",
+  "week": 34,
+  "slot": "morning",
+  "team_lead": "Josh",
+  "team_members": "Josh + James",
+  "client_name": "Priya Shah",
+  "time": "09.00am => 10.45am",
+  "mobile": "9881 2204",
+  "address": "Flat 12, 5/F, 88 Queens Road East, Wan Chai",
+  "acs": "3S",
+  "notes": null,
+  "amount": 1740,
+  "invoice": "Inv 5448",
+  "receipt": "Inv 5448",
+  "payment": "Payme",
+  "is_return": false,
+  "district": "HKN",
+  "job_type": "cleaning"
+}

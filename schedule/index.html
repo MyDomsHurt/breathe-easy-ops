@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Breathe-Easy · Scheduler</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/app.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-inner">
+      <a class="brand" href="./">
+        <div class="brand-mark">BE</div>
+        <div>
+          <div class="brand-name">Breathe-Easy</div>
+          <div class="brand-sub">Scheduler v2 · prototype</div>
+        </div>
+      </a>
+
+      <nav class="nav-switch" aria-label="Views">
+        <button data-nav="board" class="on">Board</button>
+        <button data-nav="jobs">Jobs</button>
+      </nav>
+
+      <div class="header-search">
+        <input id="globalSearch" type="search" placeholder="Search name, mobile, address, invoice…" autocomplete="off" />
+        <div id="searchHits" class="search-hits" hidden></div>
+      </div>
+
+      <div class="week-nav">
+        <button class="icon-btn" id="prevWeek" aria-label="Previous week">‹</button>
+        <div class="week-label" id="weekLabel">This week</div>
+        <button class="icon-btn" id="nextWeek" aria-label="Next week">›</button>
+        <select id="monthSelect" class="month-select" aria-label="Month"></select>
+        <button class="ghost-btn" id="thisWeek">Today</button>
+        <button class="ghost-btn on" data-mode="week">Week</button>
+        <button class="ghost-btn" data-mode="day">Day</button>
+      </div>
+
+      <button class="primary-btn" id="newBooking">+ New booking</button>
+    </div>
+  </header>
+
+  <div class="filters">
+    <span class="filter-label">Team</span>
+    <div class="chip-row" id="teamFilters"></div>
+    <span class="filter-label">Area</span>
+    <div class="chip-row" id="districtFilters"></div>
+    <span class="filter-label">Type</span>
+    <div class="chip-row" id="typeFilters"></div>
+    <div class="legend">
+      <span><i style="background:#ecfdf5;border:1px solid #86efac"></i>Empty day</span>
+      <span><i style="background:repeating-linear-gradient(-45deg,#fdba74,#fdba74 2px,#fff7ed 2px,#fff7ed 4px)"></i>Return</span>
+      <span><i style="background:#7c3aed"></i>Influencer</span>
+    </div>
+  </div>
+
+  <main class="page">
+    <section id="viewBoard" class="board-layout">
+      <aside class="appt-tray" aria-label="New appointment">
+        <div class="tray-label">Drag onto a team-day</div>
+        <button type="button" class="blank-appt" id="blankAppt" draggable="true">
+          <div class="blank-appt-kicker">New appointment</div>
+          <div class="blank-line"></div>
+          <div class="blank-line short"></div>
+          <div class="blank-line"></div>
+        </button>
+      </aside>
+      <div id="boardMount"></div>
+    </section>
+
+    <section id="viewJobs" hidden>
+      <div id="jobsMount"></div>
+    </section>
+
+    <p style="margin:18px 4px 0;font-size:12px;color:#64748b">
+      Week of 17–22 Aug 2026 · click a job to edit or move it · bookings stay in this browser
+      · <button id="resetDemo" class="ghost-btn" style="padding:3px 8px;font-size:12px">Reset demo data</button>
+    </p>
+  </main>
+
+  <div id="bookingRoot" class="drawer-root" aria-hidden="true"></div>
+  <div id="modalRoot" class="modal-root" aria-hidden="true"></div>
+  <div id="toast" class="toast" role="status"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

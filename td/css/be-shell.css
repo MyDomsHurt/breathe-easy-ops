@@ -1,0 +1,297 @@
+/* Breathe-Easy universal app shell — Schedule, Performance, future surfaces share this */
+:root {
+  --be-navy: #0E4D91;
+  --be-navy-deep: #0a3a6e;
+  --be-blue: #2896D1;
+  --be-soft: #e8f5fc;
+  --be-accent-soft: #d6eef9;
+  --be-ink: #0c1a33;
+  --be-mute: #5a6f8a;
+  --be-line: rgba(14, 77, 145, 0.12);
+  --be-line-strong: rgba(14, 77, 145, 0.22);
+  --be-green: #0d9488;
+  --be-font: "Libre Franklin", Arial, system-ui, -apple-system, sans-serif;
+}
+
+.be-shell {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  flex: 0 0 auto;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--be-line);
+  padding-top: env(safe-area-inset-top, 0);
+  box-shadow: 0 1px 0 rgba(14, 77, 145, 0.04);
+  font-family: var(--be-font);
+}
+
+.be-shell-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 16px;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: nowrap;
+}
+
+.be-brand {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--be-navy-deep);
+  text-decoration: none;
+  letter-spacing: -0.03em;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.be-brand:hover { color: var(--be-navy); }
+.be-brand-ctx {
+  color: var(--be-blue);
+  font-weight: 700;
+}
+
+.be-switch {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1.5px solid var(--be-line-strong);
+  flex-shrink: 0;
+  background: #fff;
+}
+.be-switch a,
+.be-switch span {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 14px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--be-mute);
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+  background: transparent;
+  font-family: inherit;
+}
+.be-switch a:hover {
+  color: var(--be-navy);
+  background: var(--be-soft);
+}
+.be-switch .active {
+  color: var(--be-navy-deep);
+  background: var(--be-accent-soft);
+  font-weight: 800;
+}
+
+.be-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.be-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: var(--be-soft);
+  color: var(--be-navy);
+  white-space: nowrap;
+}
+.be-chip-amber { background: #fef3c7; color: #b45309; }
+.be-chip-green { background: #d1fae5; color: #047857; }
+
+.be-shell #userChip,
+.be-shell .be-user-chip {
+  background: var(--be-soft) !important;
+  color: var(--be-navy) !important;
+}
+.be-shell #logoutBtn {
+  padding: 6px 12px !important;
+  border-radius: 10px !important;
+  font-size: 0.75rem !important;
+  font-weight: 600;
+  border: 1.5px solid var(--be-line-strong) !important;
+  background: #fff !important;
+  color: var(--be-mute) !important;
+  cursor: pointer;
+  font-family: inherit;
+}
+.be-shell #logoutBtn:hover {
+  color: var(--be-navy) !important;
+  background: var(--be-soft) !important;
+}
+
+.be-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-left: auto;
+  position: relative;
+}
+.be-acct-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 10px;
+  border: 1.5px solid var(--be-line-strong);
+  background: #fff;
+  color: var(--be-navy);
+  cursor: pointer;
+}
+.be-acct-btn[aria-expanded="true"] {
+  background: var(--be-soft);
+}
+.be-acct-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 160px;
+  background: #fff;
+  border: 1.5px solid var(--be-line-strong);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  padding: 8px;
+  z-index: 120;
+}
+.be-acct-name {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--be-navy);
+  padding: 6px 8px 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.be-acct-menu #logoutBtn {
+  width: 100%;
+  text-align: left;
+}
+.be-shell .user-chip,
+.be-shell .be-user-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: var(--be-soft);
+  color: var(--be-navy);
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.be-shell #btn-signout {
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1.5px solid var(--be-line-strong);
+  background: #fff;
+  color: var(--be-mute);
+  cursor: pointer;
+  font-family: inherit;
+}
+.be-shell #btn-signout:hover {
+  color: var(--be-navy);
+  background: var(--be-soft);
+}
+
+.be-page-nav {
+  width: 100%;
+  border-top: 1px solid var(--be-line);
+  overflow: visible;
+}
+.be-page-nav .nav-links {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 4px 16px 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  justify-content: flex-start;
+  overflow: visible;
+  width: 100%;
+  flex: none;
+  min-width: 0;
+}
+
+.be-shell .nav-links {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  align-items: center;
+  min-width: 0;
+  overflow: visible;
+}
+.be-shell .nav-links a,
+.be-shell .nav-compete {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--be-mute);
+  text-decoration: none;
+  padding: 7px 12px;
+  border-radius: 10px;
+  transition: color 0.15s, background 0.15s;
+  white-space: nowrap;
+}
+.be-shell .nav-links a:hover,
+.be-shell .nav-compete:hover {
+  color: var(--be-navy);
+  background: var(--be-soft);
+}
+.be-shell .nav-links a.active,
+.be-shell .nav-compete.active {
+  color: var(--be-navy-deep);
+  background: var(--be-accent-soft);
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .be-shell-inner {
+    padding: 6px 10px;
+    gap: 6px;
+    min-height: 48px;
+    flex-wrap: nowrap;
+  }
+  .be-brand {
+    font-size: 0.78rem;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .be-switch a,
+  .be-switch span {
+    padding: 5px 8px;
+    font-size: 0.68rem;
+  }
+  .be-tools {
+    width: auto;
+    justify-content: flex-end;
+    order: 0;
+  }
+  .be-user { margin-left: auto; }
+  .be-acct-btn { width: 34px; height: 34px; }
+  .be-page-nav .nav-links {
+    padding: 2px 10px 8px;
+  }
+}
+
+#techRangeBar {
+  top: var(--app-header-h, 56px) !important;
+}

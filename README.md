@@ -43,7 +43,10 @@ Serve the repo root for live Firestore (both apps import `shared/`).
 
 Publish [`firestore.rules`](firestore.rules) in the Firebase console. Steps: [`FIRESTORE.md`](FIRESTORE.md).
 
-The existing Netlify site [breathe-easy-dashboard](https://breathe-easy-dashboard.netlify.app/) publishes **`td/` only** (`netlify.toml`). Do not publish the repo root.
+Netlify:
+
+- [breathe-easy-dashboard](https://breathe-easy-dashboard.netlify.app/) publishes **`td/` only** (committed `netlify.toml`). Do not publish the repo root there.
+- [breathe-easy-schedule](https://breathe-easy-schedule.netlify.app/) publishes **`schedule/` only**, with `shared/` copied into that tree. Add this host in Firebase authorized domains if Google sign-in is blocked.
 
 ## Job record and store
 

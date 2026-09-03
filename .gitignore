@@ -8,3 +8,4 @@ dist
 .env.*
 .netlify
 td/shared/
+schedule/shared/

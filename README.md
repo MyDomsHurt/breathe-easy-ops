@@ -43,6 +43,8 @@ Serve the repo root for live Firestore (both apps import `shared/`).
 
 Publish [`firestore.rules`](firestore.rules) in the Firebase console. Steps: [`FIRESTORE.md`](FIRESTORE.md).
 
+The existing Netlify site [breathe-easy-dashboard](https://breathe-easy-dashboard.netlify.app/) publishes **`td/` only** (`netlify.toml`). Do not publish the repo root.
+
 ## Job record and store
 
 The canonical job both faces will share later is defined in [`shared/job-model.md`](shared/job-model.md). [`shared/job.js`](shared/job.js) maps today’s `/schedule` and `/td` jobs into that shape.

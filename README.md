@@ -1,13 +1,13 @@
 # Breathe-Easy Ops
 
-Integrated ops repo for **Breathe-Easy**. Two faces of one product, parked together. They are **not data-connected yet**.
+Integrated ops repo for **Breathe-Easy**. Two faces of one product. Live jobs live in Firestore when you are signed in.
 
 | Path | Face | What it is today |
 | --- | --- | --- |
 | [`/schedule`](schedule/) | Office Scheduling App | Place, edit, move, and delete bookings. Board + booking drawer. |
 | [`/td`](td/) | Technician Dashboard | Google-auth technician viewer of jobs, plus the Performance link. |
 
-Do **not** treat `localStorage` (Scheduling App) or static `jobs.json` (Technician Dashboard) as the final source of truth.
+Do **not** treat `localStorage` or static `jobs.json` as the final source of truth. Those are fallbacks. The live store is Firestore collection `jobs` (see [`FIRESTORE.md`](FIRESTORE.md)).
 
 ## What this pass is
 
@@ -31,31 +31,32 @@ python3 -m http.server 8080
 - Scheduling App: http://localhost:8080/schedule/
 - Technician Dashboard: http://localhost:8080/td/
 
-`/td` can still be served on its own (`cd td && python3 -m http.server 8081`) because it does not import `shared/` yet.
+Serve the repo root for live Firestore (both apps import `shared/`).
 
-## What is not connected yet
+## Live store
 
-- Scheduling App writes canonical jobs through [`shared/store.js`](shared/store.js) (`localStorage` key `be-ops-jobs`). The old `be-scheduler-v2-roster` key is unused.
-- Technician Dashboard still reads static `td/data/jobs.json` (and sequential `jobs_part_*.json` via `manifest.json`).
-- A booking made in `/schedule` does **not** appear in `/td` yet.
-- Firebase in `/td` is the existing Google sign-in (and dashboard) wiring. It is **not** the live job store.
+- Scheduling App: Google allowlist sign-in, then writes to Firestore via [`shared/store.js`](shared/store.js).
+- Technician Dashboard: after sign-in, reads the same `jobs` collection and subscribes to snapshots.
+- If Firestore is empty, TD still shows `jobs.json` so the board is not blank. It does **not** upload that archive on boot.
+- One-time copy of seed + archive: **Import existing jobs** in `/schedule` (signed in). Do not run it on every load.
+- Local adapter (`be-ops-jobs`) is offline / fallback only.
+
+Publish [`firestore.rules`](firestore.rules) in the Firebase console. Steps: [`FIRESTORE.md`](FIRESTORE.md).
 
 ## Job record and store
 
 The canonical job both faces will share later is defined in [`shared/job-model.md`](shared/job-model.md). [`shared/job.js`](shared/job.js) maps today’s `/schedule` and `/td` jobs into that shape.
 
-[`shared/store.js`](shared/store.js) is the source of truth for Scheduling App writes (local adapter by default; Firestore stub). See [`shared/store.md`](shared/store.md). `/td` does not read it yet. Booking UX and TD UX are unchanged.
+[`shared/store.js`](shared/store.js) prefers Firestore when an allowlisted user is signed in. See [`shared/store.md`](shared/store.md). Booking UX and TD cards are unchanged.
 
 ## Next work
 
-1. **Wire TD as the reader** of the same canonical jobs.
-2. **Google Sheet roster backup later** — off-repo, in the existing master-roster format. That backup must stay possible. Do not design a job shape the sheet cannot render.
+1. **Google Sheet roster backup later** — off-repo, in the existing master-roster format. That backup must stay possible.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the constraints that future work must keep.
 
 ## What this repo is not (yet)
 
 - Not a merged single-page UI
-- Not a database cutover
 - Not Google Sheet sync
 - Not a rewrite of either app’s UX

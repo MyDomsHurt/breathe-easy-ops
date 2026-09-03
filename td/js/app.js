@@ -263,28 +263,43 @@ function formatDayHeading(iso) {
   return label;
 }
 
+function sortJobs(rows) {
+  return (rows || []).filter((j) => !j.deleted).slice().sort((a, b) => {
+    if (a.date !== b.date) return a.date.localeCompare(b.date);
+    return jobSortMinutes(a) - jobSortMinutes(b);
+  });
+}
+
+async function loadStaticJobs() {
+  let files = [];
+  try {
+    const man = await fetch('data/manifest.json');
+    if (man.ok) files = await man.json();
+  } catch (_) {}
+  if (files.length) {
+    const results = await Promise.all(
+      files.map(f => fetch('data/' + f).then(r => (r.ok ? r.json() : [])).catch(() => []))
+    );
+    const flat = results.flat();
+    if (flat.length) return flat;
+  }
+  const res = await fetch('data/jobs.json');
+  if (res.ok) return res.json();
+  return [];
+}
+
 async function init() {
   try {
-    let files = [];
-    try {
-      const man = await fetch('data/manifest.json');
-      if (man.ok) files = await man.json();
-    } catch (_) {}
-    if (files.length) {
-      const results = await Promise.all(
-        files.map(f => fetch('data/' + f).then(r => (r.ok ? r.json() : [])).catch(() => []))
-      );
-      allJobs = results.flat();
+    let live = null;
+    if (typeof window.BELoadLiveJobs === 'function') {
+      live = await window.BELoadLiveJobs();
     }
-    if (allJobs.length === 0) {
-      const res = await fetch('data/jobs.json');
-      if (res.ok) allJobs = await res.json();
+    if (live && live.length) {
+      allJobs = sortJobs(live);
+    } else {
+      allJobs = sortJobs(await loadStaticJobs());
     }
     if (allJobs.length === 0) throw new Error('No job data found');
-    allJobs.sort((a, b) => {
-      if (a.date !== b.date) return a.date.localeCompare(b.date);
-      return jobSortMinutes(a) - jobSortMinutes(b);
-    });
     buildTeamButtons();
     buildDateSelect();
     bindEvents();
@@ -294,6 +309,11 @@ async function init() {
       '<div class="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4">Failed to load job data.<br><span class="text-sm">' + err.message + '</span></div>';
   }
 }
+
+window.BEOnJobsChanged = function (jobs) {
+  allJobs = sortJobs(jobs);
+  applyFilters();
+};
 
 function buildTeamButtons() {
   const sidebar = document.getElementById('teamFilters');
@@ -544,6 +564,7 @@ function getRangeBounds(range) {
 function applyFilters() {
   const bounds = getRangeBounds(currentFilters.range);
   filtered = allJobs.filter(j => {
+    if (j.deleted) return false;
     if (currentFilters.month !== 'all' && jobMonth(j) !== Number(currentFilters.month)) return false;
     if (currentFilters.team !== 'all' && j.team_lead !== currentFilters.team) return false;
     if (currentFilters.type === 'clean' && j.is_return) return false;

@@ -1,37 +1,33 @@
 # Shared job store
 
-Source of truth for jobs. **`/schedule` is the writer. `/td` is not wired yet.**
+Source of truth for jobs. **`/schedule` is the writer. `/td` is the reader.**
 
-- Scheduling App = **writer**
-- Technician Dashboard = **reader**
 - Records are canonical ([`job-model.md`](job-model.md))
 - `time` is free-form. Do not reintroduce required slots.
-
-Default adapter is **local** (memory + `localStorage` key `be-ops-jobs`). That is not the old Scheduling App key `be-scheduler-v2-roster`. Do not reuse the old key as the final store.
-
-Firestore is a **stub** only. TD Firebase is Google auth, not the job store. Google Sheet roster backup comes later.
+- **Live:** Firestore `jobs` on `breathe-easy-performance` when an allowlisted user is signed in.
+- **Fallback:** local `be-ops-jobs`. Not `be-scheduler-v2-roster`.
+- Rules and console steps: [`../FIRESTORE.md`](../FIRESTORE.md).
 
 ## Files
 
 | File | Role |
 | --- | --- |
 | `store.js` | `createStore` — list / get / upsert / remove / subscribe |
-| `store-local.js` | Memory + `be-ops-jobs` adapter (default) |
-| `store-firestore.js` | Stub interface for a later jobs collection |
-| `store-import.js` | Load schedule seed + TD JSON, normalise, merge by `job_id` |
+| `store-local.js` | Memory + `be-ops-jobs` (offline / fallback) |
+| `store-firestore.js` | Live collection `jobs`, per-document writes + `onSnapshot` |
+| `store-import.js` | Explicit import of seed + TD JSON (never on boot) |
+| `firebase-config.js` | Existing web config + allowlist |
 
 ## `createStore(options?)`
 
 ```js
 import { createStore } from './store.js';
 
-const store = createStore();        // local adapter
-await store.ready;                  // needed if the adapter load is async
+const store = createStore({ user }); // Firestore if signed in, else local
+await store.ready;
 ```
 
-Options: `adapter`, `now` (timestamp factory), and local-adapter pass-through `persist`, `storage`, `storageKey`.
-
-Swap later: `createStore({ adapter: createFirestoreAdapter() })`. The stub throws on load/save until a later slice implements it.
+Options: `adapter`, `user`, `now`, and local-adapter `persist` / `storage` / `storageKey`.
 
 ## Methods
 
@@ -43,7 +39,7 @@ Swap later: `createStore({ adapter: createFirestoreAdapter() })`. The stub throw
 | `removeJob(job_id)` | Soft-delete: `deleted: true` (so sheet sync can follow later). |
 | `removeJob(job_id, { hard: true })` | Drop the row. Only for matching old schedule cancel if a later wiring slice needs it. Default is soft-delete. |
 | `importJobs(rawJobs)` | Bulk insert/merge. Skips rows with no `job_id` or no `client_name` (does not invent clients). |
-| `subscribe(callback)` | Fires on local `load` / `upsert` / `remove` / `import`. Payload: `{ type, job, jobs, adapter }`. Returns unsubscribe. Remote adapters implement `subscribeRemote` so live snapshots can reuse this hook. |
+| `subscribe(callback)` | Fires on `load` / `upsert` / `remove` / `import` / `remote`. Firestore `onSnapshot` arrives as `remote` so TD updates without a manual refresh. |
 
 ## Import existing jobs
 
@@ -80,9 +76,10 @@ Same `job_id` is not duplicated. The richer record wins on conflicts; empty fiel
 
 Full field list: [`job-model.md`](job-model.md). Sheet strip: Name / Time / Mobile / Address / ACs / Notes / Amount / Invoice / Receipt / Payment.
 
+Boot never mass-uploads. Click **Import existing jobs** in `/schedule` (signed in) for a one-time copy.
+
 ## What this slice does not do
 
-- Does not switch `/td` onto this store
-- Does not implement Firestore
-- Does not implement Google Sheet sync
-- Does not change booking UX or TD UX
+- Does not use Google Sheet as the live database
+- Does not auto-migrate the archive on every page load
+- Does not change booking UX or TD cards

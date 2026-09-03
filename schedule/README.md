@@ -37,7 +37,7 @@ Serve the **ops repo root** over HTTP (this app imports `../shared/`):
 python3 -m http.server 8080
 ```
 
-Open http://localhost:8080/schedule/
+Open http://localhost:8080/schedule/ and sign in with an allowlisted Google account. Writes go to Firestore. Use **Import existing jobs** once if you need the archive copied up; it does not run on boot.
 
 ## Prototype notes
 

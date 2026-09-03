@@ -1,15 +1,15 @@
 /**
- * Shared live job store — future source of truth for both faces.
+ * Shared live job store.
  *
  * Scheduling App = writer. Technician Dashboard = reader.
- * /schedule is the writer (see schedule/js/store.js). /td is not wired yet.
- * Default adapter is local (memory + be-ops-jobs). Firestore is a stub.
- * Google Sheet backup comes later.
+ * Prefers Firestore when Firebase is initialised and an allowlisted
+ * user is signed in. Local adapter (be-ops-jobs) is offline / fallback.
  *
  * All records are canonical (shared/job-model.md). time is free-form.
  */
 
 import { normalizeJob } from './job.js';
+import { shouldUseFirestore } from './firebase-config.js';
 import { createLocalAdapter, OPS_JOBS_KEY, LEGACY_SCHEDULE_KEY } from './store-local.js';
 import { createFirestoreAdapter } from './store-firestore.js';
 import {
@@ -26,12 +26,18 @@ export {
   loadExistingCanonicalJobs,
   mergeCanonicalJobs,
   seedStore,
+  shouldUseFirestore,
   OPS_JOBS_KEY,
   LEGACY_SCHEDULE_KEY,
 };
 
+export function defaultAdapter(options = {}) {
+  if (shouldUseFirestore(options.user)) return createFirestoreAdapter(options);
+  return createLocalAdapter(options);
+}
+
 export function createStore(options = {}) {
-  const adapter = options.adapter || createLocalAdapter(options);
+  const adapter = options.adapter || defaultAdapter(options);
   const nowFn = options.now || (() => new Date().toISOString());
   const jobs = new Map();
   const listeners = new Set();
@@ -46,11 +52,36 @@ export function createStore(options = {}) {
     return list;
   }
 
-  function persist() {
+  function allJobList() {
     const all = [];
     for (const job of jobs.values()) all.push(job);
-    const result = adapter.save && adapter.save(all);
+    return all;
+  }
+
+  function persistAll() {
+    if (!adapter.save) return undefined;
+    const result = adapter.save(allJobList());
     return result && typeof result.then === 'function' ? result : undefined;
+  }
+
+  function persistJob(job) {
+    if (typeof adapter.upsert === 'function') {
+      const result = adapter.upsert(job);
+      return result && typeof result.then === 'function'
+        ? result.catch((err) => notify({ type: 'error', job, error: err }))
+        : undefined;
+    }
+    return persistAll();
+  }
+
+  function persistRemove(job, hard) {
+    if (typeof adapter.remove === 'function') {
+      const result = adapter.remove(job, { hard });
+      return result && typeof result.then === 'function'
+        ? result.catch((err) => notify({ type: 'error', job, error: err }))
+        : undefined;
+    }
+    return persistAll();
   }
 
   function notify(event) {
@@ -116,7 +147,7 @@ export function createStore(options = {}) {
       merged.job_id = id;
       merged.updated_at = nowFn();
       jobs.set(id, merged);
-      persist();
+      persistJob(merged);
       notify({ type: 'upsert', job: merged });
       return merged;
     },
@@ -127,7 +158,7 @@ export function createStore(options = {}) {
       if (!prev) return null;
       if (hard) {
         jobs.delete(id);
-        persist();
+        persistRemove(prev, true);
         const tombstone = { job_id: id, deleted: true, hard: true, updated_at: nowFn() };
         notify({ type: 'remove', job: tombstone });
         return tombstone;
@@ -136,7 +167,7 @@ export function createStore(options = {}) {
       next.deleted = true;
       next.updated_at = nowFn();
       jobs.set(id, next);
-      persist();
+      persistRemove(next, false);
       notify({ type: 'remove', job: next });
       return next;
     },
@@ -154,8 +185,16 @@ export function createStore(options = {}) {
         jobs.set(next.job_id, next);
         imported.push(next);
       }
-      persist();
+      let saved;
+      if (typeof adapter.importJobs === 'function') {
+        saved = adapter.importJobs(imported);
+      } else {
+        saved = persistAll();
+      }
       notify({ type: 'import', job: null });
+      if (saved && typeof saved.then === 'function') {
+        return saved.then(() => imported);
+      }
       return imported;
     },
 
@@ -194,12 +233,14 @@ function compareJobs(a, b) {
 
 const storeApi = {
   createStore,
+  defaultAdapter,
   createLocalAdapter,
   createFirestoreAdapter,
   combineExistingJobs,
   loadExistingCanonicalJobs,
   mergeCanonicalJobs,
   seedStore,
+  shouldUseFirestore,
   OPS_JOBS_KEY,
   LEGACY_SCHEDULE_KEY,
 };

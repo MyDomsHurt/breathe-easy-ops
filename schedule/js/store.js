@@ -1,15 +1,21 @@
 /**
- * Scheduling App store — thin writer over ../../shared/store.js.
+ * Scheduling App store — writer over ../../shared/store.js.
  *
- * Create / edit / move / reorder / tentative / cancel persist as canonical
- * jobs in be-ops-jobs. The old key be-scheduler-v2-roster is not used.
+ * Signed-in: Firestore jobs collection.
+ * Otherwise: local be-ops-jobs fallback.
+ * Does not auto-upload the historical archive on boot.
  */
 
 import { TEAM_META } from './config.js';
 import { loadSeedJobs, buildSeedJobs } from './seed.js';
 import { acsLabel, jobTypeOf } from './utils.js';
-import { createStore } from '../../shared/store.js';
+import {
+  createStore,
+  defaultAdapter,
+  loadExistingCanonicalJobs,
+} from '../../shared/store.js';
 import { fromScheduleJob } from '../../shared/job.js';
+import { shouldUseFirestore } from '../../shared/firebase-config.js';
 
 const listeners = new Set();
 
@@ -22,13 +28,23 @@ let undoStack = [];
 let redoStack = [];
 let recording = true;
 
-export async function initStore() {
+export async function initStore(user) {
   if (ready && ops) return allJobs();
   if (readyPromise) return readyPromise;
   readyPromise = (async () => {
-    ops = createStore();
-    await ops.ready;
-    if (ops.listJobs({ includeDeleted: true }).length === 0) {
+    const adapter = defaultAdapter({ user });
+    try {
+      ops = createStore({ adapter, user });
+      await ops.ready;
+    } catch (err) {
+      console.warn('Live store failed, using local fallback', err);
+      ops = createStore({ adapter: defaultAdapter({ user: null }) });
+      await ops.ready;
+    }
+    ops.subscribe((event) => {
+      if (event.type === 'remote' || event.type === 'load') emit();
+    });
+    if (ops.adapter === 'local' && ops.listJobs({ includeDeleted: true }).length === 0) {
       const seed = await loadSeedJobs();
       ops.importJobs(seed.map((row) => fromScheduleJob(row)));
     }
@@ -37,6 +53,14 @@ export async function initStore() {
     return allJobs();
   })();
   return readyPromise;
+}
+
+export function storeAdapterName() {
+  return (ops && ops.adapter) || 'local';
+}
+
+export function usingFirestore() {
+  return storeAdapterName() === 'firestore' || shouldUseFirestore();
 }
 
 export function allJobs() {
@@ -190,6 +214,9 @@ export function redo() {
 }
 
 export function resetDemo() {
+  if (usingFirestore()) {
+    return { blocked: true };
+  }
   const seed = buildSeedJobs().map((row) => fromScheduleJob({ ...row, deleted: false }));
   const seedIds = new Set(seed.map((j) => j.job_id));
   if (ops) {
@@ -201,6 +228,19 @@ export function resetDemo() {
   }
   clearHistory();
   emit();
+  return { blocked: false };
+}
+
+/**
+ * One-time, explicit upload of seed + TD archive. Never called on boot.
+ */
+export async function importExistingJobs() {
+  if (!ops) throw new Error('Store is not ready');
+  const baseUrl = new URL('../../', import.meta.url).href;
+  const { jobs, stats } = await loadExistingCanonicalJobs({ baseUrl });
+  await ops.importJobs(jobs);
+  emit();
+  return { count: jobs.length, stats };
 }
 
 export { jobTypeOf };

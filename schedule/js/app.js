@@ -1,6 +1,7 @@
 import { DISTRICTS, JOB_TYPES, TEAMS, TODAY } from './config.js';
 import { addDays, formatDay, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, pad, parseISO, shortTime, workWeekDays } from './utils.js';
-import { allJobs, getJob, redo, removeJob, reorderStack, resetDemo, subscribe, initStore, undo, updateJob } from './store.js';
+import { allJobs, getJob, importExistingJobs, redo, removeJob, reorderStack, resetDemo, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js';
+import { startScheduleAuth } from './auth.js';
 import { hasTimeConflict, jobsForTeamDay, nextStackOrder } from './capacity.js';
 import { renderDayBoard, renderWeekBoard } from './board.js';
 import { closeBooking, openBooking } from './booking.js';
@@ -381,7 +382,32 @@ function bindChrome() {
     openBooking({ date: state.mode === 'day' ? state.day : TODAY });
   });
   bindSearch();
+  $('importJobs').addEventListener('click', async () => {
+    if (!usingFirestore()) {
+      toast('Sign in to import into the live store');
+      return;
+    }
+    if (!confirm('One-time import of seed + technician archive into Firestore?\n\nThis can upload thousands of jobs. Do not run it on every computer or on every page load.')) {
+      return;
+    }
+    const btn = $('importJobs');
+    btn.disabled = true;
+    try {
+      const result = await importExistingJobs();
+      paint();
+      toast(`Imported ${result.count} jobs`);
+    } catch (err) {
+      console.error(err);
+      toast((err && err.message) || 'Import failed');
+    } finally {
+      btn.disabled = false;
+    }
+  });
   $('resetDemo').addEventListener('click', () => {
+    if (usingFirestore()) {
+      toast('Local demo reset is only for the offline fallback');
+      return;
+    }
     if (confirm('Reset prototype bookings back to the seed schedule?')) {
       resetDemo();
       paint();
@@ -505,12 +531,13 @@ bindBoardClicks();
 bindBoardDrag();
 subscribe(paint);
 
-initStore()
+startScheduleAuth()
+  .then((user) => initStore(user))
   .then(() => paint())
   .catch((err) => {
     console.error(err);
     const el = document.getElementById('boardMount');
     if (el) {
-      el.innerHTML = '<p style="padding:24px;color:#b91c1c">Could not start the scheduler. Hard-refresh (Cmd+Shift+R). If you opened the file directly, use http://127.0.0.1:8765 instead.</p>';
+      el.innerHTML = '<p style="padding:24px;color:#b91c1c">Could not start the scheduler. Sign in with an authorised Google account, then hard-refresh.</p>';
     }
   });

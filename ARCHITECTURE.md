@@ -1,6 +1,6 @@
 # Architecture (constraints for later work)
 
-This file is a fence, not a design of the next slice. `/schedule` writes through [`shared/store.js`](shared/store.js). `/td` still reads static `jobs.json` and is not wired yet.
+This file is a fence, not a design of the next slice. `/schedule` writes canonical jobs through [`shared/store.js`](shared/store.js). `/td` reads the same store when signed in (Firestore). Local adapter is fallback only.
 
 ## One product, two faces
 
@@ -13,11 +13,12 @@ They must share **one job record**. Do not grow two incompatible shapes.
 
 - Scheduling App is the **writer**.
 - Technician Dashboard is the **reader**.
-- [`shared/store.js`](shared/store.js) is the **source of truth** for jobs the Scheduling App writes. See [`shared/store.md`](shared/store.md).
-- Current default adapter is **local**: in-memory plus `localStorage` key `be-ops-jobs`. Do not reuse the old Scheduling App key `be-scheduler-v2-roster`.
-- `/td` still reads static `jobs.json`. A booking in `/schedule` does not appear there yet.
-- Firestore adapter is a **stub**. Google Sheet roster backup comes later.
-- Firebase already present in `/td` is for Google auth (and the existing Performance dashboard). It is **not** the live job store.
+- [`shared/store.js`](shared/store.js) is the **source of truth**. See [`shared/store.md`](shared/store.md) and [`FIRESTORE.md`](FIRESTORE.md).
+- **Live adapter:** Firestore collection `jobs` on project `breathe-easy-performance`, when Firebase is initialised and an allowlisted user is signed in.
+- **Fallback adapter:** local `be-ops-jobs`. Do not reuse `be-scheduler-v2-roster`.
+- `/td` reads Firestore after sign-in (`onSnapshot`). If Firestore is empty it falls back to `jobs.json` and does not upload the archive.
+- Google Sheet roster backup comes later. The sheet is not the live database.
+- Firebase Auth on `/td` and `/schedule` is the existing Google allowlist. It is not a new user system.
 
 ## Job record must still render as the office master sheet
 
@@ -45,13 +46,12 @@ Each strip must still be able to carry:
 
 Also keep the fields both UIs already use to place a job on that grid: `date`, `week`, `team_lead`, `team_members`, `district`, `job_type` / `is_return`.
 
-Canonical record: [`shared/job-model.md`](shared/job-model.md) and mapper [`shared/job.js`](shared/job.js). `/schedule` persists that record through the shared store. `/td` does not read it yet.
+Canonical record: [`shared/job-model.md`](shared/job-model.md) and mapper [`shared/job.js`](shared/job.js). `/schedule` writes it; `/td` reads it when Firestore has jobs.
 Old snapshots: `schedule/data/job-shape.json`, `td/data/jobs.json`.
 
 ## Out of scope until a later prompt
 
-- Wiring `/td` onto `shared/store.js` as the reader
-- Implementing the Firestore jobs collection
 - Google Sheet sync
 - Merging the two front-ends onto one page
-- Changing booking UX or TD UX
+- Changing booking UX or TD card UX
+- Auto-migrating the historical archive on every page load

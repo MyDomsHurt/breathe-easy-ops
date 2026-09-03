@@ -1,6 +1,6 @@
 # Shared job store
 
-Future source of truth for both faces. **Not wired into `/schedule` or `/td` yet.**
+Source of truth for jobs. **`/schedule` is the writer. `/td` is not wired yet.**
 
 - Scheduling App = **writer**
 - Technician Dashboard = **reader**
@@ -82,7 +82,6 @@ Full field list: [`job-model.md`](job-model.md). Sheet strip: Name / Time / Mobi
 
 ## What this slice does not do
 
-- Does not switch `/schedule` onto this store
 - Does not switch `/td` onto this store
 - Does not implement Firestore
 - Does not implement Google Sheet sync

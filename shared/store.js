@@ -2,8 +2,9 @@
  * Shared live job store — future source of truth for both faces.
  *
  * Scheduling App = writer. Technician Dashboard = reader.
- * Neither app imports this yet. Default adapter is local (memory +
- * be-ops-jobs). Firestore is a stub. Google Sheet backup comes later.
+ * /schedule is the writer (see schedule/js/store.js). /td is not wired yet.
+ * Default adapter is local (memory + be-ops-jobs). Firestore is a stub.
+ * Google Sheet backup comes later.
  *
  * All records are canonical (shared/job-model.md). time is free-form.
  */

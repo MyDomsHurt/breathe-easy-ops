@@ -1,8 +1,8 @@
 # Canonical job record
 
-One job shape both faces will share later. **Neither app uses this yet.**
+One job shape both faces will share. **`/schedule` writes it through `shared/store.js`. `/td` does not read it yet.**
 
-- `/schedule` still writes `localStorage`
+- `/schedule` persists canonical jobs in `be-ops-jobs`
 - `/td` still reads `td/data/jobs.json` / `jobs_part_*.json`
 - This file is the contract. `shared/job.js` maps today’s records into it.
 
@@ -183,8 +183,8 @@ Sources: `td/data/jobs.json`, `jobs_part_*.json`, `jobs-sample.json`.
 
 ## What this slice does not do
 
-- Does not switch `/schedule` or `/td` onto this record
+- Does not switch `/td` onto this record
 - Does not sync Google Sheets
 - Does not change booking UX or TD UX
 
-The store that will hold these records later is [`store.js`](store.js) (see [`store.md`](store.md)). It is not wired into either UI yet.
+The store that holds these records is [`store.js`](store.js) (see [`store.md`](store.md)). `/schedule` writes it; `/td` does not read it yet.

@@ -1,90 +1,37 @@
-import { STORAGE_KEY, TEAM_META } from './config.js';
+/**
+ * Scheduling App store — thin writer over ../../shared/store.js.
+ *
+ * Create / edit / move / reorder / tentative / cancel persist as canonical
+ * jobs in be-ops-jobs. The old key be-scheduler-v2-roster is not used.
+ */
+
+import { TEAM_META } from './config.js';
 import { loadSeedJobs, buildSeedJobs } from './seed.js';
-import { acsLabel, jobTypeOf, uid, weekNumber } from './utils.js';
+import { acsLabel, jobTypeOf } from './utils.js';
+import { createStore } from '../../shared/store.js';
+import { fromScheduleJob } from '../../shared/job.js';
 
 const listeners = new Set();
 
-function loadPersisted() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { extras: [], removed: [], overrides: {} };
-    const data = JSON.parse(raw);
-    return {
-      extras: Array.isArray(data.extras) ? data.extras : [],
-      removed: Array.isArray(data.removed) ? data.removed : [],
-      overrides: data.overrides && typeof data.overrides === 'object' ? data.overrides : {},
-    };
-  } catch {
-    return { extras: [], removed: [], overrides: {} };
-  }
-}
-
-function savePersisted(state) {
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify({
-      extras: state.extras,
-      removed: [...state.removed],
-      overrides: state.overrides,
-    })
-  );
-}
-
-function createState(seed) {
-  const persisted = loadPersisted();
-  return {
-    seed: seed || [],
-    extras: persisted.extras,
-    overrides: persisted.overrides,
-    removed: new Set(persisted.removed),
-  };
-}
-
-function buildJob(input, prev) {
-  const type = input.job_type || (input.is_return ? 'return' : 'cleaning');
-  const acs = input.acs || acsLabel(input.units || {}) || '';
-  const base = prev || {};
-  return {
-    ...base,
-    job_id: input.job_id || base.job_id || uid(`${input.date}-${(input.team_lead || 'team').toLowerCase()}`),
-    date: input.date,
-    week: weekNumber(input.date),
-    team_lead: input.team_lead,
-    team_members: input.team_members || TEAM_META[input.team_lead]?.members || input.team_lead,
-    client_name: input.client_name,
-    time: input.time || '',
-    mobile: input.mobile || '',
-    address: input.address || '',
-    acs: type === 'return' ? '' : acs,
-    notes: input.notes || null,
-    amount: type === 'cleaning'
-      ? (input.amount === '' || input.amount == null ? (base.amount ?? null) : Number(input.amount))
-      : null,
-    invoice: input.invoice !== undefined ? input.invoice : (base.invoice || null),
-    receipt: input.receipt !== undefined ? input.receipt : (base.receipt || null),
-    payment: input.payment || 'Unpaid',
-    is_return: type === 'return',
-    district: input.district || '',
-    job_type: type,
-    status: input.status === 'tentative' || input.status === 'confirmed'
-      ? input.status
-      : (base.status === 'tentative' ? 'tentative' : 'confirmed'),
-    source: base.source || input.source || 'local',
-    stack_order: input.stack_order != null && input.stack_order !== ''
-      ? Number(input.stack_order)
-      : (base.stack_order ?? null),
-  };
-}
-
-let state = createState([]);
+let ops = null;
 let ready = false;
 let readyPromise = null;
 
+const HISTORY_LIMIT = 20;
+let undoStack = [];
+let redoStack = [];
+let recording = true;
+
 export async function initStore() {
-  if (ready) return allJobs();
+  if (ready && ops) return allJobs();
+  if (readyPromise) return readyPromise;
   readyPromise = (async () => {
-    const seed = await loadSeedJobs();
-    state = createState(seed);
+    ops = createStore();
+    await ops.ready;
+    if (ops.listJobs({ includeDeleted: true }).length === 0) {
+      const seed = await loadSeedJobs();
+      ops.importJobs(seed.map((row) => fromScheduleJob(row)));
+    }
     ready = true;
     emit();
     return allJobs();
@@ -93,18 +40,15 @@ export async function initStore() {
 }
 
 export function allJobs() {
-  const extras = state.extras.filter((j) => !state.removed.has(j.job_id));
-  const seed = state.seed
-    .filter((j) => !state.removed.has(j.job_id))
-    .map((j) => state.overrides[j.job_id] || j);
-  return [...seed, ...extras].sort((a, b) => {
-    if (a.date !== b.date) return a.date.localeCompare(b.date);
-    return String(a.time || '').localeCompare(String(b.time || ''));
-  });
+  if (!ops) return [];
+  return ops.listJobs();
 }
 
 export function getJob(id) {
-  return allJobs().find((j) => j.job_id === id) || null;
+  if (!ops || id == null || id === '') return null;
+  const job = ops.getJob(id);
+  if (!job || job.deleted) return null;
+  return job;
 }
 
 export function subscribe(fn) {
@@ -113,13 +57,9 @@ export function subscribe(fn) {
 }
 
 function emit() {
-  listeners.forEach((fn) => fn(allJobs()));
+  const jobs = allJobs();
+  listeners.forEach((fn) => fn(jobs));
 }
-
-const HISTORY_LIMIT = 20;
-let undoStack = [];
-let redoStack = [];
-let recording = true;
 
 function snapshot(job) {
   return job ? JSON.parse(JSON.stringify(job)) : null;
@@ -137,27 +77,34 @@ function clearHistory() {
   redoStack = [];
 }
 
+function toCanonical(input, prev) {
+  const type = input.job_type || (input.is_return ? 'return' : 'cleaning');
+  const acs = type === 'return'
+    ? ''
+    : (input.acs || acsLabel(input.units || {}) || (prev && prev.acs) || '');
+  return fromScheduleJob({
+    ...(prev || {}),
+    ...input,
+    job_id: input.job_id || (prev && prev.job_id),
+    acs,
+    job_type: type,
+    is_return: type === 'return',
+    team_members:
+      input.team_members
+      || (prev && prev.team_members)
+      || TEAM_META[input.team_lead]?.members
+      || input.team_lead,
+    source: (prev && prev.source) || input.source || 'local',
+    deleted: false,
+  });
+}
+
 function writeJob(job) {
-  const id = job.job_id;
-  const extraIdx = state.extras.findIndex((j) => j.job_id === id);
-  if (extraIdx >= 0) {
-    const next = state.extras.slice();
-    next[extraIdx] = snapshot(job);
-    state.extras = next;
-  } else if (state.seed.some((j) => j.job_id === id)) {
-    state.overrides = { ...state.overrides, [id]: snapshot(job) };
-  } else {
-    state.extras = [...state.extras, snapshot(job)];
-  }
-  state.removed.delete(id);
+  return ops.upsertJob({ ...job, deleted: false });
 }
 
 function eraseJob(id) {
-  state.extras = state.extras.filter((j) => j.job_id !== id);
-  const next = { ...state.overrides };
-  delete next[id];
-  state.overrides = next;
-  state.removed.add(id);
+  return ops.removeJob(id);
 }
 
 function updateKind(before, after) {
@@ -167,10 +114,8 @@ function updateKind(before, after) {
 }
 
 export function addJob(input) {
-  const job = buildJob(input);
-  state.extras = [...state.extras, job];
+  const job = writeJob(toCanonical(input));
   pushHistory({ type: 'add', job: snapshot(job) });
-  persist();
   emit();
   return job;
 }
@@ -178,15 +123,13 @@ export function addJob(input) {
 export function updateJob(id, input) {
   const prev = getJob(id);
   if (!prev) return null;
-  const job = buildJob({ ...input, job_id: id }, prev);
-  writeJob(job);
+  const job = writeJob(toCanonical({ ...input, job_id: id }, prev));
   pushHistory({
     type: 'update',
     kind: updateKind(prev, job),
     before: snapshot(prev),
     after: snapshot(job),
   });
-  persist();
   emit();
   return job;
 }
@@ -194,10 +137,8 @@ export function updateJob(id, input) {
 export function removeJob(id) {
   const prev = getJob(id);
   if (!prev) return;
-  const wasExtra = state.extras.some((j) => j.job_id === id);
   eraseJob(id);
-  pushHistory({ type: 'remove', job: snapshot(prev), wasExtra });
-  persist();
+  pushHistory({ type: 'remove', job: snapshot(prev) });
   emit();
 }
 
@@ -211,13 +152,11 @@ export function reorderStack(orderedIds) {
   recording = false;
   for (const { prev, i } of current) {
     befores.push(snapshot(prev));
-    const next = buildJob({ ...prev, stack_order: i }, prev);
-    writeJob(next);
+    const next = writeJob(toCanonical({ ...prev, stack_order: i }, prev));
     afters.push(snapshot(next));
   }
   recording = true;
   pushHistory({ type: 'reorder', kind: 'move', before: befores, after: afters });
-  persist();
   emit();
   return true;
 }
@@ -232,7 +171,6 @@ export function undo() {
   else if (entry.type === 'update') writeJob(entry.before);
   recording = true;
   redoStack.push(entry);
-  persist();
   emit();
   return { action: 'undo', type: entry.type, kind: entry.kind || entry.type };
 }
@@ -247,21 +185,22 @@ export function redo() {
   else if (entry.type === 'update') writeJob(entry.after);
   recording = true;
   undoStack.push(entry);
-  persist();
   emit();
   return { action: 'redo', type: entry.type, kind: entry.kind || entry.type };
 }
 
 export function resetDemo() {
-  localStorage.removeItem(STORAGE_KEY);
-  const seed = state.seed.length ? state.seed : buildSeedJobs();
-  state = createState(seed);
+  const seed = buildSeedJobs().map((row) => fromScheduleJob({ ...row, deleted: false }));
+  const seedIds = new Set(seed.map((j) => j.job_id));
+  if (ops) {
+    for (const job of ops.listJobs({ includeDeleted: true })) {
+      if (seedIds.has(job.job_id)) continue;
+      if (job.source === 'local') ops.removeJob(job.job_id, { hard: true });
+    }
+    for (const job of seed) writeJob(job);
+  }
   clearHistory();
   emit();
-}
-
-function persist() {
-  savePersisted(state);
 }
 
 export { jobTypeOf };

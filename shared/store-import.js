@@ -4,7 +4,8 @@
  * Does not invent clients. Same job_id from both sources is merged, not
  * duplicated. Prefer the richer record; keep both faces’ fields.
  *
- * Not imported by /schedule or /td yet.
+ * /schedule seeds from WEEK_JOBS via fromScheduleJob when the store is empty.
+ * /td does not import this yet.
  */
 
 import { CANONICAL_FIELDS, fromScheduleJob, fromTdJob, normalizeJob } from './job.js';

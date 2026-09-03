@@ -31,20 +31,19 @@ The board is seeded from a real operational week taken from the Schedule Master:
 
 ## Run locally
 
-Serve the folder over HTTP (ES modules and `fetch` will not work from `file://`):
+Serve the **ops repo root** over HTTP (this app imports `../shared/`):
 
 ```bash
-cd breathe-easy-scheduler-v2
 python3 -m http.server 8080
 ```
 
-Open http://localhost:8080
+Open http://localhost:8080/schedule/
 
 ## Prototype notes
 
 - Job shape matches the live viewer (`date`, `time`, `team_lead`, `client_name`, `mobile`, `address`, `district`, `acs`, `amount`, `payment`, `is_return`, plus `job_type`).
 - Click a job to open details, then **Edit / move** or **Cancel job**.
-- New and edited bookings persist in `localStorage`. Use **Reset demo data** to go back to the seed week.
+- New and edited bookings persist in the shared job store (`be-ops-jobs`). Use **Reset demo data** to go back to the seed week.
 - The board loads `data/week-2026-08-17.json` first (108 jobs) so a missing day file cannot empty the view.
 - Booking time is free-form. Team suggestion uses how busy that day already is and district clustering — never a hard block.
 - A soft warning appears if the typed time is close to another job on the same team-day.

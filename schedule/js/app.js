@@ -22,8 +22,16 @@ function $(id) {
   return document.getElementById(id);
 }
 
+function visibleDates() {
+  return state.mode === 'day' ? [state.day] : workWeekDays(state.monday);
+}
+
 function teamJobs() {
-  return allJobs().filter((j) => !state.teams.length || state.teams.includes(j.team_lead));
+  const dates = new Set(visibleDates());
+  return allJobs().filter((j) => (
+    dates.has(j.date)
+    && (!state.teams.length || state.teams.includes(j.team_lead))
+  ));
 }
 
 function filteredJobs() {

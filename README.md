@@ -22,44 +22,33 @@ Those source repos stay as they are. This is the new home for integrated work.
 
 Both sides are vanilla HTML / CSS / JS. Serve over HTTP (not `file://`).
 
-Scheduling App:
+The Scheduling App imports `../shared/`, so serve the **repo root**:
 
 ```bash
-cd schedule
 python3 -m http.server 8080
 ```
 
-Open http://localhost:8080
+- Scheduling App: http://localhost:8080/schedule/
+- Technician Dashboard: http://localhost:8080/td/
 
-Technician Dashboard:
-
-```bash
-cd td
-python3 -m http.server 8081
-```
-
-Open http://localhost:8081
-
-Or serve the repo root and open `/schedule/` and `/td/`. Relative paths inside each app are unchanged.
+`/td` can still be served on its own (`cd td && python3 -m http.server 8081`) because it does not import `shared/` yet.
 
 ## What is not connected yet
 
-- Scheduling App writes stay in browser `localStorage`.
-- Technician Dashboard reads static `td/data/jobs.json` (and sequential `jobs_part_*.json` via `manifest.json`).
-- A booking made in `/schedule` does **not** appear in `/td`.
+- Scheduling App writes canonical jobs through [`shared/store.js`](shared/store.js) (`localStorage` key `be-ops-jobs`). The old `be-scheduler-v2-roster` key is unused.
+- Technician Dashboard still reads static `td/data/jobs.json` (and sequential `jobs_part_*.json` via `manifest.json`).
+- A booking made in `/schedule` does **not** appear in `/td` yet.
 - Firebase in `/td` is the existing Google sign-in (and dashboard) wiring. It is **not** the live job store.
 
 ## Job record and store
 
 The canonical job both faces will share later is defined in [`shared/job-model.md`](shared/job-model.md). [`shared/job.js`](shared/job.js) maps today’s `/schedule` and `/td` jobs into that shape.
 
-[`shared/store.js`](shared/store.js) is the **future source of truth** (local adapter by default; Firestore stub; import helper for existing jobs). See [`shared/store.md`](shared/store.md).
-
-Neither app imports these modules yet. Booking UX and TD UX are unchanged.
+[`shared/store.js`](shared/store.js) is the source of truth for Scheduling App writes (local adapter by default; Firestore stub). See [`shared/store.md`](shared/store.md). `/td` does not read it yet. Booking UX and TD UX are unchanged.
 
 ## Next work
 
-1. **Wire the store** — Scheduling App writes; Technician Dashboard reads the same canonical jobs.
+1. **Wire TD as the reader** of the same canonical jobs.
 2. **Google Sheet roster backup later** — off-repo, in the existing master-roster format. That backup must stay possible. Do not design a job shape the sheet cannot render.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the constraints that future work must keep.

@@ -13,6 +13,12 @@ function calendarToday() {
 }
 
 const TODAY = calendarToday();
+const OWNER_EMAIL = 'jefflamb1992@gmail.com';
+let signedInEmail = '';
+
+function isOwnerUser(email) {
+  return String(email || '').toLowerCase().trim() === OWNER_EMAIL;
+}
 
 const state = {
   view: 'board',
@@ -389,38 +395,6 @@ function bindChrome() {
     openBooking({ date: state.mode === 'day' ? state.day : TODAY });
   });
   bindSearch();
-  $('importJobs').addEventListener('click', async () => {
-    if (!usingFirestore()) {
-      toast('Sign in to import into the live store');
-      return;
-    }
-    if (!confirm('One-time import of seed + technician archive into Firestore?\n\nThis can upload thousands of jobs. Do not run it on every computer or on every page load.')) {
-      return;
-    }
-    const btn = $('importJobs');
-    btn.disabled = true;
-    try {
-      const result = await importExistingJobs();
-      paint();
-      toast(`Imported ${result.count} jobs`);
-    } catch (err) {
-      console.error(err);
-      toast((err && err.message) || 'Import failed');
-    } finally {
-      btn.disabled = false;
-    }
-  });
-  $('resetDemo').addEventListener('click', () => {
-    if (usingFirestore()) {
-      toast('Local demo reset is only for the offline fallback');
-      return;
-    }
-    if (confirm('Reset prototype bookings back to the seed schedule?')) {
-      resetDemo();
-      paint();
-      toast('Demo data reset');
-    }
-  });
   $('modalRoot').addEventListener('click', (e) => {
     const edit = e.target.closest('[data-edit-job]');
     if (edit) {
@@ -531,6 +505,57 @@ function bindSearch() {
   });
 }
 
+function bindOwnerTools() {
+  const box = $('ownerTools');
+  const importBtn = $('importJobs');
+  const resetBtn = $('resetDemo');
+  if (!isOwnerUser(signedInEmail)) {
+    if (box) {
+      box.hidden = true;
+      box.replaceChildren();
+    }
+    return;
+  }
+  if (box) box.hidden = false;
+  if (importBtn) {
+    importBtn.addEventListener('click', async () => {
+      if (!isOwnerUser(signedInEmail)) return;
+      if (!usingFirestore()) {
+        toast('Sign in to import into the live store');
+        return;
+      }
+      if (!confirm('One-time import of seed + technician archive into Firestore?\n\nThis can upload thousands of jobs. Do not run it on every computer or on every page load.')) {
+        return;
+      }
+      importBtn.disabled = true;
+      try {
+        const result = await importExistingJobs();
+        paint();
+        toast(`Imported ${result.count} jobs`);
+      } catch (err) {
+        console.error(err);
+        toast((err && err.message) || 'Import failed');
+      } finally {
+        importBtn.disabled = false;
+      }
+    });
+  }
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      if (!isOwnerUser(signedInEmail)) return;
+      if (usingFirestore()) {
+        toast('Local demo reset is only for the offline fallback');
+        return;
+      }
+      if (confirm('Reset prototype bookings back to the seed schedule?')) {
+        resetDemo();
+        paint();
+        toast('Demo data reset');
+      }
+    });
+  }
+}
+
 fillMonthSelect();
 bindFilters();
 bindChrome();
@@ -539,7 +564,11 @@ bindBoardDrag();
 subscribe(paint);
 
 startScheduleAuth()
-  .then((user) => initStore(user))
+  .then((user) => {
+    signedInEmail = (user && user.email) || '';
+    bindOwnerTools();
+    return initStore(user);
+  })
   .then(() => paint())
   .catch((err) => {
     console.error(err);

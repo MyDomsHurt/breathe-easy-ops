@@ -1,7 +1,6 @@
 /* TD — cache enough shell to launch standalone.
-   Never intercept navigations to / or /index.html: Google redirect
-   must get a live document, not a cached login page. */
-const CACHE = 'td-v2';
+   Never intercept /, /index.html, or auth.js — login must be network-only. */
+const CACHE = 'td-v3';
 const SHELL = [
   '/manifest.webmanifest',
   '/icons/icon-192.png',
@@ -9,7 +8,6 @@ const SHELL = [
   '/icons/apple-touch-icon.png',
   '/css/app.css?v=11',
   '/css/be-shell.css?v=3',
-  '/js/auth.js',
   '/js/app.js?v=11',
   '/js/shell-ui.js?v=2',
   '/js/unit-stats.js',
@@ -50,7 +48,7 @@ self.addEventListener('fetch', function (event) {
   if (url.pathname.indexOf('/shared/') === 0) return;
 
   const path = url.pathname;
-  if (path === '/' || path === '/index.html') {
+  if (path === '/' || path === '/index.html' || path === '/js/auth.js') {
     return;
   }
 

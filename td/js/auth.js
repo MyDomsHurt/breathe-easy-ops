@@ -59,15 +59,16 @@
     chip.classList.remove("hidden");
   }
 
-  var REDIRECT_FLAG = "td-auth-redirect";
+  function loginIsVisible() {
+    const login = document.getElementById("loginScreen");
+    return !!(login && !login.classList.contains("hidden"));
+  }
 
-  function setButtonBusy(btn, busy) {
-    if (!btn) return;
-    btn.disabled = !!busy;
-    var svg = btn.querySelector("svg");
-    btn.textContent = "";
-    if (svg) btn.appendChild(svg);
-    btn.appendChild(document.createTextNode(busy ? " Signing in…" : " Sign in with Google"));
+  function dropLoginWorker() {
+    if (!("serviceWorker" in navigator)) return;
+    navigator.serviceWorker.getRegistrations().then(function (regs) {
+      regs.forEach(function (reg) { reg.unregister(); });
+    });
   }
 
   function authErrorMessage(err) {
@@ -76,11 +77,11 @@
     if (code === "auth/unauthorized-domain") {
       return "This site is not authorised for Google sign-in. Ask Jeff to add it in Firebase Authorized domains.";
     }
+    if (code === "auth/popup-blocked" || code === "auth/cancelled-popup-request") {
+      return "Google sign-in popup was blocked. Allow popups for this site and try again.";
+    }
     if (code === "auth/network-request-failed") {
       return "Network error during sign-in. Check your connection and try again.";
-    }
-    if (code === "auth/web-storage-unsupported") {
-      return "This browser blocked sign-in storage. Try Chrome without private mode.";
     }
     return err.message || "Sign-in failed. Try again.";
   }
@@ -99,44 +100,18 @@
     provider.setCustomParameters({ prompt: "select_account" });
 
     const btn = document.getElementById("btnGoogle");
-    var returning = false;
-    try { returning = sessionStorage.getItem(REDIRECT_FLAG) === "1"; } catch (e) {}
-    if (returning) setButtonBusy(btn, true);
-
-    auth.getRedirectResult()
-      .then(function (result) {
-        try { sessionStorage.removeItem(REDIRECT_FLAG); } catch (e) {}
-        if (!result || !result.user) {
-          setButtonBusy(btn, false);
-          return;
-        }
-        if (!isAllowed(result.user.email)) {
-          setButtonBusy(btn, false);
-          return auth.signOut().then(function () {
-            showLogin();
-            setError("This Google account is not authorised for TD.");
-          });
-        }
-      })
-      .catch(function (err) {
-        try { sessionStorage.removeItem(REDIRECT_FLAG); } catch (e) {}
-        console.error(err);
-        setButtonBusy(btn, false);
-        showLogin();
-        setError(authErrorMessage(err));
-      });
-
     if (btn) {
       btn.addEventListener("click", function () {
         setError("");
-        setButtonBusy(btn, true);
-        try { sessionStorage.setItem(REDIRECT_FLAG, "1"); } catch (e) {}
-        auth.signInWithRedirect(provider).catch(function (err) {
-          try { sessionStorage.removeItem(REDIRECT_FLAG); } catch (e2) {}
-          console.error(err);
-          setButtonBusy(btn, false);
-          setError(authErrorMessage(err));
-        });
+        btn.disabled = true;
+        auth.signInWithPopup(provider)
+          .catch(function (err) {
+            console.error(err);
+            setError(authErrorMessage(err));
+          })
+          .finally(function () {
+            btn.disabled = false;
+          });
       });
     }
 
@@ -162,15 +137,22 @@
       return;
     }
 
+    if (loginIsVisible()) dropLoginWorker();
+    window.addEventListener("load", function () {
+      if (loginIsVisible()) dropLoginWorker();
+    });
+
     auth.onAuthStateChanged(function (user) {
       if (!user) {
         showLogin();
+        dropLoginWorker();
         return;
       }
 
       if (!isAllowed(user.email)) {
         auth.signOut().then(function () {
           showLogin();
+          dropLoginWorker();
           setError("This Google account is not authorised for TD.");
         });
         return;

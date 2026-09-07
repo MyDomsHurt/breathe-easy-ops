@@ -642,9 +642,10 @@ button.day-col-head:hover { background: #e0f2fe; }
   width: 100%;
   padding: 6px 7px;
   border-radius: 7px;
-  background: white;
-  border: 1px solid #e5eaf0;
+  background: #fffdf9;
+  border: 1px solid #e8edf2;
   border-left: 3px solid var(--team);
+  box-shadow: 0 1px 2px rgba(15, 39, 68, 0.08);
   font: inherit;
   font-size: 11px;
   font-weight: 500;
@@ -734,12 +735,14 @@ button.day-col-head:hover { background: #e0f2fe; }
   background: repeating-linear-gradient(-45deg, #fff7ed, #fff7ed 3px, #ffedd5 3px, #ffedd5 6px);
   border-color: #fdba74;
   border-left-color: #d97706;
+  box-shadow: 0 1px 2px rgba(15, 39, 68, 0.08);
 }
 
 .job-chip.influencer, .job-card.influencer {
   background: #f5f3ff;
   border: 1px dashed #8b5cf6;
   border-left: 3px solid #7c3aed;
+  box-shadow: 0 1px 2px rgba(15, 39, 68, 0.08);
 }
 
 .job-chip.return:hover, .job-card.return:hover { background: repeating-linear-gradient(-45deg, #ffedd5, #ffedd5 3px, #fff7ed 3px, #fff7ed 6px); }
@@ -807,9 +810,10 @@ button.day-col-head:hover { background: #e0f2fe; }
   gap: 2px;
   width: 100%;
   text-align: left;
-  background: white;
-  border: 1px solid #e5eaf0;
+  background: #fffdf9;
+  border: 1px solid #e8edf2;
   border-left: 3px solid var(--team);
+  box-shadow: 0 1px 2px rgba(15, 39, 68, 0.08);
   border-radius: 8px;
   padding: 8px;
   margin-bottom: 6px;

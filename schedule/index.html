@@ -69,12 +69,18 @@
   </header>
 
   <div class="filters">
-    <span class="filter-label">Team</span>
-    <div class="chip-row" id="teamFilters"></div>
-    <span class="filter-label">Area</span>
-    <div class="chip-row" id="districtFilters"></div>
-    <span class="filter-label">Type</span>
-    <div class="chip-row" id="typeFilters"></div>
+    <div class="filter-dd" id="teamFilter">
+      <button type="button" class="filter-dd-btn" id="teamFilterBtn" aria-haspopup="true" aria-expanded="false" aria-controls="teamFilterMenu">All teams</button>
+      <div class="filter-dd-menu" id="teamFilterMenu" hidden></div>
+    </div>
+    <div class="filter-dd" id="districtFilter">
+      <button type="button" class="filter-dd-btn" id="districtFilterBtn" aria-haspopup="true" aria-expanded="false" aria-controls="districtFilterMenu">All areas</button>
+      <div class="filter-dd-menu" id="districtFilterMenu" hidden></div>
+    </div>
+    <div class="filter-dd" id="typeFilter">
+      <button type="button" class="filter-dd-btn" id="typeFilterBtn" aria-haspopup="true" aria-expanded="false" aria-controls="typeFilterMenu">All types</button>
+      <div class="filter-dd-menu" id="typeFilterMenu" hidden></div>
+    </div>
     <div class="legend">
       <span><i style="background:#ecfdf5;border:1px solid #86efac"></i>Empty day</span>
       <span><i style="background:repeating-linear-gradient(-45deg,#fdba74,#fdba74 2px,#fff7ed 2px,#fff7ed 4px)"></i>Return</span>

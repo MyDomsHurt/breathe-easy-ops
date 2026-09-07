@@ -88,6 +88,7 @@ function paint() {
   } else {
     renderJobsList($('jobsMount'), jobs, state.query);
   }
+  syncFilterUi();
   focusJobOnBoard();
 }
 
@@ -299,44 +300,133 @@ function bindBoardDrag() {
   });
 }
 
-function bindFilters() {
-  const teamBox = $('teamFilters');
-  teamBox.innerHTML = TEAMS.map((t) => `<button class="chip team on" data-team="${t}" style="--team:var(--team-${t.toLowerCase()})">${t}</button>`).join('');
-  teamBox.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-team]');
-    if (!btn) return;
-    const t = btn.dataset.team;
-    if (state.teams.includes(t)) {
-      if (state.teams.length === 1) return;
-      state.teams = state.teams.filter((x) => x !== t);
-    } else {
-      state.teams = [...state.teams, t];
+function closeFilterMenus(except) {
+  document.querySelectorAll('.filter-dd').forEach((dd) => {
+    if (dd === except) return;
+    const btn = dd.querySelector('.filter-dd-btn');
+    const menu = dd.querySelector('.filter-dd-menu');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+    if (menu) menu.hidden = true;
+  });
+}
+
+function filterButtonLabel(singular, plural, selected, total, emptyMeansAll) {
+  const n = selected.length;
+  const allOn = emptyMeansAll ? n === 0 : n === total;
+  return allOn ? `All ${plural}` : `${singular} · ${n}`;
+}
+
+function syncFilterUi() {
+  const teamBtn = $('teamFilterBtn');
+  if (teamBtn) {
+    teamBtn.textContent = filterButtonLabel('Team', 'teams', state.teams, TEAMS.length, false);
+    teamBtn.classList.toggle('is-subset', state.teams.length !== TEAMS.length);
+  }
+  const distBtn = $('districtFilterBtn');
+  if (distBtn) {
+    distBtn.textContent = filterButtonLabel('Area', 'areas', state.districts, Object.keys(DISTRICTS).length, true);
+    distBtn.classList.toggle('is-subset', state.districts.length > 0);
+  }
+  const typeBtn = $('typeFilterBtn');
+  if (typeBtn) {
+    typeBtn.textContent = filterButtonLabel('Type', 'types', state.types, JOB_TYPES.length, true);
+    typeBtn.classList.toggle('is-subset', state.types.length > 0);
+  }
+  document.querySelectorAll('#teamFilterMenu input[type="checkbox"]').forEach((el) => {
+    el.checked = state.teams.includes(el.value);
+  });
+  document.querySelectorAll('#districtFilterMenu input[type="checkbox"]').forEach((el) => {
+    el.checked = state.districts.includes(el.value);
+  });
+  document.querySelectorAll('#typeFilterMenu input[type="checkbox"]').forEach((el) => {
+    el.checked = state.types.includes(el.value);
+  });
+}
+
+function bindFilterDropdown(btnId, menuId, html) {
+  const btn = $(btnId);
+  const menu = $(menuId);
+  if (!btn || !menu) return null;
+  menu.innerHTML = html;
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = btn.getAttribute('aria-expanded') === 'true';
+    closeFilterMenus();
+    if (!open) {
+      btn.setAttribute('aria-expanded', 'true');
+      menu.hidden = false;
     }
-    [...teamBox.children].forEach((el) => el.classList.toggle('on', state.teams.includes(el.dataset.team)));
-    paint();
   });
+  menu.addEventListener('click', (e) => e.stopPropagation());
+  return menu;
+}
 
-  const distBox = $('districtFilters');
-  distBox.innerHTML = Object.keys(DISTRICTS).map((d) => `<button class="chip district" data-district="${d}">${d}</button>`).join('');
-  distBox.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-district]');
-    if (!btn) return;
-    const d = btn.dataset.district;
-    state.districts = state.districts.includes(d) ? state.districts.filter((x) => x !== d) : [...state.districts, d];
-    [...distBox.children].forEach((el) => el.classList.toggle('on', state.districts.includes(el.dataset.district)));
-    paint();
-  });
+function bindFilters() {
+  const teamMenu = bindFilterDropdown(
+    'teamFilterBtn',
+    'teamFilterMenu',
+    TEAMS.map((t) => `<label><input type="checkbox" value="${t}" checked> ${t}</label>`).join(''),
+  );
+  if (teamMenu) {
+    teamMenu.addEventListener('change', (e) => {
+      const input = e.target.closest('input[type="checkbox"]');
+      if (!input) return;
+      const t = input.value;
+      if (input.checked) {
+        if (!state.teams.includes(t)) state.teams = [...state.teams, t];
+      } else {
+        if (state.teams.length === 1) {
+          input.checked = true;
+          return;
+        }
+        state.teams = state.teams.filter((x) => x !== t);
+      }
+      paint();
+    });
+  }
 
-  const typeBox = $('typeFilters');
-  typeBox.innerHTML = JOB_TYPES.map((t) => `<button class="chip type-${t.id}" data-type="${t.id}">${t.label}</button>`).join('');
-  typeBox.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-type]');
-    if (!btn) return;
-    const t = btn.dataset.type;
-    state.types = state.types.includes(t) ? state.types.filter((x) => x !== t) : [...state.types, t];
-    [...typeBox.children].forEach((el) => el.classList.toggle('on', state.types.includes(el.dataset.type)));
-    paint();
+  const distMenu = bindFilterDropdown(
+    'districtFilterBtn',
+    'districtFilterMenu',
+    Object.keys(DISTRICTS).map((d) => `<label><input type="checkbox" value="${d}"> ${d}</label>`).join(''),
+  );
+  if (distMenu) {
+    distMenu.addEventListener('change', (e) => {
+      const input = e.target.closest('input[type="checkbox"]');
+      if (!input) return;
+      const d = input.value;
+      state.districts = input.checked
+        ? (state.districts.includes(d) ? state.districts : [...state.districts, d])
+        : state.districts.filter((x) => x !== d);
+      paint();
+    });
+  }
+
+  const typeMenu = bindFilterDropdown(
+    'typeFilterBtn',
+    'typeFilterMenu',
+    JOB_TYPES.map((t) => `<label><input type="checkbox" value="${t.id}"> ${t.label}</label>`).join(''),
+  );
+  if (typeMenu) {
+    typeMenu.addEventListener('change', (e) => {
+      const input = e.target.closest('input[type="checkbox"]');
+      if (!input) return;
+      const t = input.value;
+      state.types = input.checked
+        ? (state.types.includes(t) ? state.types : [...state.types, t])
+        : state.types.filter((x) => x !== t);
+      paint();
+    });
+  }
+
+  document.addEventListener('mousedown', (e) => {
+    if (e.target.closest('.filter-dd')) return;
+    closeFilterMenus();
   });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeFilterMenus();
+  });
+  syncFilterUi();
 }
 
 function bindChrome() {

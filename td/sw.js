@@ -1,8 +1,8 @@
-/* TD — cache enough shell to launch standalone. */
-const CACHE = 'td-v1';
+/* TD — cache enough shell to launch standalone.
+   Never intercept navigations to / or /index.html: Google redirect
+   must get a live document, not a cached login page. */
+const CACHE = 'td-v2';
 const SHELL = [
-  '/',
-  '/index.html',
   '/manifest.webmanifest',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
@@ -21,7 +21,7 @@ self.addEventListener('install', function (event) {
   event.waitUntil(
     caches.open(CACHE).then(function (cache) {
       return cache.addAll(SHELL).catch(function () {
-        return cache.addAll(['/', '/index.html', '/manifest.webmanifest']);
+        return cache.addAll(['/manifest.webmanifest']);
       });
     }).then(function () {
       return self.skipWaiting();
@@ -49,6 +49,11 @@ self.addEventListener('fetch', function (event) {
   if (url.pathname.indexOf('/data/') === 0) return;
   if (url.pathname.indexOf('/shared/') === 0) return;
 
+  const path = url.pathname;
+  if (path === '/' || path === '/index.html') {
+    return;
+  }
+
   event.respondWith(
     fetch(req).then(function (res) {
       if (res && res.ok) {
@@ -57,9 +62,7 @@ self.addEventListener('fetch', function (event) {
       }
       return res;
     }).catch(function () {
-      return caches.match(req).then(function (hit) {
-        return hit || caches.match('/index.html');
-      });
+      return caches.match(req);
     })
   );
 });

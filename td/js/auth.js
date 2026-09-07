@@ -59,6 +59,32 @@
     chip.classList.remove("hidden");
   }
 
+  var REDIRECT_FLAG = "td-auth-redirect";
+
+  function setButtonBusy(btn, busy) {
+    if (!btn) return;
+    btn.disabled = !!busy;
+    var svg = btn.querySelector("svg");
+    btn.textContent = "";
+    if (svg) btn.appendChild(svg);
+    btn.appendChild(document.createTextNode(busy ? " Signing in…" : " Sign in with Google"));
+  }
+
+  function authErrorMessage(err) {
+    if (!err) return "Sign-in failed. Try again.";
+    var code = err.code || "";
+    if (code === "auth/unauthorized-domain") {
+      return "This site is not authorised for Google sign-in. Ask Jeff to add it in Firebase Authorized domains.";
+    }
+    if (code === "auth/network-request-failed") {
+      return "Network error during sign-in. Check your connection and try again.";
+    }
+    if (code === "auth/web-storage-unsupported") {
+      return "This browser blocked sign-in storage. Try Chrome without private mode.";
+    }
+    return err.message || "Sign-in failed. Try again.";
+  }
+
   function boot() {
     if (!window.firebase) {
       console.error("Firebase SDK missing");
@@ -72,43 +98,45 @@
     const provider = new firebase.auth.GoogleAuthProvider();
     provider.setCustomParameters({ prompt: "select_account" });
 
-    function useRedirectSignIn() {
-      var standalone = false;
-      try {
-        standalone = window.matchMedia("(display-mode: standalone)").matches
-          || window.navigator.standalone === true;
-      } catch (e) {}
-      var ios = /iPad|iPhone|iPod/.test(navigator.userAgent)
-        || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-      return standalone || ios;
-    }
-
-    auth.getRedirectResult().catch(function (err) {
-      if (!err) return;
-      console.error(err);
-      setError(err.message || "Sign-in failed. Try again.");
-    });
-
     const btn = document.getElementById("btnGoogle");
+    var returning = false;
+    try { returning = sessionStorage.getItem(REDIRECT_FLAG) === "1"; } catch (e) {}
+    if (returning) setButtonBusy(btn, true);
+
+    auth.getRedirectResult()
+      .then(function (result) {
+        try { sessionStorage.removeItem(REDIRECT_FLAG); } catch (e) {}
+        if (!result || !result.user) {
+          setButtonBusy(btn, false);
+          return;
+        }
+        if (!isAllowed(result.user.email)) {
+          setButtonBusy(btn, false);
+          return auth.signOut().then(function () {
+            showLogin();
+            setError("This Google account is not authorised for TD.");
+          });
+        }
+      })
+      .catch(function (err) {
+        try { sessionStorage.removeItem(REDIRECT_FLAG); } catch (e) {}
+        console.error(err);
+        setButtonBusy(btn, false);
+        showLogin();
+        setError(authErrorMessage(err));
+      });
+
     if (btn) {
       btn.addEventListener("click", function () {
         setError("");
-        btn.disabled = true;
-        var start = useRedirectSignIn()
-          ? auth.signInWithRedirect(provider)
-          : auth.signInWithPopup(provider);
-        start
-          .catch(function (err) {
-            console.error(err);
-            var code = err && err.code;
-            if (!useRedirectSignIn() && (code === "auth/popup-blocked" || code === "auth/cancelled-popup-request")) {
-              return auth.signInWithRedirect(provider);
-            }
-            setError((err && err.message) || "Sign-in failed. Try again.");
-          })
-          .finally(function () {
-            btn.disabled = false;
-          });
+        setButtonBusy(btn, true);
+        try { sessionStorage.setItem(REDIRECT_FLAG, "1"); } catch (e) {}
+        auth.signInWithRedirect(provider).catch(function (err) {
+          try { sessionStorage.removeItem(REDIRECT_FLAG); } catch (e2) {}
+          console.error(err);
+          setButtonBusy(btn, false);
+          setError(authErrorMessage(err));
+        });
       });
     }
 
@@ -137,7 +165,6 @@
     auth.onAuthStateChanged(function (user) {
       if (!user) {
         showLogin();
-        setError("");
         return;
       }
 

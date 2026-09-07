@@ -19,8 +19,9 @@ match /jobs/{jobId} {
 4. **Authentication** → Settings → **Authorized domains**. Include:
    - `localhost`
    - your GitHub Pages host (e.g. `mydomshurt.github.io`)
-   - `breathe-easy-dashboard.netlify.app` (technician dashboard)
-   - `breathe-easy-schedule.netlify.app` (office Scheduling App — **add this if it is not already listed**)
+   - `breathe-easy-td.netlify.app` (**add this** — technician TD)
+   - `breathe-easy-booking.netlify.app` (**add this** — office Booking)
+   - Old hosts can stay listed if they still redirect: `breathe-easy-dashboard.netlify.app`, `breathe-easy-schedule.netlify.app`
 5. Enable **Google** sign-in if it is not already on (TD already uses it).
 
 Do not deploy a service account or private key into this repo. The web config in `shared/firebase-config.js` / `td/js/auth.js` is the existing client key.

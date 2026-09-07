@@ -4,15 +4,15 @@ This file is a fence, not a design of the next slice. `/schedule` writes canonic
 
 ## One product, two faces
 
-- **Scheduling App** (`/schedule`) — office places, edits, moves, and deletes bookings.
-- **Technician Dashboard** (`/td`) — technicians view their jobs and performance.
+- **Booking** (`/schedule`) — office places, edits, moves, and deletes bookings.
+- **TD** (`/td`) — technicians view their jobs and performance.
 
 They must share **one job record**. Do not grow two incompatible shapes.
 
 ## Writer / reader
 
-- Scheduling App is the **writer**.
-- Technician Dashboard is the **reader**.
+- Booking is the **writer**.
+- TD is the **reader**.
 - [`shared/store.js`](shared/store.js) is the **source of truth**. See [`shared/store.md`](shared/store.md) and [`FIRESTORE.md`](FIRESTORE.md).
 - **Live adapter:** Firestore collection `jobs` on project `breathe-easy-performance`, when Firebase is initialised and an allowlisted user is signed in.
 - **Fallback adapter:** local `be-ops-jobs`. Do not reuse `be-scheduler-v2-roster`.

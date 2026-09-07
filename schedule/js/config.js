@@ -1,6 +1,6 @@
 /** Shared operational config. Mirrors the live viewer’s teams, districts, and job shape. */
 
-export const APP_NAME = 'Breathe-Easy Scheduler';
+export const APP_NAME = 'Booking';
 export const TODAY = '2026-08-19';
 
 export const TEAMS = ['Josh', 'Matthew', 'Tiago', 'Nick', 'Alun', 'Iggi'];

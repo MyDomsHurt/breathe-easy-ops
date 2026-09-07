@@ -1,5 +1,5 @@
-/* Live Schedule — cache enough shell to launch standalone. */
-const CACHE = 'live-schedule-v1';
+/* TD — cache enough shell to launch standalone. */
+const CACHE = 'td-v1';
 const SHELL = [
   '/',
   '/index.html',

@@ -547,7 +547,7 @@ function bindOwnerTools() {
         toast('Local demo reset is only for the offline fallback');
         return;
       }
-      if (confirm('Reset prototype bookings back to the seed schedule?')) {
+      if (confirm('Reset local demo bookings back to the seed schedule?')) {
         resetDemo();
         paint();
         toast('Demo data reset');
@@ -574,6 +574,6 @@ startScheduleAuth()
     console.error(err);
     const el = document.getElementById('boardMount');
     if (el) {
-      el.innerHTML = '<p style="padding:24px;color:#b91c1c">Could not start the scheduler. Sign in with an authorised Google account, then hard-refresh.</p>';
+      el.innerHTML = '<p style="padding:24px;color:#b91c1c">Could not start Booking. Sign in with an authorised Google account, then hard-refresh.</p>';
     }
   });

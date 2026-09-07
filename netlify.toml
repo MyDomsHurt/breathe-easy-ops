@@ -1,6 +1,7 @@
-# breathe-easy-dashboard (https://breathe-easy-dashboard.netlify.app/)
+# breathe-easy-td (https://breathe-easy-td.netlify.app/)
 # Publish /td only. Never publish the repo root (that would serve /schedule as TD).
 # Copy shared/ into the publish tree so live-jobs.js can load Firestore.
+# Booking is a separate Netlify site: https://breathe-easy-booking.netlify.app/ (publish schedule/).
 
 [build]
   command = "rm -rf td/shared && mkdir -p td/shared && cp -R shared/. td/shared/"

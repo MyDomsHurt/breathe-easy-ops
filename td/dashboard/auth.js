@@ -108,7 +108,7 @@
     if (ALLOWED.indexOf(email) === -1) {
       auth.signOut().then(function () {
         showGate();
-        setError("This Google account is not authorised for this dashboard.");
+        setError("This Google account is not authorised for Performance.");
       });
       return;
     }

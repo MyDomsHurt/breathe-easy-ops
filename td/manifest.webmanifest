@@ -1,6 +1,6 @@
 {
-  "name": "Live Schedule",
-  "short_name": "Live Schedule",
+  "name": "TD",
+  "short_name": "TD",
   "description": "Breathe-Easy technician jobs",
   "display": "standalone",
   "start_url": "/",

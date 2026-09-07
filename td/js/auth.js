@@ -144,7 +144,7 @@
       if (!isAllowed(user.email)) {
         auth.signOut().then(function () {
           showLogin();
-          setError("This Google account is not authorised for the scheduler.");
+          setError("This Google account is not authorised for TD.");
         });
         return;
       }

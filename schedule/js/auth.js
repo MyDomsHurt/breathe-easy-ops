@@ -74,7 +74,7 @@ export function startScheduleAuth() {
       if (!isAllowedEmail(user.email)) {
         auth.signOut().then(() => {
           showLogin();
-          setError('This Google account is not authorised for the scheduler.');
+          setError('This Google account is not authorised for Booking.');
         });
         return;
       }

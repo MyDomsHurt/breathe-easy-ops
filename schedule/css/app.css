@@ -48,21 +48,22 @@ button, input, select, textarea { font-family: inherit; }
 }
 
 .header-inner {
-  max-width: 1580px;
-  margin: 0 auto;
-  padding: 10px 16px;
+  max-width: none;
+  margin: 0;
+  padding: 8px 12px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   text-decoration: none;
   color: inherit;
-  min-width: 190px;
+  min-width: 0;
+  flex: 0 0 auto;
 }
 
 .brand-mark {
@@ -86,6 +87,7 @@ button, input, select, textarea { font-family: inherit; }
   border-radius: 10px;
   padding: 3px;
   gap: 2px;
+  flex: 0 0 auto;
 }
 
 .nav-switch a, .nav-switch button {
@@ -110,9 +112,9 @@ button, input, select, textarea { font-family: inherit; }
 
 .header-search {
   position: relative;
-  flex: 1;
-  min-width: 180px;
-  max-width: 480px;
+  flex: 1 1 160px;
+  min-width: 140px;
+  max-width: 260px;
 }
 
 .header-search input {
@@ -201,6 +203,7 @@ button, input, select, textarea { font-family: inherit; }
   display: flex;
   align-items: center;
   gap: 6px;
+  flex: 0 0 auto;
 }
 
 .icon-btn, .ghost-btn, .primary-btn {
@@ -229,12 +232,14 @@ button, input, select, textarea { font-family: inherit; }
   border-color: var(--brand);
   padding: 8px 12px;
   font-size: 13px;
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .primary-btn:hover { background: #0c4a6e; }
 .icon-btn:hover, .ghost-btn:hover { background: #f8fafc; }
 
-.week-label { font-weight: 700; font-size: 14px; min-width: 168px; text-align: center; }
+.week-label { font-weight: 700; font-size: 13px; min-width: 118px; text-align: center; white-space: nowrap; }
 
 .month-select {
   border: 1px solid var(--line);
@@ -247,14 +252,11 @@ button, input, select, textarea { font-family: inherit; }
   cursor: pointer;
 }
 
-.filters {
-  max-width: 1580px;
-  margin: 0 auto;
-  padding: 10px 16px 0;
+.header-filters {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
   align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
 }
 
 .filter-dd { position: relative; }
@@ -264,11 +266,11 @@ button, input, select, textarea { font-family: inherit; }
   background: white;
   color: var(--ink);
   border-radius: 10px;
-  padding: 6px 28px 6px 10px;
-  font-size: 13px;
+  padding: 6px 26px 6px 8px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  min-width: 118px;
+  min-width: 102px;
   text-align: left;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235b6b7c' d='M3 4.5L6 8l3-3.5'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
@@ -288,7 +290,7 @@ button, input, select, textarea { font-family: inherit; }
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
-  z-index: 30;
+  z-index: 50;
   min-width: 196px;
   max-height: min(70vh, 360px);
   overflow: auto;
@@ -343,36 +345,31 @@ button, input, select, textarea { font-family: inherit; }
 .chip.type-influencer.on { background: #7c3aed; }
 .chip.district.on { background: #334155; }
 
-.legend {
-  margin-left: auto;
+.board-legend {
   display: flex;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 8px 12px;
   align-items: center;
-  font-size: 11px;
+  font-size: 10px;
   color: var(--muted);
   font-weight: 600;
+  margin: 0 0 6px 2px;
+  line-height: 1.2;
 }
 
-.legend i {
+.board-legend i {
   display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
   margin-right: 4px;
   vertical-align: -1px;
 }
 
 .page {
-  max-width: 1580px;
-  margin: 0 auto;
-  padding: 12px 16px 40px;
-}
-
-.board-layout {
-  display: grid;
-  grid-template-columns: 132px minmax(0, 1fr);
-  gap: 12px;
-  align-items: start;
+  max-width: none;
+  margin: 0;
+  padding: 8px 12px 32px;
 }
 
 .appt-tray {
@@ -1359,6 +1356,7 @@ button.day-col-head:hover { background: #e0f2fe; }
   align-items: center;
   gap: 8px;
   margin-left: auto;
+  flex: 0 0 auto;
 }
 .user-chip {
   font-size: 12px;
@@ -1374,14 +1372,7 @@ button.day-col-head:hover { background: #e0f2fe; }
   .brand { min-width: 0; }
   .header-spacer { display: none; }
   .header-search { max-width: none; order: 5; flex-basis: 100%; }
-  .legend { display: none; }
+  .header-filters { order: 6; }
   .jobs-table { display: block; overflow: auto; }
   .drawer { width: 100%; }
-  .board-layout {
-    grid-template-columns: 1fr;
-  }
-  .appt-tray {
-    position: static;
-    max-width: 220px;
-  }
 }

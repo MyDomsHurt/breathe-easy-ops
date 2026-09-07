@@ -50,6 +50,21 @@
         <div id="searchHits" class="search-hits" hidden></div>
       </div>
 
+      <div class="header-filters">
+        <div class="filter-dd" id="teamFilter">
+          <button type="button" class="filter-dd-btn" id="teamFilterBtn" aria-haspopup="true" aria-expanded="false" aria-controls="teamFilterMenu">All teams</button>
+          <div class="filter-dd-menu" id="teamFilterMenu" hidden></div>
+        </div>
+        <div class="filter-dd" id="districtFilter">
+          <button type="button" class="filter-dd-btn" id="districtFilterBtn" aria-haspopup="true" aria-expanded="false" aria-controls="districtFilterMenu">All areas</button>
+          <div class="filter-dd-menu" id="districtFilterMenu" hidden></div>
+        </div>
+        <div class="filter-dd" id="typeFilter">
+          <button type="button" class="filter-dd-btn" id="typeFilterBtn" aria-haspopup="true" aria-expanded="false" aria-controls="typeFilterMenu">All types</button>
+          <div class="filter-dd-menu" id="typeFilterMenu" hidden></div>
+        </div>
+      </div>
+
       <div class="week-nav">
         <button class="icon-btn" id="prevWeek" aria-label="Previous week">‹</button>
         <div class="week-label" id="weekLabel">This week</div>
@@ -68,37 +83,13 @@
     </div>
   </header>
 
-  <div class="filters">
-    <div class="filter-dd" id="teamFilter">
-      <button type="button" class="filter-dd-btn" id="teamFilterBtn" aria-haspopup="true" aria-expanded="false" aria-controls="teamFilterMenu">All teams</button>
-      <div class="filter-dd-menu" id="teamFilterMenu" hidden></div>
-    </div>
-    <div class="filter-dd" id="districtFilter">
-      <button type="button" class="filter-dd-btn" id="districtFilterBtn" aria-haspopup="true" aria-expanded="false" aria-controls="districtFilterMenu">All areas</button>
-      <div class="filter-dd-menu" id="districtFilterMenu" hidden></div>
-    </div>
-    <div class="filter-dd" id="typeFilter">
-      <button type="button" class="filter-dd-btn" id="typeFilterBtn" aria-haspopup="true" aria-expanded="false" aria-controls="typeFilterMenu">All types</button>
-      <div class="filter-dd-menu" id="typeFilterMenu" hidden></div>
-    </div>
-    <div class="legend">
-      <span><i style="background:#ecfdf5;border:1px solid #86efac"></i>Empty day</span>
-      <span><i style="background:repeating-linear-gradient(-45deg,#fdba74,#fdba74 2px,#fff7ed 2px,#fff7ed 4px)"></i>Return</span>
-      <span><i style="background:#7c3aed"></i>Influencer</span>
-    </div>
-  </div>
-
   <main class="page">
-    <section id="viewBoard" class="board-layout">
-      <aside class="appt-tray" aria-label="New appointment">
-        <div class="tray-label">Drag onto a team-day</div>
-        <button type="button" class="blank-appt" id="blankAppt" draggable="true">
-          <div class="blank-appt-kicker">New appointment</div>
-          <div class="blank-line"></div>
-          <div class="blank-line short"></div>
-          <div class="blank-line"></div>
-        </button>
-      </aside>
+    <section id="viewBoard">
+      <div class="board-legend">
+        <span><i style="background:#ecfdf5;border:1px solid #86efac"></i>Empty day</span>
+        <span><i style="background:repeating-linear-gradient(-45deg,#fdba74,#fdba74 2px,#fff7ed 2px,#fff7ed 4px)"></i>Return</span>
+        <span><i style="background:#7c3aed"></i>Influencer</span>
+      </div>
       <div id="boardMount"></div>
     </section>
 

@@ -77,12 +77,14 @@ function cellHtml(allJobs, displayJobs, date, team, mode) {
   const vanLabel = van || "Who's on";
   return `<div class="roster-cell ${empty ? 'empty' : 'has-jobs'} ${mode === 'day' ? 'day-cell' : ''}" data-date="${date}" data-team="${team}">
     <div class="cell-top">
-      <span class="cell-status">${empty ? 'Open' : list.length + ' job' + (list.length === 1 ? '' : 's')}</span>
+      <div class="cell-head-left">
+        <span class="cell-status">${empty ? 'Open' : list.length + ' job' + (list.length === 1 ? '' : 's')}</span>
+        <button class="cell-add" data-book-date="${date}" data-book-team="${team}" type="button" aria-label="Add booking">+</button>
+      </div>
       ${districtChipsHtml(districts)}
     </div>
     <button type="button" class="cell-van${van ? '' : ' is-empty'}" data-edit-van="${esc(date)}" data-edit-van-team="${esc(team)}" data-van-value="${esc(van)}" title="${esc(van ? van : 'Set who is on the van')}">${esc(vanLabel)}</button>
     <div class="job-chips">${body}</div>
-    <button class="book-here" data-book-date="${date}" data-book-team="${team}" type="button">+ Add</button>
   </div>`;
 }
 

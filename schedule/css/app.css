@@ -524,6 +524,34 @@ button.day-col-head:hover { background: #e0f2fe; }
   gap: 6px;
 }
 
+.cell-head-left {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cell-add {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid var(--line);
+  background: white;
+  color: var(--muted);
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.cell-add:hover {
+  border-color: #7dd3fc;
+  color: var(--brand-ink);
+  background: #e0f2fe;
+}
+
 .dist-chips {
   display: flex;
   flex-wrap: wrap;
@@ -746,27 +774,6 @@ button.day-col-head:hover { background: #e0f2fe; }
 .tag.return { background: #d97706; }
 .tag.tentative { background: #ca8a04; }
 .tag.influencer { background: #7c3aed; }
-
-.book-here {
-  margin-top: auto;
-  border: 1px dashed #86efac;
-  background: rgba(236, 253, 245, .7);
-  color: #047857;
-  border-radius: 8px;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 4px 6px;
-  text-align: center;
-  width: 100%;
-  cursor: pointer;
-  font: inherit;
-}
-
-.roster-cell.has-jobs .book-here {
-  border-color: #cbd5e1;
-  background: #f8fafc;
-  color: #475569;
-}
 
 .day-roster-head {
   padding: 10px 14px;

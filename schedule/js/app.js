@@ -1,5 +1,5 @@
 import { DISTRICTS, JOB_TYPES, TEAMS } from './config.js';
-import { addDays, formatDay, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, pad, parseISO, shortTime, workWeekDays } from './utils.js';
+import { addDays, formatDay, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, pad, parseISO, shortTime, weekDays, workWeekDays } from './utils.js';
 import { allJobs, getJob, importExistingJobs, redo, removeJob, reorderStack, resetDemo, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js';
 import { startScheduleAuth } from './auth.js';
 import { hasTimeConflict, jobsForTeamDay, nextStackOrder } from './capacity.js';
@@ -30,14 +30,55 @@ const state = {
   types: [],
   query: '',
   focusJobId: '',
+  showSunday: false,
 };
 
 function $(id) {
   return document.getElementById(id);
 }
 
+function sundayOfWeek(mondayIso) {
+  return addDays(mondayIso, 6);
+}
+
+function isSunday(iso) {
+  return parseISO(iso).getDay() === 0;
+}
+
+function boardDays() {
+  return state.showSunday ? weekDays(state.monday) : workWeekDays(state.monday);
+}
+
 function visibleDates() {
-  return state.mode === 'day' ? [state.day] : workWeekDays(state.monday);
+  return state.mode === 'day' ? [state.day] : boardDays();
+}
+
+function sundayJobCount() {
+  const sun = sundayOfWeek(state.monday);
+  return allJobs().filter((j) => {
+    if (j.date !== sun) return false;
+    if (state.teams.length && !state.teams.includes(j.team_lead)) return false;
+    if (state.districts.length && !state.districts.includes(j.district)) return false;
+    if (state.types.length && !state.types.includes(jobTypeOf(j))) return false;
+    return true;
+  }).length;
+}
+
+function syncSundayUi() {
+  const btn = $('sundayToggle');
+  if (btn) {
+    btn.classList.toggle('on', state.showSunday);
+    btn.setAttribute('aria-pressed', state.showSunday ? 'true' : 'false');
+  }
+  const cue = $('sundayCue');
+  if (!cue) return;
+  const n = state.showSunday ? 0 : sundayJobCount();
+  if (n > 0) {
+    cue.hidden = false;
+    cue.textContent = `${n} on Sunday`;
+  } else {
+    cue.hidden = true;
+  }
 }
 
 function teamJobs() {
@@ -61,10 +102,10 @@ function paint() {
   const mount = $('boardMount');
   if (!label || !mount) return;
   const jobs = filteredJobs();
-  const days = workWeekDays(state.monday);
+  const days = boardDays();
   label.textContent = state.mode === 'day'
     ? formatDay(state.day, { weekday: 'short', year: 'numeric' })
-    : formatWeekLabel(state.monday);
+    : formatWeekLabel(state.monday, state.showSunday);
   $('prevWeek').setAttribute('aria-label', state.mode === 'day' ? 'Previous day' : 'Previous week');
   $('nextWeek').setAttribute('aria-label', state.mode === 'day' ? 'Next day' : 'Next week');
   const monthSel = $('monthSelect');
@@ -89,6 +130,7 @@ function paint() {
     renderJobsList($('jobsMount'), jobs, state.query);
   }
   syncFilterUi();
+  syncSundayUi();
   focusJobOnBoard();
 }
 
@@ -106,6 +148,7 @@ function goToJob(job) {
   state.mode = 'week';
   state.monday = mondayOf(job.date);
   state.day = job.date;
+  if (isSunday(job.date)) state.showSunday = true;
   state.focusJobId = job.job_id;
   hideSearchHits();
   paint();
@@ -442,7 +485,7 @@ function bindChrome() {
     el.addEventListener('click', () => {
       state.mode = el.dataset.mode;
       if (state.mode === 'day') {
-        const days = workWeekDays(state.monday);
+        const days = boardDays();
         state.day = days.includes(TODAY) ? TODAY : state.monday;
       }
       paint();
@@ -484,6 +527,20 @@ function bindChrome() {
   $('newBooking').addEventListener('click', () => {
     openBooking({ date: state.mode === 'day' ? state.day : TODAY });
   });
+  const sundayBtn = $('sundayToggle');
+  if (sundayBtn) {
+    sundayBtn.addEventListener('click', () => {
+      state.showSunday = !state.showSunday;
+      paint();
+    });
+  }
+  const sundayCue = $('sundayCue');
+  if (sundayCue) {
+    sundayCue.addEventListener('click', () => {
+      state.showSunday = true;
+      paint();
+    });
+  }
   bindSearch();
   $('modalRoot').addEventListener('click', (e) => {
     const edit = e.target.closest('[data-edit-job]');

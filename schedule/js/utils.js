@@ -46,8 +46,8 @@ export function workWeekDays(mondayIso) {
   return Array.from({ length: 6 }, (_, i) => addDays(mondayIso, i));
 }
 
-export function formatWeekLabel(mondayIso) {
-  const end = addDays(mondayIso, 5);
+export function formatWeekLabel(mondayIso, includeSunday) {
+  const end = addDays(mondayIso, includeSunday ? 6 : 5);
   const a = parseISO(mondayIso);
   const b = parseISO(end);
   const sameMonth = a.getMonth() === b.getMonth();

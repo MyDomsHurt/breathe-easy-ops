@@ -1,5 +1,6 @@
 import { TEAM_META } from './config.js';
-import { conflictingJobIds, districtsForTeamOnDay, jobsForTeamDay, teamMembersOnDay } from './capacity.js';
+import { conflictingJobIds, districtsForTeamOnDay, jobsForTeamDay } from './capacity.js';
+import { cellTeamMembers } from './team-day.js';
 import { districtChipsHtml, esc, formatDay, formatMoney, isToday, isWeekend, jobStatus, jobTypeOf, shortAddress, shortNotes, shortTime } from './utils.js';
 
 function teamColor(name) {
@@ -72,11 +73,14 @@ function cellHtml(allJobs, displayJobs, date, team, mode) {
   const body = mode === 'day'
     ? shown.map((j) => cardHtml(j, conflicts.has(j.job_id))).join('')
     : shown.map((j) => chipHtml(j, conflicts.has(j.job_id))).join('');
+  const van = cellTeamMembers(allJobs, date, team);
+  const vanLabel = van || "Who's on";
   return `<div class="roster-cell ${empty ? 'empty' : 'has-jobs'} ${mode === 'day' ? 'day-cell' : ''}" data-date="${date}" data-team="${team}">
     <div class="cell-top">
       <span class="cell-status">${empty ? 'Open' : list.length + ' job' + (list.length === 1 ? '' : 's')}</span>
       ${districtChipsHtml(districts)}
     </div>
+    <button type="button" class="cell-van${van ? '' : ' is-empty'}" data-edit-van="${esc(date)}" data-edit-van-team="${esc(team)}" data-van-value="${esc(van)}" title="${esc(van ? van : 'Set who is on the van')}">${esc(vanLabel)}</button>
     <div class="job-chips">${body}</div>
     <button class="book-here" data-book-date="${date}" data-book-team="${team}" type="button">+ Add</button>
   </div>`;
@@ -110,13 +114,11 @@ export function renderWeekBoard(el, { jobs, chipJobs, days, teams }) {
 export function renderDayBoard(el, { jobs, chipJobs, date, teams }) {
   const shown = chipJobs || jobs;
   const cols = teams.map((team) => {
-    const members = teamMembersOnDay(jobs, date, team);
     return `<div class="day-col">
       <div class="day-col-team" style="--team:${teamColor(team)}">
         <span class="team-dot" style="background:${teamColor(team)}"></span>
         <div>
           <strong>${team}</strong>
-          <div class="cell-members">${members}</div>
         </div>
       </div>
       ${cellHtml(jobs, shown, date, team, 'day')}

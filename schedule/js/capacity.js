@@ -1,5 +1,6 @@
 import { TEAM_META, TEAMS } from './config.js';
 import { startMinutes, timeToMinutes } from './utils.js';
+import { consensusTeamMembers, getTeamDayNote } from './team-day.js';
 
 export function sortByTime(jobs) {
   return jobs.slice().sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
@@ -35,8 +36,10 @@ export function nextStackOrder(jobs, date, team, exceptId) {
 }
 
 export function teamMembersOnDay(jobs, date, team) {
-  const hit = jobs.find((j) => j.date === date && j.team_lead === team && j.team_members);
-  return hit?.team_members || TEAM_META[team]?.members || team;
+  return consensusTeamMembers(jobs, date, team)
+    || getTeamDayNote(date, team)
+    || TEAM_META[team]?.members
+    || team;
 }
 
 export function districtsForTeamOnDay(jobs, date, team) {

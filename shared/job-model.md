@@ -42,7 +42,7 @@ Placement on that grid also needs `date`, `week` (optional/derived), `team_lead`
 | `date` | yes | `YYYY-MM-DD` | Day of the job. |
 | `time` | yes | string | Free-form. Empty string if unknown. Never a required `morning`/`afternoon` slot. |
 | `team_lead` | yes | string | Row on the week board (Josh, Matthew, Tiago, Nick, Alun, Iggi). |
-| `team_members` | optional | string \| null | Who is on the van that day. |
+| `team_members` | optional | string \| null | Who is on the van that day. Booking writes one string onto every job on that team-day. Empty days keep a local note (`be-ops-team-day-members`) until the first job is created. |
 | `client_name` | yes | string | Sheet **Name**. |
 | `mobile` | yes | string \| null | Sheet **Mobile**. |
 | `address` | yes | string \| null | Sheet **Address**. |

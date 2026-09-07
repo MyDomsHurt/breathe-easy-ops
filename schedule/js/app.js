@@ -1,6 +1,6 @@
 import { DISTRICTS, JOB_TYPES, TEAMS } from './config.js';
 import { addDays, formatDay, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, pad, parseISO, shortTime, weekDays, workWeekDays } from './utils.js';
-import { allJobs, getJob, importExistingJobs, redo, removeJob, reorderStack, resetDemo, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js';
+import { allJobs, getJob, importExistingJobs, redo, removeJob, reorderStack, resetDemo, setTeamDayMembers, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js';
 import { startScheduleAuth } from './auth.js';
 import { hasTimeConflict, jobsForTeamDay, nextStackOrder } from './capacity.js';
 import { renderDayBoard, renderWeekBoard } from './board.js';
@@ -177,12 +177,60 @@ function fillMonthSelect() {
   sel.value = monthKey(state.monday);
 }
 
+function startVanEdit(btn) {
+  const date = btn.dataset.editVan;
+  const team = btn.dataset.editVanTeam;
+  const current = btn.dataset.vanValue || '';
+  if (!date || !team) return;
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'cell-van-input';
+  input.value = current;
+  input.setAttribute('aria-label', 'Who is on the van');
+  btn.replaceWith(input);
+  input.focus();
+  input.select();
+  let done = false;
+  function finish(save) {
+    if (done) return;
+    done = true;
+    if (save) {
+      const next = input.value.trim();
+      if (next !== current) {
+        setTeamDayMembers(date, team, next);
+        toast(next ? `Van: ${next}` : 'Van cleared');
+        return;
+      }
+    }
+    paint();
+  }
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      input.blur();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      finish(false);
+    }
+  });
+  input.addEventListener('mousedown', (e) => e.stopPropagation());
+  input.addEventListener('click', (e) => e.stopPropagation());
+  input.addEventListener('blur', () => finish(true));
+}
+
 function bindBoardClicks() {
   $('boardMount').addEventListener('click', (e) => {
     if (suppressClick) {
       suppressClick = false;
       e.preventDefault();
       e.stopPropagation();
+      return;
+    }
+    const van = e.target.closest('[data-edit-van]');
+    if (van) {
+      e.preventDefault();
+      e.stopPropagation();
+      startVanEdit(van);
       return;
     }
     const chip = e.target.closest('[data-job]');

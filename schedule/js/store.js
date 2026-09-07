@@ -16,6 +16,7 @@ import {
 } from '../../shared/store.js';
 import { fromScheduleJob } from '../../shared/job.js';
 import { shouldUseFirestore } from '../../shared/firebase-config.js';
+import { setTeamDayNote } from './team-day.js';
 
 const listeners = new Set();
 
@@ -101,6 +102,17 @@ function clearHistory() {
   redoStack = [];
 }
 
+function pickTeamMembers(input, prev) {
+  if (Object.prototype.hasOwnProperty.call(input, 'team_members')) {
+    return input.team_members == null ? '' : String(input.team_members).trim();
+  }
+  const lead = input.team_lead || (prev && prev.team_lead);
+  return (prev && prev.team_members)
+    || TEAM_META[lead]?.members
+    || lead
+    || '';
+}
+
 function toCanonical(input, prev) {
   const type = input.job_type || (input.is_return ? 'return' : 'cleaning');
   const acs = type === 'return'
@@ -113,11 +125,7 @@ function toCanonical(input, prev) {
     acs,
     job_type: type,
     is_return: type === 'return',
-    team_members:
-      input.team_members
-      || (prev && prev.team_members)
-      || TEAM_META[input.team_lead]?.members
-      || input.team_lead,
+    team_members: pickTeamMembers(input, prev),
     source: (prev && prev.source) || input.source || 'local',
     deleted: false,
   });
@@ -142,6 +150,30 @@ export function addJob(input) {
   pushHistory({ type: 'add', job: snapshot(job) });
   emit();
   return job;
+}
+
+export function setTeamDayMembers(date, team, members) {
+  const value = String(members || '').trim();
+  setTeamDayNote(date, team, value);
+  const list = allJobs().filter((j) => j.date === date && j.team_lead === team);
+  if (!list.length) {
+    emit();
+    return { count: 0, members: value };
+  }
+  const befores = [];
+  const afters = [];
+  recording = false;
+  for (const prev of list) {
+    if (String(prev.team_members || '').trim() === value) continue;
+    befores.push(snapshot(prev));
+    afters.push(snapshot(writeJob(toCanonical({ ...prev, team_members: value }, prev))));
+  }
+  recording = true;
+  if (afters.length) {
+    pushHistory({ type: 'batch', kind: 'edit', before: befores, after: afters });
+  }
+  emit();
+  return { count: afters.length, members: value };
 }
 
 export function updateJob(id, input) {
@@ -191,7 +223,7 @@ export function undo() {
   recording = false;
   if (entry.type === 'add') eraseJob(entry.job.job_id);
   else if (entry.type === 'remove') writeJob(entry.job);
-  else if (entry.type === 'reorder') entry.before.forEach((j) => writeJob(j));
+  else if (entry.type === 'reorder' || entry.type === 'batch') entry.before.forEach((j) => writeJob(j));
   else if (entry.type === 'update') writeJob(entry.before);
   recording = true;
   redoStack.push(entry);
@@ -205,7 +237,7 @@ export function redo() {
   recording = false;
   if (entry.type === 'add') writeJob(entry.job);
   else if (entry.type === 'remove') eraseJob(entry.job.job_id);
-  else if (entry.type === 'reorder') entry.after.forEach((j) => writeJob(j));
+  else if (entry.type === 'reorder' || entry.type === 'batch') entry.after.forEach((j) => writeJob(j));
   else if (entry.type === 'update') writeJob(entry.after);
   recording = true;
   undoStack.push(entry);

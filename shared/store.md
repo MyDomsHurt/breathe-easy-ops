@@ -3,6 +3,7 @@
 Source of truth for jobs. **`/schedule` is the writer. `/td` is the reader.**
 
 - Records are canonical ([`job-model.md`](job-model.md))
+- Van crew for a team-day is a job-shaped note (`source: team-day-crew`, `job_id: crew-YYYY-MM-DD-{team}`). It is not a booking. See [`team-day.js`](team-day.js).
 - `time` is free-form. Do not reintroduce required slots.
 - **Live:** Firestore `jobs` on `breathe-easy-performance` when an allowlisted user is signed in.
 - **Fallback:** local `be-ops-jobs`. Not `be-scheduler-v2-roster`.

@@ -1,4 +1,5 @@
 import { DISTRICTS, JOB_TYPES, TEAMS } from './config.js';
+import { isCrewNote } from './team-day.js';
 import { addDays, formatDay, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, pad, parseISO, shortTime, weekDays, workWeekDays } from './utils.js';
 import { allJobs, getJob, importExistingJobs, redo, removeJob, reorderStack, resetDemo, setTeamDayMembers, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js';
 import { startScheduleAuth } from './auth.js';
@@ -56,6 +57,7 @@ function visibleDates() {
 function sundayJobCount() {
   const sun = sundayOfWeek(state.monday);
   return allJobs().filter((j) => {
+    if (isCrewNote(j)) return false;
     if (j.date !== sun) return false;
     if (state.teams.length && !state.teams.includes(j.team_lead)) return false;
     if (state.districts.length && !state.districts.includes(j.district)) return false;
@@ -84,7 +86,8 @@ function syncSundayUi() {
 function teamJobs() {
   const dates = new Set(visibleDates());
   return allJobs().filter((j) => (
-    dates.has(j.date)
+    !isCrewNote(j)
+    && dates.has(j.date)
     && (!state.teams.length || state.teams.includes(j.team_lead))
   ));
 }
@@ -122,9 +125,9 @@ function paint() {
   if (state.view === 'board') {
     const rosterJobs = teamJobs();
     if (state.mode === 'week') {
-      renderWeekBoard($('boardMount'), { jobs: rosterJobs, chipJobs: jobs, days, teams: state.teams });
+      renderWeekBoard($('boardMount'), { jobs: rosterJobs, chipJobs: jobs, days, teams: state.teams, lookupJobs: allJobs() });
     } else {
-      renderDayBoard($('boardMount'), { jobs: rosterJobs, chipJobs: jobs, date: state.day, teams: state.teams });
+      renderDayBoard($('boardMount'), { jobs: rosterJobs, chipJobs: jobs, date: state.day, teams: state.teams, lookupJobs: allJobs() });
     }
   } else {
     renderJobsList($('jobsMount'), jobs, state.query);
@@ -675,11 +678,11 @@ function bindSearch() {
   if (!input || !box) return;
   input.addEventListener('input', () => {
     state.query = input.value;
-    renderSearchHits(box, allJobs(), state.query);
+    renderSearchHits(box, allJobs().filter((j) => !isCrewNote(j)), state.query);
     if (state.view === 'jobs') paint();
   });
   input.addEventListener('focus', () => {
-    renderSearchHits(box, allJobs(), input.value);
+    renderSearchHits(box, allJobs().filter((j) => !isCrewNote(j)), input.value);
   });
   input.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter') return;

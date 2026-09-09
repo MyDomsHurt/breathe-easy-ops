@@ -5,6 +5,7 @@
 
 import { createStore, createFirestoreAdapter } from '../../shared/store.js';
 import { ensureFirebaseApp, shouldUseFirestore } from '../../shared/firebase-config.js';
+import '../../shared/team-day.js';
 
 window.BELoadLiveJobs = async function BELoadLiveJobs() {
   try {

@@ -64,7 +64,7 @@ function cardHtml(job, conflict) {
   </button>`;
 }
 
-function cellHtml(allJobs, displayJobs, date, team, mode) {
+function cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs) {
   const list = jobsForTeamDay(allJobs, date, team);
   const shown = jobsForTeamDay(displayJobs, date, team);
   const empty = list.length === 0;
@@ -73,7 +73,7 @@ function cellHtml(allJobs, displayJobs, date, team, mode) {
   const body = mode === 'day'
     ? shown.map((j) => cardHtml(j, conflicts.has(j.job_id))).join('')
     : shown.map((j) => chipHtml(j, conflicts.has(j.job_id))).join('');
-  const van = cellTeamMembers(allJobs, date, team);
+  const van = cellTeamMembers(lookupJobs || allJobs, date, team);
   const vanLabel = van || "Who's on";
   return `<div class="roster-cell ${empty ? 'empty' : 'has-jobs'} ${mode === 'day' ? 'day-cell' : ''}" data-date="${date}" data-team="${team}">
     <div class="cell-top">
@@ -88,8 +88,9 @@ function cellHtml(allJobs, displayJobs, date, team, mode) {
   </div>`;
 }
 
-export function renderWeekBoard(el, { jobs, chipJobs, days, teams }) {
+export function renderWeekBoard(el, { jobs, chipJobs, days, teams, lookupJobs }) {
   const shown = chipJobs || jobs;
+  const lookup = lookupJobs || jobs;
   const heads = days.map((d) => {
     const cls = [isToday(d) ? 'today' : '', isWeekend(d) ? 'weekend' : ''].join(' ');
     return `<button class="day-col-head ${cls}" data-open-day="${d}" type="button">
@@ -99,7 +100,7 @@ export function renderWeekBoard(el, { jobs, chipJobs, days, teams }) {
   }).join('');
 
   const rows = teams.map((team) => {
-    const cells = days.map((date) => cellHtml(jobs, shown, date, team, 'week')).join('');
+    const cells = days.map((date) => cellHtml(jobs, shown, date, team, 'week', lookup)).join('');
     return `<div class="team-row-label" style="--team:${teamColor(team)}">
       <span class="team-dot" style="background:${teamColor(team)}"></span>
       <strong>${team}</strong>
@@ -113,8 +114,9 @@ export function renderWeekBoard(el, { jobs, chipJobs, days, teams }) {
   </div></div>`;
 }
 
-export function renderDayBoard(el, { jobs, chipJobs, date, teams }) {
+export function renderDayBoard(el, { jobs, chipJobs, date, teams, lookupJobs }) {
   const shown = chipJobs || jobs;
+  const lookup = lookupJobs || jobs;
   const cols = teams.map((team) => {
     return `<div class="day-col">
       <div class="day-col-team" style="--team:${teamColor(team)}">
@@ -123,7 +125,7 @@ export function renderDayBoard(el, { jobs, chipJobs, date, teams }) {
           <strong>${team}</strong>
         </div>
       </div>
-      ${cellHtml(jobs, shown, date, team, 'day')}
+      ${cellHtml(jobs, shown, date, team, 'day', lookup)}
     </div>`;
   }).join('');
 

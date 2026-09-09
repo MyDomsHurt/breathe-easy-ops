@@ -42,7 +42,7 @@ Placement on that grid also needs `date`, `week` (optional/derived), `team_lead`
 | `date` | yes | `YYYY-MM-DD` | Day of the job. |
 | `time` | yes | string | Free-form. Empty string if unknown. Never a required `morning`/`afternoon` slot. |
 | `team_lead` | yes | string | Row on the week board (Josh, Matthew, Tiago, Nick, Alun, Iggi). |
-| `team_members` | optional | string \| null | Who is on the van that day. Booking writes one string onto every job on that team-day. Empty days keep a local note (`be-ops-team-day-members`) until the first job is created. |
+| `team_members` | optional | string \| null | Who is on the van that day. Booking writes a shared crew note (`source: team-day-crew`, `job_id: crew-YYYY-MM-DD-{team}`) and copies the same string onto every real job on that team-day. |
 | `client_name` | yes | string | Sheet **Name**. |
 | `mobile` | yes | string \| null | Sheet **Mobile**. |
 | `address` | yes | string \| null | Sheet **Address**. |
@@ -68,7 +68,7 @@ Placement on that grid also needs `date`, `week` (optional/derived), `team_lead`
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `slot` | string \| null | Old v2 capacity leftover (`morning` / `afternoon`). Present on `schedule/data/job-shape.json`, not on live seed jobs. Map if present. Not used to infer `time`. |
-| `source` | string \| null | Schedule seed tag (`schedule-master-2026-08-17`) or later writer tag. Keep if present. |
+| `source` | string \| null | Schedule seed tag (`schedule-master-2026-08-17`), writer tag, or `team-day-crew` for the shared van-crew note (not a booking). |
 
 Unknown keys on an old record are copied through so nothing is dropped.
 

@@ -561,9 +561,35 @@ function getRangeBounds(range) {
   return null;
 }
 
+function isCrewNote(job) {
+  if (window.BETeamDay && typeof window.BETeamDay.isCrewNote === 'function') {
+    return window.BETeamDay.isCrewNote(job);
+  }
+  return !!(job && (job.source === 'team-day-crew' || String(job.job_id || '').indexOf('crew-') === 0));
+}
+
+function cellTeamMembersFor(date, team) {
+  if (window.BETeamDay && typeof window.BETeamDay.cellTeamMembers === 'function') {
+    return window.BETeamDay.cellTeamMembers(allJobs, date, team);
+  }
+  return consensusTeamMembers(allJobs, date, team);
+}
+
+function visibleCrewNotes() {
+  const bounds = getRangeBounds(currentFilters.range);
+  return allJobs.filter(function (j) {
+    if (!isCrewNote(j) || j.deleted) return false;
+    if (currentFilters.team !== 'all' && j.team_lead !== currentFilters.team) return false;
+    if (currentFilters.date !== 'all' && j.date !== currentFilters.date) return false;
+    if (bounds && (j.date < bounds.start || j.date > bounds.end)) return false;
+    return !!String(j.team_members || '').trim();
+  });
+}
+
 function applyFilters() {
   const bounds = getRangeBounds(currentFilters.range);
   filtered = allJobs.filter(j => {
+    if (isCrewNote(j)) return false;
     if (j.deleted) return false;
     if (currentFilters.month !== 'all' && jobMonth(j) !== Number(currentFilters.month)) return false;
     if (currentFilters.team !== 'all' && j.team_lead !== currentFilters.team) return false;
@@ -627,7 +653,8 @@ function updateStatsPanel() {
 function render() {
   const container = document.getElementById('jobsContainer');
   const empty = document.getElementById('emptyState');
-  if (filtered.length === 0) {
+  const crewOnly = visibleCrewNotes();
+  if (filtered.length === 0 && crewOnly.length === 0) {
     container.innerHTML = '';
     empty.classList.remove('hidden');
     const title = document.getElementById('viewTitle');
@@ -667,6 +694,7 @@ function render() {
 function consensusTeamMembers(jobs, date, team) {
   const counts = {};
   (jobs || []).forEach(function (job) {
+    if (isCrewNote(job)) return;
     if (job.date !== date || job.team_lead !== team) return;
     const value = String(job.team_members || '').trim();
     if (!value) return;
@@ -686,14 +714,17 @@ function consensusTeamMembers(jobs, date, team) {
 
 function dayWhosOnHtml(jobs, date) {
   const leads = TEAMS.filter(function (team) {
-    return jobs.some(function (j) { return j.team_lead === team; });
+    return jobs.some(function (j) { return j.team_lead === team; })
+      || allJobs.some(function (j) {
+        return isCrewNote(j) && !j.deleted && j.date === date && j.team_lead === team;
+      });
   });
   jobs.forEach(function (j) {
     if (j.team_lead && leads.indexOf(j.team_lead) === -1) leads.push(j.team_lead);
   });
   if (!leads.length) return '';
   const lines = leads.map(function (team) {
-    const members = consensusTeamMembers(allJobs, date, team);
+    const members = cellTeamMembersFor(date, team);
     const who = members ? esc(members) : '\u2014';
     if (leads.length === 1) {
       return 'Who\u2019s on \u00b7 ' + who;
@@ -707,13 +738,16 @@ function dayWhosOnHtml(jobs, date) {
 
 function renderByDate(container) {
   const groups = groupBy(filtered, j => j.date);
-  const dates = Object.keys(groups).sort();
+  const dateSet = {};
+  Object.keys(groups).forEach(function (d) { dateSet[d] = true; });
+  visibleCrewNotes().forEach(function (j) { if (j.date) dateSet[j.date] = true; });
+  const dates = Object.keys(dateSet).sort();
   const gridCls = compactMode
     ? 'grid grid-cols-2 gap-1.5'
     : 'grid gap-1.5';
   const today = todayISO();
   container.innerHTML = dates.map(date => {
-    const jobs = groups[date].slice().sort((a, b) => jobSortMinutes(a) - jobSortMinutes(b));
+    const jobs = (groups[date] || []).slice().sort((a, b) => jobSortMinutes(a) - jobSortMinutes(b));
     const returns = jobs.filter(j => j.is_return).length;
     const kind = date === today ? 'today' : (date === tomorrowISO() ? 'tomorrow' : (date < today ? 'past' : 'upcoming'));
     return '<section class="day-section day-' + kind + '">' +

@@ -664,6 +664,47 @@ function render() {
   syncHeaderHeight();
 }
 
+function consensusTeamMembers(jobs, date, team) {
+  const counts = {};
+  (jobs || []).forEach(function (job) {
+    if (job.date !== date || job.team_lead !== team) return;
+    const value = String(job.team_members || '').trim();
+    if (!value) return;
+    counts[value] = (counts[value] || 0) + 1;
+  });
+  let best = '';
+  let bestCount = 0;
+  Object.keys(counts).forEach(function (value) {
+    const count = counts[value];
+    if (count > bestCount || (count === bestCount && value.localeCompare(best) < 0)) {
+      best = value;
+      bestCount = count;
+    }
+  });
+  return best;
+}
+
+function dayWhosOnHtml(jobs, date) {
+  const leads = TEAMS.filter(function (team) {
+    return jobs.some(function (j) { return j.team_lead === team; });
+  });
+  jobs.forEach(function (j) {
+    if (j.team_lead && leads.indexOf(j.team_lead) === -1) leads.push(j.team_lead);
+  });
+  if (!leads.length) return '';
+  const lines = leads.map(function (team) {
+    const members = consensusTeamMembers(allJobs, date, team);
+    const who = members ? esc(members) : '\u2014';
+    if (leads.length === 1) {
+      return 'Who\u2019s on \u00b7 ' + who;
+    }
+    return esc(team) + ' \u00b7 Who\u2019s on \u00b7 ' + who;
+  });
+  return '<div class="day-whos-on">' + lines.map(function (line) {
+    return '<div>' + line + '</div>';
+  }).join('') + '</div>';
+}
+
 function renderByDate(container) {
   const groups = groupBy(filtered, j => j.date);
   const dates = Object.keys(groups).sort();
@@ -676,11 +717,14 @@ function renderByDate(container) {
     const returns = jobs.filter(j => j.is_return).length;
     const kind = date === today ? 'today' : (date === tomorrowISO() ? 'tomorrow' : (date < today ? 'past' : 'upcoming'));
     return '<section class="day-section day-' + kind + '">' +
-      '<div class="day-header-sticky flex items-center justify-between">' +
-        '<h3 class="font-semibold text-brand-800">' +
-          formatDayHeading(date) + '<span class="text-slate-400 font-normal text-sm ml-2">' + jobs.length + ' job' + (jobs.length !== 1 ? 's' : '') + '</span>' +
-          (returns ? '<span class="ml-1 text-amber-600 text-sm">\u00b7 ' + returns + ' return' + (returns > 1 ? 's' : '') + '</span>' : '') +
-        '</h3>' +
+      '<div class="day-header-sticky">' +
+        '<div class="flex items-center justify-between">' +
+          '<h3 class="font-semibold text-brand-800">' +
+            formatDayHeading(date) + '<span class="text-slate-400 font-normal text-sm ml-2">' + jobs.length + ' job' + (jobs.length !== 1 ? 's' : '') + '</span>' +
+            (returns ? '<span class="ml-1 text-amber-600 text-sm">\u00b7 ' + returns + ' return' + (returns > 1 ? 's' : '') + '</span>' : '') +
+          '</h3>' +
+        '</div>' +
+        dayWhosOnHtml(jobs, date) +
       '</div>' +
       '<div class="' + gridCls + '">' + jobs.map(jobCard).join('') + '</div></section>';
   }).join('');

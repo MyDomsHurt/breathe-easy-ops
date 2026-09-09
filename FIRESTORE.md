@@ -8,11 +8,12 @@ Project: **breathe-easy-performance** (existing). Collection: **`jobs`**. Docume
 
 1. Open [Firebase console](https://console.firebase.google.com/) → project **breathe-easy-performance**.
 2. Build → **Firestore Database**. Create the database if it does not exist (production mode).
-3. **Rules** tab. Paste [`firestore.rules`](firestore.rules) and **Publish**:
+3. **Rules** tab. Paste [`firestore.rules`](firestore.rules) and **Publish**. Signed-in is not enough: the Google email must be on the same allowlist as TD/Booking (`td/js/auth.js`). The app does not deploy rules.
 
 ```
 match /jobs/{jobId} {
-  allow read, write: if request.auth != null;
+  allow read, write: if request.auth != null
+    && request.auth.token.email.lower() in [ /* allowlist emails */ ];
 }
 ```
 

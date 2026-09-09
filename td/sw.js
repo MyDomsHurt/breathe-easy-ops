@@ -1,14 +1,14 @@
 /* TD — cache enough shell to launch standalone.
    Never intercept /, /index.html, or auth.js — login must be network-only. */
-const CACHE = 'td-v6';
+const CACHE = 'td-v7';
 const SHELL = [
   '/manifest.webmanifest',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/icons/apple-touch-icon.png',
-  '/css/app.css?v=13',
+  '/css/app.css?v=14',
   '/css/be-shell.css?v=3',
-  '/js/app.js?v=14',
+  '/js/app.js?v=15',
   '/js/shell-ui.js?v=2',
   '/js/unit-stats.js',
   '/js/app-nav.js',

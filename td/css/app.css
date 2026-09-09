@@ -20,6 +20,20 @@
   flex-shrink: 0;
   display: inline-block;
 }
+.tentative-badge {
+  background: #ca8a04;
+  white-space: nowrap;
+  flex-shrink: 0;
+  display: inline-block;
+}
+.job-card.is-tentative.job-card-detailed {
+  background: #fef9c3;
+  border-color: #eab308;
+}
+body.compact .job-card.compact-card.is-tentative {
+  background: #fef9c3 !important;
+  border-color: #eab308;
+}
 .team-chip {
   font-size: 0.7rem;
   letter-spacing: 0.02em;

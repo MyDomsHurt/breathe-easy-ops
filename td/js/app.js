@@ -824,8 +824,14 @@ function renderByTeam(container) {
   bindCardClicks();
 }
 
+function isTentative(j) {
+  return String(j && j.status || '').toLowerCase() === 'tentative';
+}
+
 function jobCard(j) {
+  const hold = isTentative(j);
   const returnBadge = j.is_return ? '<span class="return-badge shrink-0 whitespace-nowrap text-white text-[10px] font-semibold px-1.5 py-0.5 rounded">RETURN</span>' : '';
+  const tentBadge = hold ? '<span class="tentative-badge shrink-0 whitespace-nowrap text-white text-[10px] font-semibold px-1.5 py-0.5 rounded">Tentative</span>' : '';
   const isPaid = jobIsPaid(j);
   const rightBadge = isPaid
     ? '<span class="text-[10px] font-bold tracking-wide px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">PAID</span>'
@@ -836,7 +842,9 @@ function jobCard(j) {
   const dist = DISTRICT_COLORS[j.district] || DISTRICT_FALLBACK;
 
   if (compactMode) {
-    const distBar = 'border-left: 4px solid ' + dist.border + '; background:' + dist.bg + ';';
+    const distBar = hold
+      ? 'border-left: 4px solid #ca8a04; background:#fef9c3;'
+      : 'border-left: 4px solid ' + dist.border + '; background:' + dist.bg + ';';
     const showTeam = currentFilters.team === 'all';
     const teamChip = showTeam
       ? '<span class="text-[10px] font-medium px-1 py-0.5 rounded ' + (TEAM_COLORS[j.team_lead] || 'bg-slate-100') + '">' + esc(j.team_lead) + '</span>'
@@ -845,11 +853,11 @@ function jobCard(j) {
     const shortAddr = shownAddr
       ? '<p class="text-[10px] leading-tight text-slate-600 mt-1 line-clamp-2">' + esc(shownAddr) + '</p>'
       : '';
-    return '<article class="job-card compact-card rounded-xl cursor-pointer active:opacity-90 overflow-hidden" data-id="' + esc(j.job_id) + '" style="' + distBar + '">' +
+    return '<article class="job-card compact-card rounded-xl cursor-pointer active:opacity-90 overflow-hidden' + (hold ? ' is-tentative' : '') + '" data-id="' + esc(j.job_id) + '" style="' + distBar + '">' +
       '<div class="p-2 min-h-[100px] flex flex-col">' +
         '<div class="flex items-start justify-between gap-1 min-w-0">' +
           '<p class="font-semibold text-[12px] leading-tight line-clamp-1 text-slate-800 min-w-0 flex-1 pr-1">' + esc(j.client_name) + '</p>' +
-          returnBadge +
+          tentBadge + returnBadge +
         '</div>' +
         '<p class="text-[12px] font-semibold text-slate-700 mt-0.5">' + esc(displayTime(j)) + '</p>' +
         shortAddr +
@@ -867,10 +875,11 @@ function jobCard(j) {
   const notesBlock = j.notes
     ? '<p class="live-notes">' + esc(j.notes) + '</p>'
     : '';
-  return '<article class="job-card job-card-detailed" data-id="' + esc(j.job_id) + '" style="border-left:4px solid ' + dist.border + '">' +
+  const left = hold ? '#ca8a04' : dist.border;
+  return '<article class="job-card job-card-detailed' + (hold ? ' is-tentative' : '') + '" data-id="' + esc(j.job_id) + '" style="border-left:4px solid ' + left + '">' +
     '<div class="live-name-row">' +
       '<p class="live-name">' + esc(j.client_name) + (showTeam ? ' \u00b7 ' + esc(j.team_lead) : '') + '</p>' +
-      '<div class="live-badges">' + returnBadge + rightBadge + '</div>' +
+      '<div class="live-badges">' + tentBadge + returnBadge + rightBadge + '</div>' +
     '</div>' +
     '<div class="live-time-row">' +
       '<span class="live-time">' + esc(displayTime(j)) + '</span>' + unitsBit +
@@ -929,6 +938,11 @@ function openModal(j) {
     : '<span class="inline-flex items-center gap-1.5 text-rose-700 font-semibold">UNPAID</span>';
   const rows = [
     ['Type', j.is_return ? '<span class="text-amber-600 font-semibold">Return</span>' : 'Full clean'],
+  ];
+  if (isTentative(j)) {
+    rows.push(['Status', '<span class="tentative-badge text-white text-[10px] font-semibold px-1.5 py-0.5 rounded">Tentative</span>']);
+  }
+  rows.push(
     ['Team', j.team_lead + (j.team_members ? ' (' + j.team_members + ')' : '')],
     ['ACs / Units', j.acs || '\u2014 (empty \u2192 treated as return)'],
     ['Payment Status', paidStatus],
@@ -937,7 +951,7 @@ function openModal(j) {
     ['District', j.district || '\u2014'],
     ['Notes', j.notes || '\u2014'],
     ['Job ID', j.job_id]
-  ];
+  );
   document.getElementById('modalBody').innerHTML = rows.map(function(pair) {
     return '<div><dt class="text-xs font-medium text-slate-400 uppercase tracking-wide">' + pair[0] + '</dt><dd class="mt-0.5 text-slate-800 break-words">' + pair[1] + '</dd></div>';
   }).join('') +

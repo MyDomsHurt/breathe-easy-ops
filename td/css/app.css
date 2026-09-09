@@ -160,6 +160,24 @@ body.compact .max-w-7xl.mx-auto.px-4.py-5 {
   line-height: 1;
   padding: 0 4px;
 }
+.day-step {
+  flex: 0 0 auto;
+  width: 34px;
+  min-width: 34px;
+  min-height: 34px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #0c4a6e;
+  font-family: inherit;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+.day-step:active { background: #e2e8f0; }
 
 main {
   width: 100% !important;

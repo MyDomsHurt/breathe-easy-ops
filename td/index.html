@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/app.css?v=12" />
+  <link rel="stylesheet" href="css/app.css?v=13" />
   <link rel="stylesheet" href="css/be-shell.css?v=3" />
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen" style="font-family:'Libre Franklin',system-ui,sans-serif">
@@ -100,7 +100,9 @@
         </div>
       </div>
       <div class="tech-bar-row range-seg" role="group" aria-label="Timeframe">
+        <button type="button" id="prevDay" class="day-step" aria-label="Previous day">‹</button>
         <button type="button" data-range="today" class="range-btn bg-brand-600 text-white">Today</button>
+        <button type="button" id="nextDay" class="day-step" aria-label="Next day">›</button>
         <button type="button" data-range="this_week" class="range-btn bg-slate-100 text-slate-700">This Week</button>
         <button type="button" data-range="next_week" class="range-btn bg-slate-100 text-slate-700">Next Week</button>
       </div>
@@ -138,7 +140,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
   <script src="js/auth.js"></script>
   <script type="module" src="js/live-jobs.js"></script>
-  <script src="js/app.js?v=13"></script>
+  <script src="js/app.js?v=14"></script>
   <script src="js/shell-ui.js?v=2"></script>
   <script src="js/unit-stats.js"></script>
   <script src="js/app-nav.js"></script>

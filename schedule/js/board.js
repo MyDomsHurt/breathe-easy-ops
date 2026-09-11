@@ -24,6 +24,14 @@ function hoverTitle(job) {
     .join(' · ');
 }
 
+function isUnpaid(job) {
+  return String(job && job.payment_status || '').trim().toUpperCase() === 'UNPAID';
+}
+
+function unpaidTip(job) {
+  return isUnpaid(job) ? '<span class="unpaid-tip" aria-hidden="true"></span>' : '';
+}
+
 function chipHtml(job, conflict) {
   const type = jobTypeOf(job);
   const extra = type !== 'cleaning' ? type : '';
@@ -38,6 +46,7 @@ function chipHtml(job, conflict) {
     </div>
     <div class="chip-addr">${esc(shortAddress(job))}</div>
     ${notesRow}
+    ${unpaidTip(job)}
   </button>`;
 }
 
@@ -61,6 +70,7 @@ function cardHtml(job, conflict) {
     ${who}
     ${notesRow}
     ${money}
+    ${unpaidTip(job)}
   </button>`;
 }
 

@@ -765,6 +765,18 @@ button.day-col-head:hover { background: #e0f2fe; }
 }
 .job-chip.tentative:hover, .job-card.tentative:hover { background: #fef08a; }
 
+.unpaid-tip {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 0 9px 9px;
+  border-color: transparent transparent #ea580c transparent;
+  pointer-events: none;
+}
+
 .tag {
   font-size: 9px;
   font-weight: 800;

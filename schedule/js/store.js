@@ -114,7 +114,7 @@ function pickTeamMembers(input, prev) {
 }
 
 function toCanonical(input, prev) {
-  const type = input.job_type || (input.is_return ? 'return' : 'cleaning');
+  const type = jobTypeOf({ ...prev, ...input });
   const acs = type === 'return'
     ? ''
     : (input.acs || acsLabel(input.units || {}) || (prev && prev.acs) || '');

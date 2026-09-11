@@ -73,10 +73,17 @@ export const UNIT_TYPES = [
 ];
 
 export const JOB_TYPES = [
-  { id: 'cleaning', label: 'Cleaning' },
+  { id: 'cleaning', label: 'Service' },
   { id: 'return', label: 'Return' },
-  { id: 'influencer', label: 'Influencer' },
+  { id: 'inspection', label: 'Inspection' },
+  { id: 'influencer', label: 'Collab' },
+  { id: 'other', label: 'Other' },
 ];
+
+export function jobTypeLabel(id) {
+  const hit = JOB_TYPES.find((t) => t.id === id);
+  return hit ? hit.label : 'Service';
+}
 
 export const PAYMENTS = [
   'Unpaid',

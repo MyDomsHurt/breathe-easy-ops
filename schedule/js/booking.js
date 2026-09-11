@@ -2,7 +2,7 @@ import { DISTRICTS, JOB_TYPES, PAYMENTS, TEAMS, TEAM_META, UNIT_TYPES } from './
 import { nextStackOrder, overlapWarning, suggestTeams, teamMembersOnDay } from './capacity.js';
 import { addJob, allJobs, removeJob, updateJob } from './store.js';
 import { uniqueClientsFrom } from './seed.js';
-import { acsLabel, acsTotal, emptyUnits, formatDay, jobStatus, parseAcs, shortTime } from './utils.js';
+import { acsLabel, acsTotal, emptyUnits, formatDay, jobStatus, jobTypeOf, parseAcs, shortTime } from './utils.js';
 
 let form = {
   job_id: '',
@@ -73,7 +73,7 @@ export function openBooking(prefill = {}) {
     date: prefill.date || '',
     time: prefill.time || '',
     team_lead: prefill.team_lead || '',
-    job_type: prefill.job_type || (prefill.is_return ? 'return' : 'cleaning'),
+    job_type: jobTypeOf(prefill),
     amount: prefill.amount != null && prefill.amount !== '' ? prefill.amount : '',
     payment: normalizePaymentLabel(prefill.payment, prefill.payment_status),
     notes: prefill.notes || '',

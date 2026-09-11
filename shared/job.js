@@ -7,7 +7,11 @@
  * See shared/job-model.md
  */
 
-export const JOB_TYPES = ['cleaning', 'return', 'influencer'];
+export const JOB_TYPES = ['cleaning', 'return', 'inspection', 'influencer', 'other'];
+const JOB_TYPE_ALIASES = {
+  service: 'cleaning',
+  collab: 'influencer',
+};
 export const STATUSES = ['confirmed', 'tentative'];
 export const PAYMENT_STATUSES = ['PAID', 'UNPAID'];
 
@@ -167,7 +171,8 @@ function asUpdatedAt(value, now) {
 
 function inferJobType(input) {
   const t = String(input.job_type || '').toLowerCase().trim();
-  if (JOB_TYPES.includes(t)) return t;
+  const mapped = JOB_TYPE_ALIASES[t] || t;
+  if (JOB_TYPES.includes(mapped)) return mapped;
   if (input.is_return === true || input.is_return === 'true') return 'return';
   const notes = String(input.notes || '').toLowerCase();
   if (notes.includes('influencer')) return 'influencer';

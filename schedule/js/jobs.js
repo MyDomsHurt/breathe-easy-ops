@@ -1,4 +1,4 @@
-import { DISTRICTS, TEAM_META } from './config.js';
+import { DISTRICTS, TEAM_META, jobTypeLabel } from './config.js';
 import { esc, formatDay, formatMoney, jobTypeOf, shortAddress, shortNotes, shortTime } from './utils.js';
 
 function displayMobile(mobile) {
@@ -38,7 +38,7 @@ export function renderSearchHits(el, jobs, query) {
   el.hidden = false;
   el.innerHTML = hits.map((j) => {
     const type = jobTypeOf(j);
-    const mark = type === 'return' ? 'RET' : type === 'influencer' ? 'INF' : (j.acs || '');
+    const mark = type === 'return' ? 'RET' : type === 'influencer' ? 'COL' : (j.acs || '');
     const when = [formatDay(j.date), shortTime(j), j.team_lead, j.district].filter(Boolean).join(' · ');
     const place = [shortAddress(j), mark].filter(Boolean).join(' · ');
     const notes = shortNotes(j, 72);
@@ -107,8 +107,8 @@ export function renderJobsList(el, jobs, query) {
 
 function typeBadge(type) {
   if (type === 'return') return '<span class="tag return">RETURN</span>';
-  if (type === 'influencer') return '<span class="tag influencer">INFLUENCER</span>';
-  return '<span style="font-size:12px;font-weight:700;color:#0f766e">Cleaning</span>';
+  if (type === 'influencer') return '<span class="tag influencer">COLLAB</span>';
+  return `<span style="font-size:12px;font-weight:700;color:#0f766e">${esc(jobTypeLabel(type))}</span>`;
 }
 
 export function renderJobModal(el, job) {

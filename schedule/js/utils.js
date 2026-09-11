@@ -215,10 +215,18 @@ export function acsTotal(countsOrString) {
   return UNIT_TYPES.reduce((n, u) => n + (counts[u.id] || 0), 0);
 }
 
+const JOB_TYPE_IDS = ['cleaning', 'return', 'inspection', 'influencer', 'other'];
+const JOB_TYPE_ALIASES = {
+  service: 'cleaning',
+  collab: 'influencer',
+};
+
 export function jobTypeOf(job) {
-  if (job.job_type) return job.job_type;
-  if (job.is_return) return 'return';
-  const notes = String(job.notes || '').toLowerCase();
+  const t = String(job && job.job_type || '').toLowerCase().trim();
+  const mapped = JOB_TYPE_ALIASES[t] || t;
+  if (JOB_TYPE_IDS.includes(mapped)) return mapped;
+  if (job && (job.is_return === true || job.is_return === 'true')) return 'return';
+  const notes = String(job && job.notes || '').toLowerCase();
   if (notes.includes('influencer')) return 'influencer';
   return 'cleaning';
 }

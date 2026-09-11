@@ -9,12 +9,17 @@ function teamColor(name) {
 
 function typeMark(type, compact) {
   if (type === 'return') return `<span class="tag return">${compact ? 'RET' : 'RETURN'}</span>`;
-  if (type === 'influencer') return `<span class="tag influencer">${compact ? 'INF' : 'INFLUENCER'}</span>`;
+  if (type === 'influencer') return `<span class="tag influencer">${compact ? 'COL' : 'COLLAB'}</span>`;
   return '';
 }
 
+function markedType(type) {
+  return type === 'return' || type === 'influencer';
+}
+
 function rightMark(job, type, compact) {
-  if (type !== 'cleaning') return typeMark(type, compact);
+  const mark = typeMark(type, compact);
+  if (mark) return mark;
   return job.acs ? `<span class="acs">${esc(job.acs)}</span>` : '';
 }
 
@@ -34,7 +39,7 @@ function unpaidTip(job) {
 
 function chipHtml(job, conflict) {
   const type = jobTypeOf(job);
-  const extra = type !== 'cleaning' ? type : '';
+  const extra = markedType(type) ? type : '';
   const tentative = jobStatus(job) === 'tentative' ? ' tentative' : '';
   const notes = shortNotes(job);
   const notesRow = notes ? `<div class="chip-notes">${esc(notes)}</div>` : '';
@@ -52,7 +57,7 @@ function chipHtml(job, conflict) {
 
 function cardHtml(job, conflict) {
   const type = jobTypeOf(job);
-  const extra = type !== 'cleaning' ? type : '';
+  const extra = markedType(type) ? type : '';
   const tentative = jobStatus(job) === 'tentative' ? ' tentative' : '';
   const notes = shortNotes(job, 140);
   const notesRow = notes ? `<p class="card-notes">${esc(notes)}</p>` : '';

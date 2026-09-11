@@ -87,7 +87,6 @@ export function jobTypeLabel(id) {
 
 export const PAYMENTS = [
   'Unpaid',
-  'Paid',
   'Free',
   'Deposit',
   'Bank Transfer/FPS',

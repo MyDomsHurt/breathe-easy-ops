@@ -27,7 +27,6 @@ function $(sel) {
 
 const PAYMENT_ALIASES = {
   unpaid: 'Unpaid',
-  paid: 'Paid',
   free: 'Free',
   deposit: 'Deposit',
   'bank transfer/fps': 'Bank Transfer/FPS',
@@ -39,16 +38,18 @@ const PAYMENT_ALIASES = {
   cash: 'Cash',
   cheque: 'Cheque',
   check: 'Cheque',
-  visa: 'Paid',
 };
 
 function normalizePaymentLabel(raw, status) {
   const s = String(raw || '').trim();
   if (PAYMENTS.includes(s)) return s;
-  const mapped = PAYMENT_ALIASES[s.toLowerCase()];
+  const lower = s.toLowerCase();
+  const mapped = PAYMENT_ALIASES[lower];
   if (mapped) return mapped;
   if (String(status || '').trim().toUpperCase() === 'UNPAID') return 'Unpaid';
-  if (String(status || '').trim().toUpperCase() === 'PAID') return 'Paid';
+  if (String(status || '').trim().toUpperCase() === 'PAID' || lower === 'paid' || lower === 'visa') {
+    return 'Bank Transfer/FPS';
+  }
   return 'Unpaid';
 }
 

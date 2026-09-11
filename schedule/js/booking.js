@@ -25,6 +25,37 @@ function $(sel) {
   return document.querySelector(sel);
 }
 
+const PAYMENT_ALIASES = {
+  unpaid: 'Unpaid',
+  paid: 'Paid',
+  free: 'Free',
+  deposit: 'Deposit',
+  'bank transfer/fps': 'Bank Transfer/FPS',
+  'bank transfer': 'Bank Transfer/FPS',
+  fps: 'Bank Transfer/FPS',
+  'payme / fps': 'Bank Transfer/FPS',
+  bt: 'Bank Transfer/FPS',
+  payme: 'PayMe',
+  cash: 'Cash',
+  cheque: 'Cheque',
+  check: 'Cheque',
+  visa: 'Paid',
+};
+
+function normalizePaymentLabel(raw, status) {
+  const s = String(raw || '').trim();
+  if (PAYMENTS.includes(s)) return s;
+  const mapped = PAYMENT_ALIASES[s.toLowerCase()];
+  if (mapped) return mapped;
+  if (String(status || '').trim().toUpperCase() === 'UNPAID') return 'Unpaid';
+  if (String(status || '').trim().toUpperCase() === 'PAID') return 'Paid';
+  return 'Unpaid';
+}
+
+function paymentStatusFromLabel(label) {
+  return String(label || '').trim().toLowerCase() === 'unpaid' ? 'UNPAID' : 'PAID';
+}
+
 export function openBooking(prefill = {}) {
   const jobs = allJobs();
   const editing = Boolean(prefill.job_id);
@@ -44,7 +75,7 @@ export function openBooking(prefill = {}) {
     team_lead: prefill.team_lead || '',
     job_type: prefill.job_type || (prefill.is_return ? 'return' : 'cleaning'),
     amount: prefill.amount != null && prefill.amount !== '' ? prefill.amount : '',
-    payment: prefill.payment || 'Unpaid',
+    payment: normalizePaymentLabel(prefill.payment, prefill.payment_status),
     notes: prefill.notes || '',
     status: jobStatus(prefill),
     invoice: prefill.invoice,
@@ -319,6 +350,8 @@ function save(status = 'confirmed') {
     units: form.units,
     notes,
     time: String(form.time || '').trim(),
+    payment: form.payment,
+    payment_status: paymentStatusFromLabel(form.payment),
     team_members: teamMembersOnDay(jobs, form.date, form.team_lead),
     amount: form.job_type === 'cleaning'
       ? (form.amount === '' || form.amount == null ? null : Number(form.amount))

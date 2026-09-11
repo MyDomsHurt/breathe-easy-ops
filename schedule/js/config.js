@@ -78,6 +78,15 @@ export const JOB_TYPES = [
   { id: 'influencer', label: 'Influencer' },
 ];
 
-export const PAYMENTS = ['Unpaid', 'Payme', 'FPS', 'Cash', 'Visa', 'Payme / FPS'];
+export const PAYMENTS = [
+  'Unpaid',
+  'Paid',
+  'Free',
+  'Deposit',
+  'Bank Transfer/FPS',
+  'PayMe',
+  'Cash',
+  'Cheque',
+];
 
 export const STORAGE_KEY = 'be-scheduler-v2-roster';

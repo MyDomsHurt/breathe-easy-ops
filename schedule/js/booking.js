@@ -3,7 +3,7 @@ import { nextStackOrder, overlapWarning, suggestTeams, teamMembersOnDay } from '
 import { addJob, allJobs, removeJob, updateJob } from './store.js';
 import { uniqueClientsFrom } from './seed.js';
 import { highlightOf } from '../../shared/job.js';
-import { acsLabel, acsTotal, emptyUnits, formatDay, jobStatus, jobTypeOf, NOTES1_MAX, parseAcs, shortTime } from './utils.js';
+import { acsLabel, emptyUnits, formatDay, jobStatus, jobTypeOf, NOTES1_MAX, parseAcs, shortTime } from './utils.js';
 
 let form = {
   job_id: '',
@@ -119,7 +119,7 @@ export function openBooking(prefill = {}) {
   const root = $('#bookingRoot');
   root.classList.add('open');
   root.setAttribute('aria-hidden', 'false');
-  setTimeout(() => $('#clientSearch')?.focus(), 30);
+  if (!editing) setTimeout(() => $('#clientSearch')?.focus(), 30);
 }
 
 export function closeBooking() {
@@ -290,7 +290,6 @@ function bindForm() {
     form.client_name = e.target.value;
     renderHits(e.target.value);
   });
-  $('#clientSearch').addEventListener('focus', (e) => renderHits(e.target.value));
   $('#mobileInput').addEventListener('input', (e) => { form.mobile = e.target.value; });
   $('#addressInput').addEventListener('input', (e) => { form.address = e.target.value; });
   $('#districtInput').addEventListener('change', (e) => { form.district = e.target.value; renderForm(); });
@@ -388,10 +387,6 @@ function save(status = 'confirmed') {
   }
   if (!form.date || !form.team_lead) {
     toast('Date and team are required');
-    return;
-  }
-  if (form.job_type === 'cleaning' && acsTotal(form.units) === 0) {
-    toast('Add at least one AC, or switch job type');
     return;
   }
   const notesRaw = form.job_type === 'influencer' && !/influencer/i.test(form.notes || '')

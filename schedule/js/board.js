@@ -2,7 +2,7 @@ import { TEAM_META } from './config.js';
 import { conflictingJobIds, districtsForTeamOnDay, jobsForTeamDay } from './capacity.js';
 import { cellTeamMembers, findCrewNote } from './team-day.js';
 import { isHeld } from '../../shared/job.js';
-import { districtChipsHtml, esc, formatDay, formatMoney, isToday, isWeekend, jobStatus, jobTypeOf, notes1Text, shortAddress, shortTime } from './utils.js';
+import { districtChipsHtml, esc, formatDay, formatMoney, isToday, isWeekend, jobStatus, jobTypeOf, normalizeLunch, notes1Text, shortAddress, shortTime, startMinutes } from './utils.js';
 
 function teamColor(name) {
   return TEAM_META[name]?.color || '#64748b';
@@ -99,18 +99,44 @@ function cardHtml(job, conflict) {
   </button>`;
 }
 
+function lunchCardHtml(time) {
+  return `<div class="lunch-card" data-lunch-card="1">
+    <span class="lunch-label">Lunch</span>
+    <span class="lunch-time">${esc(time)}</span>
+  </div>`;
+}
+
+function stackWithLunch(jobs, lunchTime, conflicts, mode) {
+  const time = normalizeLunch(lunchTime);
+  const renderJob = (j) => (mode === 'day' ? cardHtml(j, conflicts.has(j.job_id)) : chipHtml(j, conflicts.has(j.job_id)));
+  if (!time) return jobs.map(renderJob).join('');
+  const mins = startMinutes({ time });
+  const out = [];
+  let placed = false;
+  for (const j of jobs) {
+    const t = startMinutes(j);
+    if (!placed && (t == null || t >= mins)) {
+      out.push(lunchCardHtml(time));
+      placed = true;
+    }
+    out.push(renderJob(j));
+  }
+  if (!placed) out.push(lunchCardHtml(time));
+  return out.join('');
+}
+
 function cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs) {
   const list = jobsForTeamDay(allJobs, date, team);
   const shown = jobsForTeamDay(displayJobs, date, team);
   const empty = list.length === 0;
   const districts = empty ? [] : districtsForTeamOnDay(allJobs, date, team);
   const conflicts = conflictingJobIds(list);
-  const body = mode === 'day'
-    ? shown.map((j) => cardHtml(j, conflicts.has(j.job_id))).join('')
-    : shown.map((j) => chipHtml(j, conflicts.has(j.job_id))).join('');
   const lookup = lookupJobs || allJobs;
+  const note = findCrewNote(lookup, date, team);
+  const lunch = normalizeLunch(note && note.lunch);
+  const body = stackWithLunch(shown, lunch, conflicts, mode);
   const van = cellTeamMembers(lookup, date, team);
-  const vanHi = isHi(findCrewNote(lookup, date, team)?.highlight_members);
+  const vanHi = isHi(note && note.highlight_members);
   const vanLabel = van || "Who's on";
   return `<div class="roster-cell ${empty ? 'empty' : 'has-jobs'} ${mode === 'day' ? 'day-cell' : ''}" data-date="${date}" data-team="${team}">
     <div class="cell-top">
@@ -123,6 +149,9 @@ function cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs) {
     <div class="cell-van-row">
       <button type="button" class="cell-van${van ? '' : ' is-empty'}${vanHi ? ' hi' : ''}" data-edit-van="${esc(date)}" data-edit-van-team="${esc(team)}" data-van-value="${esc(van)}" title="${esc(van ? van : 'Set who is on the van')}">${esc(vanLabel)}</button>
       <button type="button" class="hold-chip${vanHi ? ' on' : ''}" data-mark-van="${esc(date)}" data-mark-van-team="${esc(team)}" aria-pressed="${vanHi ? 'true' : 'false'}" title="Mark who's on">Mark</button>
+    </div>
+    <div class="cell-lunch-row">
+      <button type="button" class="cell-lunch${lunch ? '' : ' is-empty'}" data-edit-lunch="${esc(date)}" data-edit-lunch-team="${esc(team)}" data-lunch-value="${esc(lunch)}" title="Set lunch start">${lunch ? `Lunch ${esc(lunch)}` : 'Lunch'}</button>
     </div>
     <div class="job-chips">${body}</div>
   </div>`;

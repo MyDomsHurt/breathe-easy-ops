@@ -1,7 +1,7 @@
 import { DISTRICTS, JOB_TYPES, TEAMS } from './config.js';
 import { isCrewNote } from './team-day.js';
-import { addDays, formatDay, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, pad, parseISO, shortTime, weekDays, workWeekDays } from './utils.js';
-import { allJobs, getJob, importExistingJobs, redo, removeJob, reorderStack, resetDemo, setTeamDayHighlight, setTeamDayMembers, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js';
+import { addDays, formatDay, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, normalizeLunch, pad, parseISO, shortTime, weekDays, workWeekDays } from './utils.js';
+import { allJobs, getJob, importExistingJobs, redo, removeJob, reorderStack, resetDemo, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js';
 import { startScheduleAuth } from './auth.js';
 import { hasTimeConflict, jobsForTeamDay, nextStackOrder } from './capacity.js';
 import { pulseRemaining, renderDayBoard, renderWeekBoard } from './board.js';
@@ -234,6 +234,48 @@ function startVanEdit(btn) {
   input.addEventListener('blur', () => finish(true));
 }
 
+function startLunchEdit(btn) {
+  const date = btn.dataset.editLunch;
+  const team = btn.dataset.editLunchTeam;
+  const current = btn.dataset.lunchValue || '';
+  if (!date || !team) return;
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'cell-lunch-input';
+  input.value = current;
+  input.placeholder = '14:00';
+  input.setAttribute('aria-label', 'Lunch start');
+  btn.replaceWith(input);
+  input.focus();
+  input.select();
+  let done = false;
+  function finish(save) {
+    if (done) return;
+    done = true;
+    if (save) {
+      const next = normalizeLunch(input.value);
+      if (next !== current) {
+        setTeamDayLunch(date, team, next);
+        toast(next ? `Lunch ${next}` : 'Lunch cleared');
+        return;
+      }
+    }
+    paint();
+  }
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      input.blur();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      finish(false);
+    }
+  });
+  input.addEventListener('mousedown', (e) => e.stopPropagation());
+  input.addEventListener('click', (e) => e.stopPropagation());
+  input.addEventListener('blur', () => finish(true));
+}
+
 function bindBoardClicks() {
   $('boardMount').addEventListener('click', (e) => {
     if (suppressClick) {
@@ -249,6 +291,19 @@ function bindBoardClicks() {
       const on = markVan.getAttribute('aria-pressed') !== 'true';
       setTeamDayHighlight(markVan.dataset.markVan, markVan.dataset.markVanTeam, on);
       paint();
+      return;
+    }
+    const lunchEdit = e.target.closest('[data-edit-lunch]');
+    if (lunchEdit) {
+      e.preventDefault();
+      e.stopPropagation();
+      startLunchEdit(lunchEdit);
+      return;
+    }
+    const lunchCard = e.target.closest('[data-lunch-card]');
+    if (lunchCard) {
+      e.preventDefault();
+      e.stopPropagation();
       return;
     }
     const van = e.target.closest('[data-edit-van]');

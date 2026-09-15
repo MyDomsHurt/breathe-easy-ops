@@ -119,6 +119,12 @@ export function formatTime24(raw) {
   return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
 }
 
+export function normalizeLunch(raw) {
+  const s = String(raw || '').trim().replace(/;/g, ':');
+  if (!s) return '';
+  return formatTime24(s);
+}
+
 export function timeToMinutes(t) {
   const mins = parseTimeToMinutes(t);
   return mins == null ? 9999 : mins;

@@ -317,6 +317,30 @@ export function setTeamDayHighlight(date, team, on) {
   emit();
 }
 
+export function setTeamDayLunch(date, team, lunch) {
+  const noteId = crewNoteId(date, team);
+  const prevNote = getJob(noteId);
+  const members = prevNote
+    ? String(prevNote.team_members || '').trim()
+    : cellTeamMembers(allJobs(), date, team);
+  writeJob(toCanonical({
+    job_id: noteId,
+    date,
+    team_lead: team,
+    team_members: members,
+    client_name: '',
+    time: '',
+    acs: '',
+    job_type: 'cleaning',
+    is_return: false,
+    source: CREW_SOURCE,
+    status: 'confirmed',
+    highlight_members: prevNote ? !!prevNote.highlight_members : false,
+    lunch: lunch || null,
+  }, prevNote));
+  emit();
+}
+
 export function updateJob(id, input) {
   const prev = getJob(id);
   if (!prev) return null;

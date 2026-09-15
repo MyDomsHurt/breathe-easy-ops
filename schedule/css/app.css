@@ -509,7 +509,7 @@ button.day-col-head:hover { background: #e0f2fe; }
 }
 
 .roster-cell.empty { background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 70%); }
-.roster-cell.is-full { background: #dcfce7; }
+.roster-cell.is-full { background: #f3eee6; }
 .roster-cell:hover { outline: 2px solid #7dd3fc; outline-offset: -2px; z-index: 1; }
 .roster-cell.drop-ok {
   outline: 2px solid #0284c7;

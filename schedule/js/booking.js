@@ -2,6 +2,7 @@ import { DISTRICTS, JOB_TYPES, PAYMENTS, TEAMS, TEAM_META, UNIT_TYPES } from './
 import { overlapWarning, stackOrderOnSave, suggestTeams, teamMembersOnDay } from './capacity.js';
 import { addJob, allJobs, removeJob, updateJob } from './store.js';
 import { uniqueClientsFrom } from './seed.js';
+import { displayNameForEmail } from '../../shared/firebase-config.js';
 import { highlightOf } from '../../shared/job.js';
 import { acsLabel, emptyUnits, formatDay, formatTime24, jobStatus, jobTypeOf, NOTES1_MAX, parseAcs, shortTime } from './utils.js';
 
@@ -114,7 +115,7 @@ function changeRailHtml() {
         ? diffs.map((d) => `<p class="log-sentence">${escapeAttr(diffSentence(d))}</p>`).join('')
         : `<p class="log-sentence">${escapeAttr(logFallback(row.action))}</p>`;
       return `<article class="log-entry">
-        <p class="log-meta">${escapeAttr(formatLogAt(row.at))} · ${escapeAttr(row.by || '—')}</p>
+        <p class="log-meta">${escapeAttr(formatLogAt(row.at))} · ${escapeAttr(displayNameForEmail(row.by))}</p>
         ${sentences}
       </article>`;
     }).join('');
@@ -337,7 +338,7 @@ function renderForm() {
         </section>
       </div>
       <div class="drawer-foot">
-        ${editing ? `<p class="foot-audit">Created by ${escapeAttr(String(form.created_by || '').trim() || '—')} · Last edit ${escapeAttr(String(form.updated_by || '').trim() || '—')}</p>` : ''}
+        ${editing ? `<p class="foot-audit">Created by ${escapeAttr(displayNameForEmail(form.created_by))} · Last edit ${escapeAttr(displayNameForEmail(form.updated_by))}</p>` : ''}
         <div class="foot-row">
           ${editing ? '<button class="ghost-btn danger-btn" id="deleteBooking" type="button">Cancel job</button>' : '<span class="foot-spacer"></span>'}
           <div class="foot-actions">

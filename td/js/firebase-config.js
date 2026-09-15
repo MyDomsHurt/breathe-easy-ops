@@ -16,7 +16,6 @@ window.FIREBASE_CONFIG = {
 // (live allowlist is in js/auth.js and dashboard/auth.js)
 // ============================================================
 window.ALLOWLIST = [
-  "iamruby112@gmail.com",
   "iggi.king@gmail.com",
   "info@breathe-easyhk.com",
   "itstartswiththemind@gmail.com",

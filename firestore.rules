@@ -2,7 +2,6 @@ rules_version = '2';
 // Allowlist (same emails as td/js/auth.js and shared/firebase-config.js).
 // Jeff must Publish these rules again in Firebase console → Firestore →
 // Rules after this change. The app does not deploy rules.
-//   iamruby112@gmail.com
 //   iggi.king@gmail.com
 //   info@breathe-easyhk.com
 //   itstartswiththemind@gmail.com
@@ -21,7 +20,6 @@ service cloud.firestore {
       return request.auth != null
         && request.auth.token.email is string
         && request.auth.token.email.lower() in [
-          'iamruby112@gmail.com',
           'iggi.king@gmail.com',
           'info@breathe-easyhk.com',
           'itstartswiththemind@gmail.com',

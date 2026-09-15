@@ -14,7 +14,6 @@ export const FIREBASE_CONFIG = {
 };
 
 export const ALLOWLIST = [
-  'iamruby112@gmail.com',
   'iggi.king@gmail.com',
   'info@breathe-easyhk.com',
   'itstartswiththemind@gmail.com',
@@ -28,6 +27,23 @@ export const ALLOWLIST = [
   'sudor23@gmail.com',
   'tiagogiri334@gmail.com',
 ];
+
+export const USER_NAMES = {
+  'jefflamb1992@gmail.com': 'Admin',
+  'info@breathe-easyhk.com': 'Customer Service',
+  'ruby@breathe-easyhk.com': 'Ruby',
+  'joshua@breathe-easyhk.com': 'Josh',
+  'perry@breathe-easyhk.com': 'Perry',
+};
+
+export function displayNameForEmail(email) {
+  const raw = String(email || '').trim();
+  if (!raw) return '—';
+  const mapped = USER_NAMES[raw.toLowerCase()];
+  if (mapped) return mapped;
+  const at = raw.indexOf('@');
+  return at > 0 ? raw.slice(0, at) : raw;
+}
 
 export const JOBS_COLLECTION = 'jobs';
 

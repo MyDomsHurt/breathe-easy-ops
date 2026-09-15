@@ -839,15 +839,19 @@ function consensusTeamMembers(jobs, date, team) {
 }
 
 function dayWhosOnHtml(jobs, date) {
-  const leads = TEAMS.filter(function (team) {
-    return jobs.some(function (j) { return j.team_lead === team; })
-      || allJobs.some(function (j) {
-        return isCrewNote(j) && !j.deleted && j.date === date && j.team_lead === team;
-      });
-  });
-  jobs.forEach(function (j) {
-    if (j.team_lead && leads.indexOf(j.team_lead) === -1) leads.push(j.team_lead);
-  });
+  const leads = currentFilters.team !== 'all'
+    ? [currentFilters.team]
+    : TEAMS.filter(function (team) {
+      return jobs.some(function (j) { return j.team_lead === team; })
+        || allJobs.some(function (j) {
+          return isCrewNote(j) && !j.deleted && j.date === date && j.team_lead === team;
+        });
+    });
+  if (currentFilters.team === 'all') {
+    jobs.forEach(function (j) {
+      if (j.team_lead && leads.indexOf(j.team_lead) === -1) leads.push(j.team_lead);
+    });
+  }
   if (!leads.length) return '';
   const lines = leads.map(function (team) {
     const members = cellTeamMembersFor(date, team);

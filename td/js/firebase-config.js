@@ -18,6 +18,7 @@ window.FIREBASE_CONFIG = {
 window.ALLOWLIST = [
   "iamruby112@gmail.com",
   "iggi.king@gmail.com",
+  "info@breathe-easyhk.com",
   "itstartswiththemind@gmail.com",
   "jefflamb1992@gmail.com",
   "joshua@breathe-easyhk.com",

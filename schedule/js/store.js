@@ -217,13 +217,11 @@ function stampAudit(job, prev, action) {
   next.updated_by = email;
   next.updated_at = now;
   const prior = prev && prev.changes != null ? prev.changes : next.changes;
-  if (action && !isCrewNote(next)) {
-    next.changes = appendChange(prior, {
-      at: now,
-      by: email,
-      action,
-      diffs: fieldDiffs(prev, next),
-    });
+  const diffs = action && !isCrewNote(next) ? fieldDiffs(prev, next) : [];
+  if (action === 'created' && !isCrewNote(next)) {
+    next.changes = appendChange(prior, { at: now, by: email, action, diffs });
+  } else if (action && diffs.length && !isCrewNote(next)) {
+    next.changes = appendChange(prior, { at: now, by: email, action, diffs });
   } else {
     next.changes = asChanges(prior);
   }

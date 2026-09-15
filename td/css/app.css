@@ -354,6 +354,32 @@ main {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+.lunch-row {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #fff8dc;
+  border: 1px solid #efe4b0;
+  color: #6b5e2f;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  user-select: none;
+}
+.lunch-row .lunch-label {
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+.lunch-row .lunch-time {
+  font-variant-numeric: tabular-nums;
+}
+
 .job-card-detailed .live-notes {
   margin: 3px 0 0;
   font-size: 12px;

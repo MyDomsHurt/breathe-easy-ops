@@ -612,6 +612,88 @@ function cellTeamMembersFor(date, team) {
   return consensusTeamMembers(allJobs, date, team);
 }
 
+function findCrewNoteFor(date, team) {
+  if (window.BETeamDay && typeof window.BETeamDay.findCrewNote === 'function') {
+    return window.BETeamDay.findCrewNote(allJobs, date, team);
+  }
+  const id = 'crew-' + String(date || '') + '-' + String(team || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  let found = null;
+  (allJobs || []).forEach(function (job) {
+    if (job.deleted || !isCrewNote(job)) return;
+    if (job.job_id === id) found = job;
+    else if (!found && job.date === date && job.team_lead === team) found = job;
+  });
+  return found;
+}
+
+function parseLunchMinutes(raw) {
+  const s = String(raw || '').trim().replace(/;/g, ':').replace(/\s+/g, '').toLowerCase();
+  if (!s) return null;
+  const m24 = s.match(/^(\d{1,2}):(\d{2})$/);
+  if (m24) {
+    const h = parseInt(m24[1], 10);
+    const min = parseInt(m24[2], 10);
+    if (h <= 23 && min <= 59) return h * 60 + min;
+  }
+  const mins = timeToMinutes(s);
+  return mins === 9999 ? null : mins;
+}
+
+function formatLunch24(raw) {
+  const mins = parseLunchMinutes(raw);
+  if (mins == null) return '';
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+}
+
+function lunchesOnDate(date) {
+  const teams = currentFilters.team !== 'all' ? [currentFilters.team] : TEAMS.slice();
+  const out = [];
+  teams.forEach(function (team) {
+    const note = findCrewNoteFor(date, team);
+    const raw = note && String(note.lunch || '').trim();
+    const mins = parseLunchMinutes(raw);
+    if (mins == null) return;
+    out.push({ team: team, time: formatLunch24(raw), mins: mins });
+  });
+  out.sort(function (a, b) {
+    if (a.mins !== b.mins) return a.mins - b.mins;
+    return a.team.localeCompare(b.team);
+  });
+  return out;
+}
+
+function lunchRowHtml(row, showTeam) {
+  const who = showTeam ? esc(row.team) + ' \u00b7 ' : '';
+  return '<div class="lunch-row" data-lunch="1">' +
+    '<span class="lunch-label">' + who + 'Lunch</span>' +
+    '<span class="lunch-time">' + esc(row.time) + '</span>' +
+  '</div>';
+}
+
+function cardsWithLunch(jobs, date, teamFilter) {
+  const sorted = (jobs || []).slice().sort(function (a, b) {
+    return jobSortMinutes(a) - jobSortMinutes(b);
+  });
+  const lunches = lunchesOnDate(date);
+  const bits = [];
+  let li = 0;
+  sorted.forEach(function (j) {
+    const jm = jobSortMinutes(j);
+    while (li < lunches.length && lunches[li].mins <= jm) {
+      bits.push(lunchRowHtml(lunches[li], teamFilter === 'all'));
+      li += 1;
+    }
+    bits.push(jobCard(j));
+  });
+  while (li < lunches.length) {
+    bits.push(lunchRowHtml(lunches[li], teamFilter === 'all'));
+    li += 1;
+  }
+  return bits.join('');
+}
+
 function visibleCrewNotes() {
   const bounds = getRangeBounds(currentFilters.range);
   return allJobs.filter(function (j) {
@@ -619,7 +701,9 @@ function visibleCrewNotes() {
     if (currentFilters.team !== 'all' && j.team_lead !== currentFilters.team) return false;
     if (currentFilters.date !== 'all' && j.date !== currentFilters.date) return false;
     if (bounds && (j.date < bounds.start || j.date > bounds.end)) return false;
-    return !!String(j.team_members || '').trim();
+    const who = String(j.team_members || '').trim();
+    const lunch = String(j.lunch || '').trim();
+    return !!(who || lunch);
   });
 }
 
@@ -802,7 +886,7 @@ function renderByDate(container) {
         '</div>' +
         dayWhosOnHtml(jobs, date) +
       '</div>' +
-      '<div class="' + gridCls + '">' + jobs.map(jobCard).join('') + '</div></section>';
+      '<div class="' + gridCls + '">' + cardsWithLunch(jobs, date, currentFilters.team) + '</div></section>';
   }).join('');
   bindCardClicks();
 }
@@ -819,7 +903,12 @@ function renderByTeam(container) {
     return '<section><div class="flex items-center justify-between mb-2"><h3 class="font-semibold"><span class="inline-block px-2 py-0.5 rounded ' +
       (TEAM_COLORS[team] || 'bg-slate-100') + ' team-chip mr-1">' + team + '</span><span class="text-slate-400 font-normal text-sm">' +
       jobs.length + ' jobs' + (returns ? ' \u00b7 ' + returns + ' returns' : '') + '</span></h3>' +
-      '</div><div class="' + (compactMode ? 'grid grid-cols-2 gap-1.5' : 'grid gap-1.5') + '">' + jobs.map(jobCard).join('') + '</div></section>';
+      '</div><div class="' + (compactMode ? 'grid grid-cols-2 gap-1.5' : 'grid gap-1.5') + '">' + (function () {
+        const byDate = groupBy(jobs, function (j) { return j.date; });
+        return Object.keys(byDate).sort().map(function (d) {
+          return cardsWithLunch(byDate[d], d, team);
+        }).join('');
+      }()) + '</div></section>';
   }).join('');
   bindCardClicks();
 }

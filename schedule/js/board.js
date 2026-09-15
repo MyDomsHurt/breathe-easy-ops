@@ -8,20 +8,11 @@ function teamColor(name) {
   return TEAM_META[name]?.color || '#64748b';
 }
 
-function typeMark(type, compact, job) {
-  const hi = isHeld(job, 'type') ? ' hi' : '';
-  if (type === 'return') return `<span class="tag return${hi}">${compact ? 'RET' : 'RETURN'}</span>`;
-  if (type === 'influencer') return `<span class="tag influencer${hi}">${compact ? 'COL' : 'COLLAB'}</span>`;
-  return '';
-}
-
 function markedType(type) {
   return type === 'return' || type === 'influencer';
 }
 
-function rightMark(job, type, compact) {
-  const mark = typeMark(type, compact, job);
-  if (mark) return mark;
+function rightMark(job) {
   return job.acs ? `<span class="acs${isHeld(job, 'acs') ? ' hi' : ''}">${esc(job.acs)}</span>` : '';
 }
 
@@ -60,7 +51,7 @@ function chipHtml(job, conflict) {
     ${who}
     <div class="chip-top">
       <span class="when${conflict ? ' time-conflict' : ''}${hi(job, 'time')}">${esc(shortTime(job))}</span>
-      ${tent}${rightMark(job, type, true)}
+      ${tent}${rightMark(job)}
     </div>
     <div class="chip-addr${hi(job, 'address')}">${esc(shortAddress(job))}</div>
     ${notesRow}
@@ -83,7 +74,7 @@ function cardHtml(job, conflict) {
     ${who}
     <div class="card-top">
       <strong class="when${conflict ? ' time-conflict' : ''}${hi(job, 'time')}">${esc(shortTime(job))}</strong>
-      ${tent}${rightMark(job, type, false)}
+      ${tent}${rightMark(job)}
     </div>
     <div class="card-addr${hi(job, 'address')}">${esc(shortAddress(job, 56))}</div>
     ${notesRow}

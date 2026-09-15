@@ -35,6 +35,18 @@ export function nextStackOrder(jobs, date, team, exceptId) {
   return max + 1;
 }
 
+/** Keep place in the cell. nextStackOrder only for a new job or a date/team change. */
+export function stackOrderOnSave(jobs, date, team, prev) {
+  if (!prev || !prev.job_id || prev.date !== date || prev.team_lead !== team) {
+    return nextStackOrder(jobs, date, team, prev && prev.job_id);
+  }
+  const n = Number(prev.stack_order);
+  if (Number.isFinite(n)) return n;
+  const list = jobsForTeamDay(jobs, date, team);
+  const i = list.findIndex((j) => j.job_id === prev.job_id);
+  return i >= 0 ? i : nextStackOrder(jobs, date, team, prev.job_id);
+}
+
 export function teamMembersOnDay(jobs, date, team) {
   return cellTeamMembers(jobs, date, team)
     || TEAM_META[team]?.members

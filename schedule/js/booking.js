@@ -1,5 +1,5 @@
 import { DISTRICTS, JOB_TYPES, PAYMENTS, TEAMS, TEAM_META, UNIT_TYPES } from './config.js';
-import { nextStackOrder, overlapWarning, suggestTeams, teamMembersOnDay } from './capacity.js';
+import { overlapWarning, stackOrderOnSave, suggestTeams, teamMembersOnDay } from './capacity.js';
 import { addJob, allJobs, removeJob, updateJob } from './store.js';
 import { uniqueClientsFrom } from './seed.js';
 import { highlightOf } from '../../shared/job.js';
@@ -443,11 +443,6 @@ function save(status = 'confirmed') {
   const notes = String(notesRaw || '').slice(0, NOTES1_MAX);
   const jobs = allJobs();
   const prev = form.job_id ? jobs.find((j) => j.job_id === form.job_id) : null;
-  const keepOrder = prev
-    && prev.date === form.date
-    && prev.team_lead === form.team_lead
-    && prev.stack_order != null
-    && prev.stack_order !== '';
   const payload = {
     ...form,
     status: status === 'tentative' ? 'tentative' : 'confirmed',
@@ -464,7 +459,7 @@ function save(status = 'confirmed') {
     amount: form.job_type === 'cleaning'
       ? (form.amount === '' || form.amount == null ? null : Number(form.amount))
       : null,
-    stack_order: keepOrder ? prev.stack_order : nextStackOrder(jobs, form.date, form.team_lead, form.job_id),
+    stack_order: stackOrderOnSave(jobs, form.date, form.team_lead, prev),
   };
   delete payload.created_by;
   delete payload.created_at;

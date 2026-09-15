@@ -25,6 +25,8 @@ window.ALLOWLIST = [
   "matthewgross2001@gmail.com",
   "n.marie.lamb@gmail.com",
   "neltrestium@gmail.com",
+  "perry@breathe-easyhk.com",
+  "ruby@breathe-easyhk.com",
   "sudor23@gmail.com",
   "tiagogiri334@gmail.com"
 ];

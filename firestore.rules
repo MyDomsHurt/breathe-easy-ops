@@ -11,6 +11,8 @@ rules_version = '2';
 //   matthewgross2001@gmail.com
 //   n.marie.lamb@gmail.com
 //   neltrestium@gmail.com
+//   perry@breathe-easyhk.com
+//   ruby@breathe-easyhk.com
 //   sudor23@gmail.com
 //   tiagogiri334@gmail.com
 service cloud.firestore {
@@ -28,6 +30,8 @@ service cloud.firestore {
           'matthewgross2001@gmail.com',
           'n.marie.lamb@gmail.com',
           'neltrestium@gmail.com',
+          'perry@breathe-easyhk.com',
+          'ruby@breathe-easyhk.com',
           'sudor23@gmail.com',
           'tiagogiri334@gmail.com'
         ];

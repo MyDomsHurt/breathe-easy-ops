@@ -4,7 +4,7 @@ import { addDays, formatDay, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth
 import { allJobs, getJob, importExistingJobs, redo, removeJob, reorderStack, resetDemo, setTeamDayHighlight, setTeamDayMembers, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js';
 import { startScheduleAuth } from './auth.js';
 import { hasTimeConflict, jobsForTeamDay, nextStackOrder } from './capacity.js';
-import { renderDayBoard, renderWeekBoard } from './board.js';
+import { pulseRemaining, renderDayBoard, renderWeekBoard } from './board.js';
 import { closeBooking, openBooking } from './booking.js';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js';
 
@@ -135,6 +135,19 @@ function paint() {
   syncFilterUi();
   syncSundayUi();
   focusJobOnBoard();
+  schedulePulseClear();
+}
+
+function schedulePulseClear() {
+  clearTimeout(schedulePulseClear._t);
+  let next = Infinity;
+  for (const job of allJobs()) {
+    const remain = pulseRemaining(job);
+    if (remain > 0 && remain < next) next = remain;
+  }
+  if (next < Infinity) {
+    schedulePulseClear._t = setTimeout(() => paint(), next + 40);
+  }
 }
 
 function focusJobOnBoard() {
@@ -653,6 +666,7 @@ function bindChrome() {
     state.monday = mondayOf(job.date);
     state.day = job.date;
     state.view = 'board';
+    state.focusJobId = job.job_id;
     paint();
     toast(`${job.status === 'tentative' ? 'Tentative' : 'Saved'} ${job.client_name} · ${job.team_lead} · ${job.date}`);
   });

@@ -38,6 +38,20 @@ function hi(job, key) {
   return isHeld(job, key) ? ' hi' : '';
 }
 
+const PULSE_MS = 20000;
+
+export function pulseRemaining(job, now = Date.now()) {
+  const rows = job && Array.isArray(job.changes) ? job.changes : [];
+  const last = rows[rows.length - 1];
+  if (!last) return 0;
+  if (last.action !== 'created' && last.action !== 'saved' && last.action !== 'tentative' && last.action !== 'moved') return 0;
+  const t = Date.parse(last.at);
+  if (!Number.isFinite(t)) return 0;
+  const remain = t + PULSE_MS - now;
+  if (remain <= 0 || remain > PULSE_MS) return 0;
+  return remain;
+}
+
 function chipHtml(job, conflict) {
   const type = jobTypeOf(job);
   const extra = markedType(type) ? type : '';
@@ -47,7 +61,8 @@ function chipHtml(job, conflict) {
   const who = job.client_name
     ? `<div class="who${hi(job, 'client')}">${esc(job.client_name)}</div>` : '';
   const tent = tentative ? '<span class="tag tentative">TENT</span>' : '';
-  return `<button class="job-chip ${extra}${tentative}" draggable="true" data-job="${job.job_id}" style="--team:${teamColor(job.team_lead)}" title="${esc(hoverTitle(job))}">
+  const pulse = pulseRemaining(job) ? ' is-pulse' : '';
+  return `<button class="job-chip ${extra}${tentative}${pulse}" draggable="true" data-job="${job.job_id}" style="--team:${teamColor(job.team_lead)}" title="${esc(hoverTitle(job))}">
     ${who}
     <div class="chip-top">
       <span class="when${conflict ? ' time-conflict' : ''}${hi(job, 'time')}">${esc(shortTime(job))}</span>
@@ -70,7 +85,8 @@ function cardHtml(job, conflict) {
   const who = job.client_name
     ? `<div class="who${hi(job, 'client')}">${esc(job.client_name)}</div>` : '';
   const tent = tentative ? '<span class="tag tentative">TENT</span>' : '';
-  return `<button class="job-card ${extra}${tentative}" draggable="true" data-job="${job.job_id}" style="--team:${teamColor(job.team_lead)}" title="${esc(hoverTitle(job))}">
+  const pulse = pulseRemaining(job) ? ' is-pulse' : '';
+  return `<button class="job-card ${extra}${tentative}${pulse}" draggable="true" data-job="${job.job_id}" style="--team:${teamColor(job.team_lead)}" title="${esc(hoverTitle(job))}">
     ${who}
     <div class="card-top">
       <strong class="when${conflict ? ' time-conflict' : ''}${hi(job, 'time')}">${esc(shortTime(job))}</strong>

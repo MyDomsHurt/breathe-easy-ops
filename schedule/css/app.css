@@ -706,6 +706,16 @@ button.day-col-head:hover { background: #e0f2fe; }
   box-shadow: 0 0 0 3px rgba(14, 165, 233, .22);
 }
 
+@keyframes be-job-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(8, 145, 178, 0.22); }
+  50% { box-shadow: 0 0 0 5px rgba(8, 145, 178, 0.1); }
+}
+.job-chip.is-pulse, .job-card.is-pulse {
+  outline: 2px solid #22d3ee;
+  outline-offset: 1px;
+  animation: be-job-pulse 1.8s ease-in-out infinite;
+}
+
 .chip-top, .card-top {
   display: flex;
   align-items: baseline;

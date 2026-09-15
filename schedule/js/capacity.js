@@ -15,8 +15,22 @@ export function stackKey(job) {
 
 export function sortByStack(jobs) {
   return jobs.slice().sort((a, b) => {
-    const d = stackKey(a) - stackKey(b);
-    if (d) return d;
+    const ta = startMinutes(a);
+    const tb = startMinutes(b);
+    if (ta != null && tb != null) {
+      const d = ta - tb;
+      if (d) return d;
+      return String(a.job_id || '').localeCompare(String(b.job_id || ''));
+    }
+    if (ta != null && tb == null) return -1;
+    if (ta == null && tb != null) return 1;
+    const sa = Number(a && a.stack_order);
+    const sb = Number(b && b.stack_order);
+    const aN = Number.isFinite(sa);
+    const bN = Number.isFinite(sb);
+    if (aN && bN && sa !== sb) return sa - sb;
+    if (aN && !bN) return -1;
+    if (!aN && bN) return 1;
     return String(a.job_id || '').localeCompare(String(b.job_id || ''));
   });
 }

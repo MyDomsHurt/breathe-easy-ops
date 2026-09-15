@@ -3,7 +3,7 @@ import { overlapWarning, stackOrderOnSave, suggestTeams, teamMembersOnDay } from
 import { addJob, allJobs, removeJob, updateJob } from './store.js';
 import { uniqueClientsFrom } from './seed.js';
 import { highlightOf } from '../../shared/job.js';
-import { acsLabel, emptyUnits, formatDay, jobStatus, jobTypeOf, NOTES1_MAX, parseAcs, shortTime } from './utils.js';
+import { acsLabel, emptyUnits, formatDay, formatTime24, jobStatus, jobTypeOf, NOTES1_MAX, parseAcs, shortTime } from './utils.js';
 
 let form = {
   job_id: '',
@@ -124,7 +124,7 @@ export function openBooking(prefill = {}) {
     district: prefill.district || '',
     units,
     date: prefill.date || '',
-    time: prefill.time || '',
+    time: formatTime24(prefill.time) || prefill.time || '',
     team_lead: prefill.team_lead || '',
     job_type: jobTypeOf(prefill),
     amount: prefill.amount != null && prefill.amount !== '' ? prefill.amount : '',
@@ -227,7 +227,8 @@ function renderForm() {
             </div>
             <div class="field${fieldClass('time')}">
               <label>Time ${holdChip('time', 'time')}</label>
-              <input id="timeInput" value="${escapeAttr(form.time)}" />
+              <input id="timeInput" value="${escapeAttr(form.time)}" placeholder="13:00" autocomplete="off" />
+              <p class="field-hint">24-hour · HH:MM (13:00). 9am and 1pm convert on save.</p>
             </div>
           </div>
         </section>
@@ -343,7 +344,12 @@ function bindForm() {
   $('#districtInput').addEventListener('change', (e) => { form.district = e.target.value; renderForm(); });
   $('#dateInput').addEventListener('change', (e) => { form.date = e.target.value; renderForm(); });
   $('#timeInput').addEventListener('input', (e) => { form.time = e.target.value; });
-  $('#timeInput').addEventListener('change', (e) => { form.time = e.target.value; renderForm(); });
+  $('#timeInput').addEventListener('change', (e) => {
+    const converted = formatTime24(e.target.value);
+    form.time = converted || e.target.value;
+    if (converted) e.target.value = converted;
+    renderForm();
+  });
   $('#typeInput').addEventListener('change', (e) => { form.job_type = e.target.value; renderForm(); });
   $('#payInput').addEventListener('change', (e) => { form.payment = e.target.value; });
   $('#amountInput').addEventListener('input', (e) => {
@@ -452,7 +458,7 @@ function save(status = 'confirmed') {
     notes_long: form.notes_long,
     invoice: form.invoice || '',
     highlight: highlightOf({ highlight: form.highlight }),
-    time: String(form.time || '').trim(),
+    time: formatTime24(form.time) || String(form.time || '').trim(),
     payment: form.payment,
     payment_status: paymentStatusFromLabel(form.payment),
     team_members: teamMembersOnDay(jobs, form.date, form.team_lead),

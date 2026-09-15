@@ -86,72 +86,56 @@ export function isWeekend(iso) {
   return day === 0 || day === 6;
 }
 
-export function timeToMinutes(t) {
-  if (!t) return 9999;
-  const s = String(t).toLowerCase().replace(/\s+/g, '');
-  const m = s.match(/(\d{1,2})(?:[.:](\d{2}))?(am|pm)?/);
-  if (!m) return 9999;
-  let h = parseInt(m[1], 10);
-  const min = m[2] != null ? parseInt(m[2], 10) : 0;
-  const ap = m[3] || '';
-  if (ap === 'pm' && h < 12) h += 12;
-  if (ap === 'am' && h === 12) h = 0;
-  if (!ap && h >= 1 && h <= 6) h += 12;
-  return h * 60 + min;
-}
-
 function rawTime(job) {
   if (job == null) return '';
   if (typeof job === 'object') return job.time;
   return job;
 }
 
-function formatClock(token, fallbackAp) {
-  const s = String(token || '').toLowerCase().replace(/\s+/g, '');
-  const m = s.match(/^(\d{1,2})(?:[:.](\d{2}))?(?:[:.]\d{2})?(am|pm)?$/);
-  if (!m) return '';
+/** Minutes from midnight. Blank/unparseable → null. Accepts 9am, 1pm, 13:00, 09.30. */
+export function parseTimeToMinutes(raw) {
+  let s = String(raw == null ? '' : raw).trim();
+  if (!s) return null;
+  s = s.split(/\s*=>\s*/).pop().trim();
+  s = s.split(/\s*-\s*/)[0].trim();
+  const compact = s.toLowerCase().replace(/\s+/g, '');
+  const m = compact.match(/^(\d{1,2})(?:[:.](\d{2}))?(?:[:.]\d{2})?(am|pm)?$/);
+  if (!m) return null;
   let h = parseInt(m[1], 10);
   const min = m[2] != null ? parseInt(m[2], 10) : 0;
-  let ap = m[3] || fallbackAp || '';
-  if (!ap) {
-    if (h === 12) ap = 'pm';
-    else if (h >= 8 && h <= 11) ap = 'am';
-    else if (h >= 13 && h <= 23) {
-      h -= 12;
-      ap = 'pm';
-    } else {
-      ap = 'pm';
-    }
-  }
-  if (h === 0) {
-    h = 12;
-    ap = 'am';
-  } else if (h > 12) {
-    h -= 12;
-    if (!m[3]) ap = 'pm';
-  }
-  return `${String(h).padStart(2, '0')}.${String(min).padStart(2, '0')}${ap}`;
+  if (!Number.isFinite(h) || !Number.isFinite(min) || min > 59) return null;
+  const ap = m[3] || '';
+  if (ap === 'pm' && h < 12) h += 12;
+  else if (ap === 'am' && h === 12) h = 0;
+  if (h > 23) return null;
+  return h * 60 + min;
 }
 
-/** Card start time: 09.00am. Ranges and “11.30am => 10.30am” use the actual start. */
+export function formatTime24(raw) {
+  const mins = parseTimeToMinutes(raw);
+  if (mins == null) return '';
+  const h = Math.floor(mins / 60);
+  const min = mins % 60;
+  return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+}
+
+export function timeToMinutes(t) {
+  const mins = parseTimeToMinutes(t);
+  return mins == null ? 9999 : mins;
+}
+
+/** Card start time as 24-hour HH:MM. */
 export function shortTime(job) {
   const raw = String(rawTime(job) || '').trim();
   if (!raw) return '—';
-  const current = raw.split(/\s*=>\s*/).pop().trim();
-  const apMatch = current.match(/[ap]m/i);
-  const ap = apMatch ? apMatch[0].toLowerCase() : '';
-  const start = current.split(/\s*-\s*/)[0].trim();
-  return formatClock(start, ap) || raw;
+  return formatTime24(raw) || raw;
 }
 
 /** Minutes from midnight for conflict checks. Blank/unparseable times are not conflicts. */
 export function startMinutes(job) {
   const raw = String(rawTime(job) || '').trim();
   if (!raw) return null;
-  const label = shortTime(job);
-  if (!label || label === '—') return null;
-  const mins = timeToMinutes(label);
-  return mins === 9999 ? null : mins;
+  return parseTimeToMinutes(raw);
 }
 
 export function shortAddress(job, max = 42) {

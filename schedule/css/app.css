@@ -694,6 +694,61 @@ button.day-col-head:hover { background: #e0f2fe; }
 .lunch-label { text-transform: uppercase; font-size: 10px; letter-spacing: 0.06em; }
 .lunch-time { font-variant-numeric: tabular-nums; }
 
+.cell-day-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 5px;
+}
+.day-full-btn,
+.add-slot-btn {
+  border: 1px solid #d6d3d1;
+  border-radius: 999px;
+  background: #fff;
+  color: #78716c;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 1px 7px;
+  cursor: pointer;
+  line-height: 1.4;
+}
+.day-full-btn:hover,
+.add-slot-btn:hover {
+  border-color: #94a3b8;
+  color: var(--ink);
+}
+.day-full-btn.on {
+  background: #e2e8f0;
+  border-color: #64748b;
+  color: #334155;
+}
+.empty-slot {
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 6px;
+  background: repeating-linear-gradient(
+    -45deg,
+    #f8fafc,
+    #f8fafc 6px,
+    #f1f5f9 6px,
+    #f1f5f9 12px
+  );
+  cursor: pointer;
+  padding: 0;
+}
+.empty-slot:hover { border-color: #38bdf8; background: #f0f9ff; }
+.empty-slot.is-locked {
+  cursor: not-allowed;
+  opacity: 0.45;
+  border-color: #94a3b8;
+  background: #e2e8f0;
+}
+.day-cell .empty-slot { min-height: 40px; }
+
 .cell-van-input {
   display: block;
   width: 100%;

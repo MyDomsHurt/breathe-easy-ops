@@ -50,6 +50,8 @@ export const CANONICAL_FIELDS = [
   'highlight',
   'highlight_members',
   'lunch',
+  'day_slots',
+  'day_full',
   'deleted',
   'slot',
   'source',
@@ -96,6 +98,8 @@ export function normalizeJob(raw, opts) {
     highlight: asHighlight(input),
     highlight_members: asFlag(input.highlight_members),
     lunch: textOrNull(input.lunch),
+    day_slots: asDaySlots(input.day_slots),
+    day_full: asFlag(input.day_full),
     deleted: input.deleted === true || input.deleted === 'true',
     slot: textOrNull(input.slot),
     source: textOrNull(input.source),
@@ -238,6 +242,12 @@ export function appendChange(list, entry) {
 
 function asFlag(value) {
   return value === true || value === 'true';
+}
+
+function asDaySlots(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 6) return null;
+  return Math.min(24, Math.floor(n));
 }
 
 function asHighlight(input) {

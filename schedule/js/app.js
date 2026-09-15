@@ -1,7 +1,7 @@
 import { DISTRICTS, JOB_TYPES, TEAMS } from './config.js';
 import { isCrewNote } from './team-day.js';
 import { addDays, formatDay, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, normalizeLunch, pad, parseISO, shortTime, weekDays, workWeekDays } from './utils.js';
-import { allJobs, getJob, importExistingJobs, redo, removeJob, reorderStack, resetDemo, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js';
+import { allJobs, getJob, importExistingJobs, redo, removeJob, reorderStack, resetDemo, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js';
 import { startScheduleAuth } from './auth.js';
 import { hasTimeConflict, jobsForTeamDay, nextStackOrder } from './capacity.js';
 import { pulseRemaining, renderDayBoard, renderWeekBoard } from './board.js';
@@ -291,6 +291,30 @@ function bindBoardClicks() {
       const on = markVan.getAttribute('aria-pressed') !== 'true';
       setTeamDayHighlight(markVan.dataset.markVan, markVan.dataset.markVanTeam, on);
       paint();
+      return;
+    }
+    const dayFull = e.target.closest('[data-day-full]');
+    if (dayFull) {
+      e.preventDefault();
+      e.stopPropagation();
+      const on = dayFull.getAttribute('aria-pressed') !== 'true';
+      setTeamDayFull(dayFull.dataset.dayFull, dayFull.dataset.dayFullTeam, on);
+      paint();
+      return;
+    }
+    const addSlot = e.target.closest('[data-add-slot]');
+    if (addSlot) {
+      e.preventDefault();
+      e.stopPropagation();
+      const n = Number(addSlot.dataset.addSlotCount) || 6;
+      setTeamDaySlots(addSlot.dataset.addSlot, addSlot.dataset.addSlotTeam, n + 1);
+      paint();
+      return;
+    }
+    const emptySlot = e.target.closest('[data-empty-slot]');
+    if (emptySlot && emptySlot.classList.contains('is-locked')) {
+      e.preventDefault();
+      e.stopPropagation();
       return;
     }
     const lunchEdit = e.target.closest('[data-edit-lunch]');

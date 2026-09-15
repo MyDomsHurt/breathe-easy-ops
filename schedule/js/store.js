@@ -315,6 +315,60 @@ export function setTeamDayHighlight(date, team, on) {
   emit();
 }
 
+export function setTeamDayFull(date, team, on) {
+  const noteId = crewNoteId(date, team);
+  const prevNote = getJob(noteId);
+  const members = prevNote
+    ? String(prevNote.team_members || '').trim()
+    : cellTeamMembers(allJobs(), date, team);
+  writeJob(toCanonical({
+    job_id: noteId,
+    date,
+    team_lead: team,
+    team_members: members,
+    client_name: '',
+    time: '',
+    acs: '',
+    job_type: 'cleaning',
+    is_return: false,
+    source: CREW_SOURCE,
+    status: 'confirmed',
+    highlight_members: prevNote ? !!prevNote.highlight_members : false,
+    lunch: prevNote && prevNote.lunch || null,
+    day_slots: prevNote && prevNote.day_slots,
+    day_full: !!on,
+  }, prevNote));
+  emit();
+}
+
+export function setTeamDaySlots(date, team, count) {
+  const noteId = crewNoteId(date, team);
+  const prevNote = getJob(noteId);
+  const members = prevNote
+    ? String(prevNote.team_members || '').trim()
+    : cellTeamMembers(allJobs(), date, team);
+  const n = Number(count);
+  const slots = Number.isFinite(n) && n >= 6 ? Math.min(24, Math.floor(n)) : 6;
+  writeJob(toCanonical({
+    job_id: noteId,
+    date,
+    team_lead: team,
+    team_members: members,
+    client_name: '',
+    time: '',
+    acs: '',
+    job_type: 'cleaning',
+    is_return: false,
+    source: CREW_SOURCE,
+    status: 'confirmed',
+    highlight_members: prevNote ? !!prevNote.highlight_members : false,
+    lunch: prevNote && prevNote.lunch || null,
+    day_slots: slots,
+    day_full: !!(prevNote && prevNote.day_full),
+  }, prevNote));
+  emit();
+}
+
 export function setTeamDayLunch(date, team, lunch) {
   const noteId = crewNoteId(date, team);
   const prevNote = getJob(noteId);

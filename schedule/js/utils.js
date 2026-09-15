@@ -92,14 +92,15 @@ function rawTime(job) {
   return job;
 }
 
-/** Minutes from midnight. Blank/unparseable → null. Accepts 9am, 1pm, 13:00, 09.30. */
+/** Minutes from midnight. Blank/unparseable → null. Accepts 9am, 1pm, 13:00, 09.30, 1400, 14;00. */
 export function parseTimeToMinutes(raw) {
   let s = String(raw == null ? '' : raw).trim();
   if (!s) return null;
   s = s.split(/\s*=>\s*/).pop().trim();
   s = s.split(/\s*-\s*/)[0].trim();
-  const compact = s.toLowerCase().replace(/\s+/g, '');
-  const m = compact.match(/^(\d{1,2})(?:[:.](\d{2}))?(?:[:.]\d{2})?(am|pm)?$/);
+  const compact = s.toLowerCase().replace(/\s+/g, '').replace(/;/g, ':');
+  let m = compact.match(/^(\d{1,2})(?:[:.](\d{2}))?(?:[:.]\d{2})?(am|pm)?$/);
+  if (!m) m = compact.match(/^(\d{1,2})(\d{2})(am|pm)?$/);
   if (!m) return null;
   let h = parseInt(m[1], 10);
   const min = m[2] != null ? parseInt(m[2], 10) : 0;
@@ -120,9 +121,7 @@ export function formatTime24(raw) {
 }
 
 export function normalizeLunch(raw) {
-  const s = String(raw || '').trim().replace(/;/g, ':');
-  if (!s) return '';
-  return formatTime24(s);
+  return formatTime24(raw);
 }
 
 export function timeToMinutes(t) {

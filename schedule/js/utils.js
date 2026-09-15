@@ -175,6 +175,14 @@ export function shortNotes(job, max = 96) {
   return s;
 }
 
+export const NOTES1_MAX = 150;
+
+export function notes1Text(job) {
+  const s = String(job && job.notes || '').replace(/\s+/g, ' ').trim();
+  if (!s) return '';
+  return s.length > NOTES1_MAX ? s.slice(0, NOTES1_MAX) : s;
+}
+
 const ACS_ALIASES = {
   S: 'S',
   W: 'W',

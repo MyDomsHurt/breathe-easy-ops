@@ -635,7 +635,7 @@ function applyFilters() {
     if (currentFilters.date !== 'all' && j.date !== currentFilters.date) return false;
     if (bounds && (j.date < bounds.start || j.date > bounds.end)) return false;
     if (currentFilters.search) {
-      const hay = [j.client_name, j.mobile, j.address, j.notes, j.acs, j.invoice].join(' ').toLowerCase();
+      const hay = [j.client_name, j.mobile, j.address, j.notes, j.notes_long, j.acs, j.invoice].join(' ').toLowerCase();
       if (!hay.includes(currentFilters.search)) return false;
     }
     return true;
@@ -949,9 +949,10 @@ function openModal(j) {
     ['Mobile', mobileHtml],
     ['Address', addressHtml],
     ['District', j.district || '\u2014'],
-    ['Notes', j.notes || '\u2014'],
-    ['Job ID', j.job_id]
+    ['Notes 1', j.notes ? esc(j.notes) : '\u2014']
   );
+  if (j.notes_long) rows.push(['Notes 2', esc(j.notes_long)]);
+  rows.push(['Job ID', j.job_id]);
   document.getElementById('modalBody').innerHTML = rows.map(function(pair) {
     return '<div><dt class="text-xs font-medium text-slate-400 uppercase tracking-wide">' + pair[0] + '</dt><dd class="mt-0.5 text-slate-800 break-words">' + pair[1] + '</dd></div>';
   }).join('') +

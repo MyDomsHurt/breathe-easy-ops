@@ -12,7 +12,7 @@ export function searchJobs(jobs, query, limit = 8) {
   if (s.length < 2) return [];
   const hits = [];
   for (const j of jobs) {
-    const hay = [j.client_name, j.mobile, j.address, j.district, j.notes, j.invoice, j.job_id, j.acs, j.team_lead]
+    const hay = [j.client_name, j.mobile, j.address, j.district, j.notes, j.notes_long, j.invoice, j.job_id, j.acs, j.team_lead]
       .join(' ')
       .toLowerCase();
     if (hay.includes(s)) hits.push(j);
@@ -59,7 +59,7 @@ export function renderJobsList(el, jobs, query) {
   const q = String(query || '').trim().toLowerCase();
   const rows = jobs.filter((j) => {
     if (!q) return true;
-    return [j.client_name, j.mobile, j.address, j.notes, j.acs, j.invoice, j.team_lead, j.district]
+    return [j.client_name, j.mobile, j.address, j.notes, j.notes_long, j.acs, j.invoice, j.team_lead, j.district]
       .join(' ')
       .toLowerCase()
       .includes(q);
@@ -143,7 +143,8 @@ export function renderJobModal(el, job) {
         ${kv('Address', `${job.address || '—'}${maps}`)}
         ${kv('District', dist ? `${dist.short} · ${dist.label}` : (job.district || '—'))}
         ${kv('Invoice', job.invoice || '—')}
-        ${kv('Notes', job.notes || '—')}
+        ${kv('Notes 1', job.notes || '—')}
+        ${job.notes_long ? kv('Notes 2', job.notes_long) : ''}
         ${kv('Job ID', job.job_id)}
         <div style="display:flex;gap:8px;margin-top:16px">
           <button class="primary-btn" data-edit-job="${job.job_id}" type="button">Edit / move</button>

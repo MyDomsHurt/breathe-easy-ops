@@ -1,7 +1,7 @@
 import { TEAM_META } from './config.js';
 import { conflictingJobIds, districtsForTeamOnDay, jobsForTeamDay } from './capacity.js';
 import { cellTeamMembers } from './team-day.js';
-import { districtChipsHtml, esc, formatDay, formatMoney, isToday, isWeekend, jobStatus, jobTypeOf, shortAddress, shortNotes, shortTime } from './utils.js';
+import { districtChipsHtml, esc, formatDay, formatMoney, isToday, isWeekend, jobStatus, jobTypeOf, notes1Text, shortAddress, shortTime } from './utils.js';
 
 function teamColor(name) {
   return TEAM_META[name]?.color || '#64748b';
@@ -41,7 +41,7 @@ function chipHtml(job, conflict) {
   const type = jobTypeOf(job);
   const extra = markedType(type) ? type : '';
   const tentative = jobStatus(job) === 'tentative' ? ' tentative' : '';
-  const notes = shortNotes(job);
+  const notes = notes1Text(job);
   const notesRow = notes ? `<div class="chip-notes">${esc(notes)}</div>` : '';
   const tent = tentative ? '<span class="tag tentative">TENT</span>' : '';
   return `<button class="job-chip ${extra}${tentative}" draggable="true" data-job="${job.job_id}" style="--team:${teamColor(job.team_lead)}" title="${esc(hoverTitle(job))}">
@@ -59,7 +59,7 @@ function cardHtml(job, conflict) {
   const type = jobTypeOf(job);
   const extra = markedType(type) ? type : '';
   const tentative = jobStatus(job) === 'tentative' ? ' tentative' : '';
-  const notes = shortNotes(job, 140);
+  const notes = notes1Text(job);
   const notesRow = notes ? `<p class="card-notes">${esc(notes)}</p>` : '';
   const money = type === 'cleaning' && job.amount != null
     ? `<span class="card-money">${formatMoney(job.amount)}</span>` : '';

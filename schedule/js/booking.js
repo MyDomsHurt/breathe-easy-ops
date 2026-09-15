@@ -2,7 +2,7 @@ import { DISTRICTS, JOB_TYPES, PAYMENTS, TEAMS, TEAM_META, UNIT_TYPES } from './
 import { nextStackOrder, overlapWarning, suggestTeams, teamMembersOnDay } from './capacity.js';
 import { addJob, allJobs, removeJob, updateJob } from './store.js';
 import { uniqueClientsFrom } from './seed.js';
-import { acsLabel, acsTotal, emptyUnits, formatDay, jobStatus, jobTypeOf, parseAcs, shortTime } from './utils.js';
+import { acsLabel, acsTotal, emptyUnits, formatDay, jobStatus, jobTypeOf, NOTES1_MAX, parseAcs, shortTime } from './utils.js';
 
 let form = {
   job_id: '',
@@ -18,6 +18,7 @@ let form = {
   amount: '',
   payment: 'Unpaid',
   notes: '',
+  notes_long: '',
   status: 'confirmed',
 };
 
@@ -78,6 +79,7 @@ export function openBooking(prefill = {}) {
     amount: prefill.amount != null && prefill.amount !== '' ? prefill.amount : '',
     payment: normalizePaymentLabel(prefill.payment, prefill.payment_status),
     notes: prefill.notes || '',
+    notes_long: prefill.notes_long || '',
     status: jobStatus(prefill),
     invoice: prefill.invoice,
     receipt: prefill.receipt,
@@ -206,8 +208,12 @@ function renderForm() {
             </div>
           </div>
           <div class="field">
-            <label>Notes</label>
-            <textarea id="notesInput" rows="2" placeholder="Access, parking, language…">${escapeAttr(form.notes)}</textarea>
+            <label>Notes 1 <span id="notes1Count" class="notes-count">${String(form.notes || '').length}/${NOTES1_MAX}</span></label>
+            <textarea id="notesInput" rows="3" maxlength="${NOTES1_MAX}" placeholder="Shown on the board">${escapeAttr(form.notes)}</textarea>
+          </div>
+          <div class="field">
+            <label>Notes 2</label>
+            <textarea id="notesLongInput" class="notes-long" rows="5" placeholder="Extra detail — drawer only">${escapeAttr(form.notes_long)}</textarea>
           </div>
         </section>
 
@@ -265,7 +271,13 @@ function bindForm() {
   $('#amountInput').addEventListener('input', (e) => {
     form.amount = e.target.value === '' ? '' : Number(e.target.value);
   });
-  $('#notesInput').addEventListener('input', (e) => { form.notes = e.target.value; });
+  $('#notesInput').addEventListener('input', (e) => {
+    form.notes = String(e.target.value || '').slice(0, NOTES1_MAX);
+    if (e.target.value !== form.notes) e.target.value = form.notes;
+    const count = $('#notes1Count');
+    if (count) count.textContent = `${form.notes.length}/${NOTES1_MAX}`;
+  });
+  $('#notesLongInput').addEventListener('input', (e) => { form.notes_long = e.target.value; });
   root.querySelectorAll('[data-unit]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const id = btn.dataset.unit;
@@ -334,9 +346,10 @@ function save(status = 'confirmed') {
     toast('Add at least one AC, or switch job type');
     return;
   }
-  const notes = form.job_type === 'influencer' && !/influencer/i.test(form.notes || '')
+  const notesRaw = form.job_type === 'influencer' && !/influencer/i.test(form.notes || '')
     ? `Influencer (Free)${form.notes ? ' — ' + form.notes : ''}`
     : form.notes;
+  const notes = String(notesRaw || '').slice(0, NOTES1_MAX);
   const jobs = allJobs();
   const prev = form.job_id ? jobs.find((j) => j.job_id === form.job_id) : null;
   const keepOrder = prev
@@ -350,6 +363,7 @@ function save(status = 'confirmed') {
     acs: form.job_type === 'cleaning' ? acsLabel(form.units) : '',
     units: form.units,
     notes,
+    notes_long: form.notes_long,
     time: String(form.time || '').trim(),
     payment: form.payment,
     payment_status: paymentStatusFromLabel(form.payment),

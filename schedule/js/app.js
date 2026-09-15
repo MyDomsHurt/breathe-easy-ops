@@ -1,9 +1,9 @@
 import { DISTRICTS, JOB_TYPES, TEAMS } from './config.js';
 import { isCrewNote } from './team-day.js';
 import { addDays, formatDay, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, normalizeLunch, pad, parseISO, shortTime, weekDays, workWeekDays } from './utils.js';
-import { allJobs, getJob, importExistingJobs, redo, removeJob, reorderStack, resetDemo, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js';
+import { allJobs, getJob, importExistingJobs, placeJobInSlot, redo, removeJob, resetDemo, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js';
 import { startScheduleAuth } from './auth.js';
-import { hasTimeConflict, jobsForTeamDay, nextStackOrder } from './capacity.js';
+import { firstEmptySlotIndex, hasTimeConflict, slotIndex } from './capacity.js';
 import { pulseRemaining, renderDayBoard, renderWeekBoard } from './board.js';
 import { closeBooking, openBooking } from './booking.js';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js';
@@ -317,16 +317,20 @@ function bindBoardClicks() {
       e.stopPropagation();
       if (removeSlot.disabled) return;
       const n = Number(removeSlot.dataset.removeSlotCount) || 6;
-      const jobs = Number(removeSlot.dataset.removeSlotJobs) || 0;
-      const floor = Math.max(6, jobs);
+      const floor = Number(removeSlot.dataset.removeSlotFloor) || 6;
       setTeamDaySlots(removeSlot.dataset.removeSlot, removeSlot.dataset.removeSlotTeam, Math.max(floor, n - 1));
       paint();
       return;
     }
     const emptySlot = e.target.closest('[data-empty-slot]');
-    if (emptySlot && emptySlot.classList.contains('is-locked')) {
+    if (emptySlot) {
       e.preventDefault();
       e.stopPropagation();
+      if (emptySlot.classList.contains('is-locked')) return;
+      const date = emptySlot.dataset.bookDate;
+      const team = emptySlot.dataset.bookTeam;
+      const slot = Number(emptySlot.dataset.slot);
+      if (date && team) openBooking({ date, team_lead: team, stack_order: Number.isFinite(slot) ? slot : undefined });
       return;
     }
     const lunchEdit = e.target.closest('[data-edit-lunch]');
@@ -368,7 +372,13 @@ function bindBoardClicks() {
     const date = add?.dataset.bookDate || cell?.dataset.date;
     const team = add?.dataset.bookTeam || cell?.dataset.team;
     if (!date || !team) return;
-    openBooking({ date, team_lead: team });
+    const slotRaw = add && add.dataset.slot;
+    const slot = Number(slotRaw);
+    openBooking({
+      date,
+      team_lead: team,
+      stack_order: Number.isFinite(slot) ? slot : firstEmptySlotIndex(allJobs(), date, team),
+    });
   });
 }
 
@@ -383,27 +393,23 @@ function clearDropTargets() {
   dropHint = null;
 }
 
-function setDropHint(id, where) {
-  if (dropHint && dropHint.id === id && dropHint.where === where) return;
-  dropHint = { id, where };
-  document.querySelectorAll('#boardMount .drop-before, #boardMount .drop-after').forEach((el) => {
-    el.classList.remove('drop-before', 'drop-after');
-  });
-  if (!id) return;
-  const el = document.querySelector(`#boardMount [data-job="${CSS.escape(id)}"]`);
-  if (el) el.classList.add(where === 'before' ? 'drop-before' : 'drop-after');
+function setDropSlot(slot) {
+  const n = Number(slot);
+  dropHint = Number.isFinite(n) ? { slot: n } : null;
 }
 
-function placeInStack(ids, draggedId, targetId, where) {
-  const next = ids.filter((id) => id !== draggedId);
-  if (!targetId || !next.includes(targetId) || where === 'end') {
-    next.push(draggedId);
-    return next;
+function slotFromPoint(e, date, team, exceptId) {
+  const emptyOver = e.target.closest('[data-empty-slot]');
+  if (emptyOver) {
+    const n = Number(emptyOver.dataset.slot);
+    if (Number.isFinite(n)) return n;
   }
-  let i = next.indexOf(targetId);
-  if (where === 'after') i += 1;
-  next.splice(i, 0, draggedId);
-  return next;
+  const overJob = e.target.closest('[data-job]');
+  if (overJob && overJob.dataset.job !== exceptId) {
+    const i = slotIndex(getJob(overJob.dataset.job));
+    if (i != null) return i;
+  }
+  return firstEmptySlotIndex(allJobs(), date, team, exceptId);
 }
 
 function bindBoardDrag() {
@@ -447,25 +453,13 @@ function bindBoardDrag() {
     document.querySelectorAll('#boardMount .drop-ok').forEach((el) => {
       if (el !== cell) el.classList.remove('drop-ok');
     });
-    if (sameStack) {
-      cell.classList.remove('drop-ok');
-      const overJob = e.target.closest('[data-job]');
-      if (overJob && overJob.dataset.job !== dragJobId) {
-        const rect = overJob.getBoundingClientRect();
-        const where = (e.clientY - rect.top) < rect.height / 2 ? 'before' : 'after';
-        setDropHint(overJob.dataset.job, where);
-      } else {
-        setDropHint(null, 'end');
-      }
-    } else {
-      setDropHint(null, null);
-      cell.classList.add('drop-ok');
-      const emptyOver = e.target.closest('[data-empty-slot]');
-      document.querySelectorAll('#boardMount .empty-slot.drop-ok').forEach((el) => {
-        if (el !== emptyOver) el.classList.remove('drop-ok');
-      });
-      if (emptyOver) emptyOver.classList.add('drop-ok');
-    }
+    const emptyOver = e.target.closest('[data-empty-slot]');
+    document.querySelectorAll('#boardMount .empty-slot.drop-ok').forEach((el) => {
+      if (el !== emptyOver) el.classList.remove('drop-ok');
+    });
+    cell.classList.add('drop-ok');
+    if (emptyOver) emptyOver.classList.add('drop-ok');
+    setDropSlot(slotFromPoint(e, cell.dataset.date, cell.dataset.team, sameStack ? dragJobId : null));
   });
   mount.addEventListener('drop', (e) => {
     const cell = e.target.closest('[data-date][data-team]');
@@ -481,29 +475,19 @@ function bindBoardDrag() {
     const date = cell.dataset.date;
     const team = cell.dataset.team;
     if (!date || !team) return;
+    const slot = hint && Number.isFinite(hint.slot)
+      ? hint.slot
+      : firstEmptySlotIndex(allJobs(), date, team, id === 'new-appointment' ? null : id);
     if (id === 'new-appointment') {
-      openBooking({ date, team_lead: team, time: '' });
+      openBooking({ date, team_lead: team, time: '', stack_order: slot });
       return;
     }
     const job = getJob(id);
     if (!job) return;
-    if (job.date === date && job.team_lead === team) {
-      const ids = jobsForTeamDay(allJobs(), date, team).map((j) => j.job_id);
-      const nextIds = placeInStack(ids, id, hint && hint.id, hint && hint.where);
-      if (nextIds.join() === ids.join()) return;
-      if (reorderStack(nextIds)) toast('Reordered');
-      return;
-    }
     state.monday = mondayOf(date);
     state.day = date;
     state.focusJobId = id;
-    const moved = updateJob(id, {
-      ...job,
-      date,
-      team_lead: team,
-      time: job.time,
-      stack_order: nextStackOrder(allJobs(), date, team, id),
-    });
+    const moved = placeJobInSlot(id, date, team, slot);
     if (!moved) return;
     if (hasTimeConflict(moved, allJobs())) {
       toast(`Moved — time conflict at ${shortTime(moved)}`);

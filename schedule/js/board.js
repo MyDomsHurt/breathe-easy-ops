@@ -1,5 +1,5 @@
 import { TEAM_META } from './config.js';
-import { conflictingJobIds, districtsForTeamOnDay, jobsForTeamDay } from './capacity.js';
+import { conflictingJobIds, daySlotsOf, districtsForTeamOnDay, firstEmptySlotIndex, jobsForTeamDay, layoutSlots, slotFloor } from './capacity.js';
 import { cellTeamMembers, findCrewNote } from './team-day.js';
 import { isHeld } from '../../shared/job.js';
 import { districtChipsHtml, esc, formatDay, formatMoney, isToday, isWeekend, jobStatus, jobTypeOf, normalizeLunch, notes1Text, shortAddress, shortTime, startMinutes } from './utils.js';
@@ -106,38 +106,33 @@ function lunchCardHtml(time) {
   </div>`;
 }
 
-function daySlotsOf(note) {
-  const n = Number(note && note.day_slots);
-  if (Number.isFinite(n) && n >= 6) return Math.min(24, Math.floor(n));
-  return 6;
+function emptySlotHtml(date, team, index) {
+  return `<button type="button" class="empty-slot" data-book-date="${esc(date)}" data-book-team="${esc(team)}" data-empty-slot="1" data-slot="${index}" aria-label="Add booking"></button>`;
 }
 
-function stackWithLunch(jobs, lunchTime, conflicts, mode) {
+function renderSlotStack(slots, lunchTime, conflicts, mode, full, date, team) {
   const time = normalizeLunch(lunchTime);
+  const lunchMins = time ? startMinutes({ time }) : null;
   const renderJob = (j) => (mode === 'day' ? cardHtml(j, conflicts.has(j.job_id)) : chipHtml(j, conflicts.has(j.job_id)));
-  if (!time) return jobs.map(renderJob).join('');
-  const mins = startMinutes({ time });
   const out = [];
-  let placed = false;
-  for (const j of jobs) {
-    const t = startMinutes(j);
-    if (!placed && (t == null || t >= mins)) {
-      out.push(lunchCardHtml(time));
-      placed = true;
+  let placedLunch = !time;
+  for (let i = 0; i < slots.length; i += 1) {
+    const j = slots[i];
+    if (j) {
+      if (!placedLunch) {
+        const t = startMinutes(j);
+        if (t == null || t >= lunchMins) {
+          out.push(lunchCardHtml(time));
+          placedLunch = true;
+        }
+      }
+      out.push(renderJob(j));
+    } else if (!full) {
+      out.push(emptySlotHtml(date, team, i));
     }
-    out.push(renderJob(j));
   }
-  if (!placed) out.push(lunchCardHtml(time));
+  if (!placedLunch) out.push(lunchCardHtml(time));
   return out.join('');
-}
-
-function emptySlotsHtml(date, team, count, locked) {
-  if (count <= 0) return '';
-  const bits = [];
-  for (let i = 0; i < count; i += 1) {
-    bits.push(`<button type="button" class="empty-slot${locked ? ' is-locked' : ''}" data-book-date="${esc(date)}" data-book-team="${esc(team)}" data-empty-slot="1"${locked ? ' disabled aria-disabled="true"' : ''} aria-label="${locked ? 'Day full' : 'Add booking'}"></button>`);
-  }
-  return bits.join('');
 }
 
 function cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs) {
@@ -151,17 +146,18 @@ function cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs) {
   const lunch = normalizeLunch(note && note.lunch);
   const slots = daySlotsOf(note);
   const full = !!(note && (note.day_full === true || note.day_full === 'true'));
-  const leftover = full ? 0 : Math.max(0, slots - shown.length);
-  const body = stackWithLunch(shown, lunch, conflicts, mode) + emptySlotsHtml(date, team, leftover, false);
+  const laid = layoutSlots(shown, slots);
+  const body = renderSlotStack(laid, lunch, conflicts, mode, full, date, team);
   const van = cellTeamMembers(lookup, date, team);
   const vanHi = isHi(note && note.highlight_members);
   const vanLabel = van || "Who's on";
   const status = full ? 'Full' : (empty ? 'Open' : list.length + ' job' + (list.length === 1 ? '' : 's'));
+  const floor = slotFloor(list, date, team);
   return `<div class="roster-cell ${empty ? 'empty' : 'has-jobs'}${full ? ' is-full' : ''} ${mode === 'day' ? 'day-cell' : ''}" data-date="${date}" data-team="${team}">
     <div class="cell-top">
       <div class="cell-head-left">
         <span class="cell-status">${status}</span>
-        <button class="cell-add" data-book-date="${date}" data-book-team="${team}" type="button" aria-label="Add booking">+</button>
+        <button class="cell-add" data-book-date="${date}" data-book-team="${team}" data-slot="${firstEmptySlotIndex(list, date, team, null, slots)}" type="button" aria-label="Add booking">+</button>
       </div>
       ${districtChipsHtml(districts)}
     </div>
@@ -175,7 +171,7 @@ function cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs) {
     <div class="cell-day-tools">
       <button type="button" class="day-full-btn${full ? ' on' : ''}" data-day-full="${esc(date)}" data-day-full-team="${esc(team)}" aria-pressed="${full ? 'true' : 'false'}">Day full</button>
       <button type="button" class="add-slot-btn" data-add-slot="${esc(date)}" data-add-slot-team="${esc(team)}" data-add-slot-count="${slots}" title="Add a slot">+ slot</button>
-      <button type="button" class="add-slot-btn" data-remove-slot="${esc(date)}" data-remove-slot-team="${esc(team)}" data-remove-slot-count="${slots}" data-remove-slot-jobs="${shown.length}" title="Remove an empty slot"${slots <= Math.max(6, shown.length) ? ' disabled' : ''}>− slot</button>
+      <button type="button" class="add-slot-btn" data-remove-slot="${esc(date)}" data-remove-slot-team="${esc(team)}" data-remove-slot-count="${slots}" data-remove-slot-floor="${floor}" title="Remove an empty slot"${slots <= floor ? ' disabled' : ''}>− slot</button>
     </div>
     <div class="job-chips">${body}</div>
   </div>`;

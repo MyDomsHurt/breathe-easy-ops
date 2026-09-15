@@ -28,6 +28,7 @@ let form = {
   updated_at: '',
   highlight: {},
   changes: [],
+  stack_order: '',
 };
 
 function $(sel) {
@@ -170,6 +171,7 @@ export function openBooking(prefill = {}) {
     highlight: highlightOf(prefill),
     changes: Array.isArray(prefill.changes) ? prefill.changes : [],
     invoice: prefill.invoice || '',
+    stack_order: prefill.stack_order != null && prefill.stack_order !== '' ? prefill.stack_order : '',
     receipt: prefill.receipt,
     source: prefill.source,
   };
@@ -504,7 +506,7 @@ function save(status = 'confirmed') {
     amount: form.job_type === 'cleaning'
       ? (form.amount === '' || form.amount == null ? null : Number(form.amount))
       : null,
-    stack_order: stackOrderOnSave(jobs, form.date, form.team_lead, prev),
+    stack_order: stackOrderOnSave(jobs, form.date, form.team_lead, prev, form.stack_order),
   };
   delete payload.created_by;
   delete payload.created_at;

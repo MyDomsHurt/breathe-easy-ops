@@ -17,6 +17,7 @@ import {
 import { appendChange, asChanges, fromScheduleJob } from '../../shared/job.js';
 import { shouldUseFirestore } from '../../shared/firebase-config.js';
 import { CREW_SOURCE, cellTeamMembers, crewNoteId, isCrewNote } from './team-day.js';
+import { planSlotTake, slotCountFor, slotFloor } from './capacity.js';
 
 const listeners = new Set();
 
@@ -244,11 +245,48 @@ function updateKind(before, after) {
   return 'edit';
 }
 
+function expandSlotsIfNeeded(date, team, stackOrder) {
+  const i = Number(stackOrder);
+  if (!Number.isFinite(i) || i < 0) return;
+  const need = Math.floor(i) + 1;
+  if (need > slotCountFor(allJobs(), date, team)) setTeamDaySlots(date, team, need);
+}
+
 export function addJob(input) {
   const job = writeJob(toCanonical(input), 'created');
   pushHistory({ type: 'add', job: snapshot(job) });
+  expandSlotsIfNeeded(job.date, job.team_lead, job.stack_order);
   emit();
   return job;
+}
+
+export function placeJobInSlot(jobId, date, team, targetSlot) {
+  const job = getJob(jobId);
+  if (!job) return null;
+  const destJobs = allJobs().filter((j) => !isCrewNote(j) && j.date === date && j.team_lead === team);
+  const currentSlots = slotCountFor(allJobs(), date, team);
+  const plan = planSlotTake(destJobs, currentSlots, jobId, targetSlot);
+  const destChanged = job.date !== date || job.team_lead !== team;
+  recording = false;
+  if (plan.slotCount > currentSlots) setTeamDaySlots(date, team, plan.slotCount);
+  for (const row of plan.assigns) {
+    const prev = getJob(row.id);
+    if (!prev) continue;
+    if (row.id === jobId) {
+      writeJob(toCanonical({
+        ...prev,
+        date,
+        team_lead: team,
+        time: prev.time,
+        stack_order: row.slot,
+      }, prev), destChanged ? 'moved' : null);
+    } else {
+      writeJob(toCanonical({ ...prev, stack_order: row.slot }, prev), null);
+    }
+  }
+  recording = true;
+  emit();
+  return getJob(jobId);
 }
 
 export function setTeamDayMembers(date, team, members) {
@@ -348,8 +386,7 @@ export function setTeamDaySlots(date, team, count) {
     ? String(prevNote.team_members || '').trim()
     : cellTeamMembers(allJobs(), date, team);
   const n = Number(count);
-  const jobs = allJobs().filter((j) => !isCrewNote(j) && j.date === date && j.team_lead === team).length;
-  const floor = Math.max(6, jobs);
+  const floor = slotFloor(allJobs(), date, team);
   const slots = Number.isFinite(n) ? Math.min(24, Math.max(floor, Math.floor(n))) : floor;
   writeJob(toCanonical({
     job_id: noteId,
@@ -410,6 +447,7 @@ export function updateJob(id, input) {
     before: snapshot(prev),
     after: snapshot(job),
   });
+  expandSlotsIfNeeded(job.date, job.team_lead, job.stack_order);
   emit();
   return job;
 }

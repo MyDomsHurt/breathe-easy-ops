@@ -151,8 +151,8 @@ function cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs) {
   const lunch = normalizeLunch(note && note.lunch);
   const slots = daySlotsOf(note);
   const full = !!(note && (note.day_full === true || note.day_full === 'true'));
-  const leftover = Math.max(0, slots - shown.length);
-  const body = stackWithLunch(shown, lunch, conflicts, mode) + emptySlotsHtml(date, team, leftover, full);
+  const leftover = full ? 0 : Math.max(0, slots - shown.length);
+  const body = stackWithLunch(shown, lunch, conflicts, mode) + emptySlotsHtml(date, team, leftover, false);
   const van = cellTeamMembers(lookup, date, team);
   const vanHi = isHi(note && note.highlight_members);
   const vanLabel = van || "Who's on";

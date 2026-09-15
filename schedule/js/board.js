@@ -53,8 +53,11 @@ function chipHtml(job, conflict) {
   const tentative = jobStatus(job) === 'tentative' ? ' tentative' : '';
   const notes = notes1Text(job);
   const notesRow = notes ? `<div class="chip-notes${hi(job, 'notes')}">${esc(notes)}</div>` : '';
+  const who = job.client_name
+    ? `<div class="who${hi(job, 'client')}">${esc(job.client_name)}</div>` : '';
   const tent = tentative ? '<span class="tag tentative">TENT</span>' : '';
   return `<button class="job-chip ${extra}${tentative}" draggable="true" data-job="${job.job_id}" style="--team:${teamColor(job.team_lead)}" title="${esc(hoverTitle(job))}">
+    ${who}
     <div class="chip-top">
       <span class="when${conflict ? ' time-conflict' : ''}${hi(job, 'time')}">${esc(shortTime(job))}</span>
       ${tent}${rightMark(job, type, true)}
@@ -77,12 +80,12 @@ function cardHtml(job, conflict) {
     ? `<div class="who${hi(job, 'client')}">${esc(job.client_name)}</div>` : '';
   const tent = tentative ? '<span class="tag tentative">TENT</span>' : '';
   return `<button class="job-card ${extra}${tentative}" draggable="true" data-job="${job.job_id}" style="--team:${teamColor(job.team_lead)}" title="${esc(hoverTitle(job))}">
+    ${who}
     <div class="card-top">
       <strong class="when${conflict ? ' time-conflict' : ''}${hi(job, 'time')}">${esc(shortTime(job))}</strong>
       ${tent}${rightMark(job, type, false)}
     </div>
     <div class="card-addr${hi(job, 'address')}">${esc(shortAddress(job, 56))}</div>
-    ${who}
     ${notesRow}
     ${money}
     ${unpaidTip(job)}

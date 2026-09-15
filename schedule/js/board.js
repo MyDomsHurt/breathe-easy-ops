@@ -1,6 +1,6 @@
 import { TEAM_META } from './config.js';
 import { conflictingJobIds, districtsForTeamOnDay, jobsForTeamDay } from './capacity.js';
-import { cellTeamMembers } from './team-day.js';
+import { cellTeamMembers, findCrewNote } from './team-day.js';
 import { districtChipsHtml, esc, formatDay, formatMoney, isToday, isWeekend, jobStatus, jobTypeOf, notes1Text, shortAddress, shortTime } from './utils.js';
 
 function teamColor(name) {
@@ -37,16 +37,20 @@ function unpaidTip(job) {
   return isUnpaid(job) ? '<span class="unpaid-tip" aria-hidden="true"></span>' : '';
 }
 
+function isHi(value) {
+  return value === true || value === 'true';
+}
+
 function chipHtml(job, conflict) {
   const type = jobTypeOf(job);
   const extra = markedType(type) ? type : '';
   const tentative = jobStatus(job) === 'tentative' ? ' tentative' : '';
   const notes = notes1Text(job);
-  const notesRow = notes ? `<div class="chip-notes">${esc(notes)}</div>` : '';
+  const notesRow = notes ? `<div class="chip-notes${isHi(job.highlight_notes) ? ' hi' : ''}">${esc(notes)}</div>` : '';
   const tent = tentative ? '<span class="tag tentative">TENT</span>' : '';
   return `<button class="job-chip ${extra}${tentative}" draggable="true" data-job="${job.job_id}" style="--team:${teamColor(job.team_lead)}" title="${esc(hoverTitle(job))}">
     <div class="chip-top">
-      <span class="when${conflict ? ' time-conflict' : ''}">${esc(shortTime(job))}</span>
+      <span class="when${conflict ? ' time-conflict' : ''}${isHi(job.highlight_time) ? ' hi' : ''}">${esc(shortTime(job))}</span>
       ${tent}${rightMark(job, type, true)}
     </div>
     <div class="chip-addr">${esc(shortAddress(job))}</div>
@@ -60,7 +64,7 @@ function cardHtml(job, conflict) {
   const extra = markedType(type) ? type : '';
   const tentative = jobStatus(job) === 'tentative' ? ' tentative' : '';
   const notes = notes1Text(job);
-  const notesRow = notes ? `<p class="card-notes">${esc(notes)}</p>` : '';
+  const notesRow = notes ? `<p class="card-notes${isHi(job.highlight_notes) ? ' hi' : ''}">${esc(notes)}</p>` : '';
   const money = type === 'cleaning' && job.amount != null
     ? `<span class="card-money">${formatMoney(job.amount)}</span>` : '';
   const who = job.client_name
@@ -68,7 +72,7 @@ function cardHtml(job, conflict) {
   const tent = tentative ? '<span class="tag tentative">TENT</span>' : '';
   return `<button class="job-card ${extra}${tentative}" draggable="true" data-job="${job.job_id}" style="--team:${teamColor(job.team_lead)}" title="${esc(hoverTitle(job))}">
     <div class="card-top">
-      <strong class="when${conflict ? ' time-conflict' : ''}">${esc(shortTime(job))}</strong>
+      <strong class="when${conflict ? ' time-conflict' : ''}${isHi(job.highlight_time) ? ' hi' : ''}">${esc(shortTime(job))}</strong>
       ${tent}${rightMark(job, type, false)}
     </div>
     <div class="card-addr">${esc(shortAddress(job, 56))}</div>
@@ -88,7 +92,9 @@ function cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs) {
   const body = mode === 'day'
     ? shown.map((j) => cardHtml(j, conflicts.has(j.job_id))).join('')
     : shown.map((j) => chipHtml(j, conflicts.has(j.job_id))).join('');
-  const van = cellTeamMembers(lookupJobs || allJobs, date, team);
+  const lookup = lookupJobs || allJobs;
+  const van = cellTeamMembers(lookup, date, team);
+  const vanHi = isHi(findCrewNote(lookup, date, team)?.highlight_members);
   const vanLabel = van || "Who's on";
   return `<div class="roster-cell ${empty ? 'empty' : 'has-jobs'} ${mode === 'day' ? 'day-cell' : ''}" data-date="${date}" data-team="${team}">
     <div class="cell-top">
@@ -98,7 +104,10 @@ function cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs) {
       </div>
       ${districtChipsHtml(districts)}
     </div>
-    <button type="button" class="cell-van${van ? '' : ' is-empty'}" data-edit-van="${esc(date)}" data-edit-van-team="${esc(team)}" data-van-value="${esc(van)}" title="${esc(van ? van : 'Set who is on the van')}">${esc(vanLabel)}</button>
+    <div class="cell-van-row">
+      <button type="button" class="cell-van${van ? '' : ' is-empty'}${vanHi ? ' hi' : ''}" data-edit-van="${esc(date)}" data-edit-van-team="${esc(team)}" data-van-value="${esc(van)}" title="${esc(van ? van : 'Set who is on the van')}">${esc(vanLabel)}</button>
+      <button type="button" class="piece-mark${vanHi ? ' on' : ''}" data-mark-van="${esc(date)}" data-mark-van-team="${esc(team)}" aria-pressed="${vanHi ? 'true' : 'false'}" title="Highlight who's on" aria-label="Highlight who's on"></button>
+    </div>
     <div class="job-chips">${body}</div>
   </div>`;
 }

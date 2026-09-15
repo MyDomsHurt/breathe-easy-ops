@@ -1,7 +1,7 @@
 import { DISTRICTS, JOB_TYPES, TEAMS } from './config.js';
 import { isCrewNote } from './team-day.js';
 import { addDays, formatDay, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, pad, parseISO, shortTime, weekDays, workWeekDays } from './utils.js';
-import { allJobs, getJob, importExistingJobs, redo, removeJob, reorderStack, resetDemo, setTeamDayMembers, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js';
+import { allJobs, getJob, importExistingJobs, redo, removeJob, reorderStack, resetDemo, setTeamDayHighlight, setTeamDayMembers, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js';
 import { startScheduleAuth } from './auth.js';
 import { hasTimeConflict, jobsForTeamDay, nextStackOrder } from './capacity.js';
 import { renderDayBoard, renderWeekBoard } from './board.js';
@@ -227,6 +227,15 @@ function bindBoardClicks() {
       suppressClick = false;
       e.preventDefault();
       e.stopPropagation();
+      return;
+    }
+    const markVan = e.target.closest('[data-mark-van]');
+    if (markVan) {
+      e.preventDefault();
+      e.stopPropagation();
+      const on = markVan.getAttribute('aria-pressed') !== 'true';
+      setTeamDayHighlight(markVan.dataset.markVan, markVan.dataset.markVanTeam, on);
+      paint();
       return;
     }
     const van = e.target.closest('[data-edit-van]');

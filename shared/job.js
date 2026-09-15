@@ -46,6 +46,9 @@ export const CANONICAL_FIELDS = [
   'created_at',
   'updated_by',
   'updated_at',
+  'highlight_time',
+  'highlight_notes',
+  'highlight_members',
   'deleted',
   'slot',
   'source',
@@ -88,6 +91,9 @@ export function normalizeJob(raw, opts) {
     created_at: asUpdatedAt(input.created_at, false),
     updated_by: textOrNull(input.updated_by),
     updated_at: asUpdatedAt(input.updated_at, options.now),
+    highlight_time: asFlag(input.highlight_time),
+    highlight_notes: asFlag(input.highlight_notes),
+    highlight_members: asFlag(input.highlight_members),
     deleted: input.deleted === true || input.deleted === 'true',
     slot: textOrNull(input.slot),
     source: textOrNull(input.source),
@@ -167,6 +173,10 @@ function asOptionalNumber(value, fallback) {
     if (Number.isFinite(n)) return n;
   }
   return fallback == null ? null : fallback;
+}
+
+function asFlag(value) {
+  return value === true || value === 'true';
 }
 
 function asUpdatedAt(value, now) {

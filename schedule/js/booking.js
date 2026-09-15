@@ -24,6 +24,8 @@ let form = {
   created_at: '',
   updated_by: '',
   updated_at: '',
+  highlight_time: false,
+  highlight_notes: false,
 };
 
 function $(sel) {
@@ -89,6 +91,8 @@ export function openBooking(prefill = {}) {
     created_at: prefill.created_at || '',
     updated_by: prefill.updated_by || '',
     updated_at: prefill.updated_at || '',
+    highlight_time: prefill.highlight_time === true || prefill.highlight_time === 'true',
+    highlight_notes: prefill.highlight_notes === true || prefill.highlight_notes === 'true',
     invoice: prefill.invoice,
     receipt: prefill.receipt,
     source: prefill.source,
@@ -174,8 +178,8 @@ function renderForm() {
               <input id="dateInput" type="date" value="${form.date}" />
             </div>
             <div class="field">
-              <label>Time</label>
-              <input id="timeInput" value="${escapeAttr(form.time)}" />
+              <label>Time <button type="button" class="piece-mark${form.highlight_time ? ' on' : ''}" id="markTime" aria-pressed="${form.highlight_time ? 'true' : 'false'}" title="Highlight time on the board"></button></label>
+              <input id="timeInput" class="${form.highlight_time ? 'hi-field' : ''}" value="${escapeAttr(form.time)}" />
             </div>
           </div>
         </section>
@@ -216,8 +220,8 @@ function renderForm() {
             </div>
           </div>
           <div class="field">
-            <label>Notes 1 <span id="notes1Count" class="notes-count">${String(form.notes || '').length}/${NOTES1_MAX}</span></label>
-            <textarea id="notesInput" rows="3" maxlength="${NOTES1_MAX}" placeholder="Shown on the board">${escapeAttr(form.notes)}</textarea>
+            <label>Notes 1 <button type="button" class="piece-mark${form.highlight_notes ? ' on' : ''}" id="markNotes" aria-pressed="${form.highlight_notes ? 'true' : 'false'}" title="Highlight notes on the board"></button> <span id="notes1Count" class="notes-count">${String(form.notes || '').length}/${NOTES1_MAX}</span></label>
+            <textarea id="notesInput" class="${form.highlight_notes ? 'hi-field' : ''}" rows="3" maxlength="${NOTES1_MAX}" placeholder="Shown on the board">${escapeAttr(form.notes)}</textarea>
           </div>
           <div class="field">
             <label>Notes 2</label>
@@ -289,6 +293,20 @@ function bindForm() {
     if (count) count.textContent = `${form.notes.length}/${NOTES1_MAX}`;
   });
   $('#notesLongInput').addEventListener('input', (e) => { form.notes_long = e.target.value; });
+  function bindPieceMark(id, key, fieldSel) {
+    const btn = $(id);
+    if (!btn) return;
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      form[key] = !form[key];
+      btn.classList.toggle('on', form[key]);
+      btn.setAttribute('aria-pressed', form[key] ? 'true' : 'false');
+      const field = fieldSel ? $(fieldSel) : null;
+      if (field) field.classList.toggle('hi-field', form[key]);
+    });
+  }
+  bindPieceMark('markTime', 'highlight_time', 'timeInput');
+  bindPieceMark('markNotes', 'highlight_notes', 'notesInput');
   root.querySelectorAll('[data-unit]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const id = btn.dataset.unit;
@@ -375,6 +393,8 @@ function save(status = 'confirmed') {
     units: form.units,
     notes,
     notes_long: form.notes_long,
+    highlight_time: !!form.highlight_time,
+    highlight_notes: !!form.highlight_notes,
     time: String(form.time || '').trim(),
     payment: form.payment,
     payment_status: paymentStatusFromLabel(form.payment),

@@ -16,7 +16,7 @@ import {
 } from '../../shared/store.js';
 import { fromScheduleJob } from '../../shared/job.js';
 import { shouldUseFirestore } from '../../shared/firebase-config.js';
-import { CREW_SOURCE, crewNoteId, isCrewNote } from './team-day.js';
+import { CREW_SOURCE, cellTeamMembers, crewNoteId, isCrewNote } from './team-day.js';
 
 const listeners = new Set();
 
@@ -203,6 +203,7 @@ export function setTeamDayMembers(date, team, members) {
     is_return: false,
     source: CREW_SOURCE,
     status: 'confirmed',
+    highlight_members: prevNote ? !!prevNote.highlight_members : false,
   }, prevNote));
   for (const prev of list) {
     if (String(prev.team_members || '').trim() === value) continue;
@@ -221,6 +222,29 @@ export function setTeamDayMembers(date, team, members) {
   });
   emit();
   return { count: afters.length, members: value };
+}
+
+export function setTeamDayHighlight(date, team, on) {
+  const noteId = crewNoteId(date, team);
+  const prevNote = getJob(noteId);
+  const members = prevNote
+    ? String(prevNote.team_members || '').trim()
+    : cellTeamMembers(allJobs(), date, team);
+  writeJob(toCanonical({
+    job_id: noteId,
+    date,
+    team_lead: team,
+    team_members: members,
+    client_name: '',
+    time: '',
+    acs: '',
+    job_type: 'cleaning',
+    is_return: false,
+    source: CREW_SOURCE,
+    status: 'confirmed',
+    highlight_members: !!on,
+  }, prevNote));
+  emit();
 }
 
 export function updateJob(id, input) {

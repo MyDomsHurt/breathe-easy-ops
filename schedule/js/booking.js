@@ -70,7 +70,7 @@ function held(key) {
 
 function holdChip(key, label) {
   const on = held(key);
-  return `<button type="button" class="hold-chip${on ? ' on' : ''}" data-hold="${key}" aria-pressed="${on ? 'true' : 'false'}" title="Hold ${label}">Hold</button>`;
+  return `<button type="button" class="hold-chip${on ? ' on' : ''}" data-hold="${key}" aria-pressed="${on ? 'true' : 'false'}" title="Mark ${label}">Mark</button>`;
 }
 
 function fieldClass(key) {

@@ -6,7 +6,7 @@
  * Does not auto-upload the historical archive on boot.
  */
 
-import { TEAM_META } from './config.js';
+import { JOB_TYPES, TEAM_META } from './config.js';
 import { loadSeedJobs, buildSeedJobs } from './seed.js';
 import { acsLabel, jobTypeOf } from './utils.js';
 import {
@@ -144,6 +144,65 @@ function currentActorEmail() {
   }
 }
 
+const DIFF_FIELDS = [
+  ['team_lead', 'Team'],
+  ['client_name', 'Client'],
+  ['date', 'Date'],
+  ['time', 'Time'],
+  ['mobile', 'Mobile'],
+  ['district', 'District'],
+  ['address', 'Address'],
+  ['acs', 'ACs'],
+  ['notes', 'Notes 1'],
+  ['notes_long', 'Notes 2'],
+  ['payment', 'Payment'],
+  ['amount', 'Amount'],
+  ['invoice', 'Invoice'],
+  ['job_type', 'Type'],
+  ['status', 'Status'],
+];
+
+function typeLabel(id) {
+  const hit = JOB_TYPES.find((t) => t.id === id);
+  return hit ? hit.label : (id || '—');
+}
+
+function fieldText(key, value) {
+  if (key === 'job_type') return typeLabel(value);
+  if (key === 'status') return value === 'tentative' ? 'Tentative' : 'Confirmed';
+  if (key === 'amount') {
+    if (value == null || value === '') return '—';
+    const n = Number(value);
+    return Number.isFinite(n) ? String(n) : '—';
+  }
+  const s = value == null ? '' : String(value).trim();
+  return s || '—';
+}
+
+function fieldKey(key, value) {
+  if (key === 'amount') {
+    if (value == null || value === '') return '';
+    const n = Number(value);
+    return Number.isFinite(n) ? String(n) : '';
+  }
+  if (value == null) return '';
+  return String(value).trim();
+}
+
+function fieldDiffs(prev, next) {
+  if (!prev || !next) return [];
+  const diffs = [];
+  for (const [key, label] of DIFF_FIELDS) {
+    if (fieldKey(key, prev[key]) === fieldKey(key, next[key])) continue;
+    diffs.push({
+      field: label,
+      from: fieldText(key, prev[key]),
+      to: fieldText(key, next[key]),
+    });
+  }
+  return diffs;
+}
+
 function stampAudit(job, prev, action) {
   const email = currentActorEmail();
   const now = new Date().toISOString();
@@ -159,7 +218,12 @@ function stampAudit(job, prev, action) {
   next.updated_at = now;
   const prior = prev && prev.changes != null ? prev.changes : next.changes;
   if (action && !isCrewNote(next)) {
-    next.changes = appendChange(prior, { at: now, by: email, action });
+    next.changes = appendChange(prior, {
+      at: now,
+      by: email,
+      action,
+      diffs: fieldDiffs(prev, next),
+    });
   } else {
     next.changes = asChanges(prior);
   }

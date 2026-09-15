@@ -91,22 +91,52 @@ function formatLogAt(iso) {
   });
 }
 
-function logPanelHtml() {
+function diffSentence(diff) {
+  return `${diff.field} changed from ${diff.from} to ${diff.to}`;
+}
+
+function logFallback(action) {
+  if (action === 'created') return 'Job created';
+  if (action === 'tentative') return 'Marked tentative';
+  if (action === 'moved') return 'Moved';
+  return 'Saved';
+}
+
+function changeRailHtml() {
   const rows = Array.isArray(form.changes) ? form.changes.slice().reverse() : [];
-  const body = rows.length
-    ? `<ul class="log-list">${rows.map((row) => `<li>${escapeAttr(formatLogAt(row.at))} · ${escapeAttr(row.by || '—')} · ${escapeAttr(row.action)}</li>`).join('')}</ul>`
-    : '<p class="log-empty">No changes yet</p>';
+  let body;
+  if (!rows.length) {
+    body = '<p class="log-empty">No history yet</p>';
+  } else {
+    body = rows.map((row) => {
+      const diffs = Array.isArray(row.diffs) ? row.diffs : [];
+      const sentences = diffs.length
+        ? diffs.map((d) => `<p class="log-sentence">${escapeAttr(diffSentence(d))}</p>`).join('')
+        : `<p class="log-sentence">${escapeAttr(logFallback(row.action))}</p>`;
+      return `<article class="log-entry">
+        <p class="log-meta">${escapeAttr(formatLogAt(row.at))} · ${escapeAttr(row.by || '—')}</p>
+        ${sentences}
+      </article>`;
+    }).join('');
+  }
   return `
-    <div class="log-wrap">
-      <button type="button" class="icon-btn log-btn" id="toggleLog" aria-expanded="false" title="Change log" aria-label="Change log">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-          <path d="M8 7h8M8 11h8M8 15h5"/>
-        </svg>
-      </button>
-      <div id="changeLog" class="log-panel" hidden>${body}</div>
-    </div>`;
+    <aside class="log-rail" id="changeLog" hidden>
+      <div class="log-rail-head">
+        <h3>History</h3>
+      </div>
+      <div class="log-rail-body">${body}</div>
+    </aside>`;
+}
+
+function logButtonHtml() {
+  return `
+    <button type="button" class="icon-btn log-btn" id="toggleLog" aria-expanded="false" title="History" aria-label="History">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+        <path d="M8 7h8M8 11h8M8 15h5"/>
+      </svg>
+    </button>`;
 }
 
 export function openBooking(prefill = {}) {
@@ -157,8 +187,10 @@ export function openBooking(prefill = {}) {
 
 export function closeBooking() {
   const root = $('#bookingRoot');
-  root.classList.remove('open');
+  root.classList.remove('open', 'log-open');
   root.setAttribute('aria-hidden', 'true');
+  const logPanel = $('#changeLog');
+  if (logPanel) logPanel.setAttribute('hidden', '');
 }
 
 function others() {
@@ -183,6 +215,7 @@ function renderForm() {
 
   $('#bookingRoot').innerHTML = `
     <div class="drawer-bg" data-close="1"></div>
+    ${editing ? changeRailHtml() : ''}
     <aside class="drawer" role="dialog" aria-label="${editing ? 'Edit booking' : 'New booking'}">
       <div class="drawer-head">
         <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start">
@@ -191,7 +224,7 @@ function renderForm() {
             <p>${headWhen}${form.status === 'tentative' ? ' · Tentative' : ''}</p>
           </div>
           <div class="head-btns">
-            ${editing ? logPanelHtml() : ''}
+            ${editing ? logButtonHtml() : ''}
             <button class="icon-btn" data-close="1" aria-label="Close">✕</button>
           </div>
         </div>
@@ -330,8 +363,13 @@ function bindForm() {
       e.preventDefault();
       e.stopPropagation();
       const open = logPanel.hasAttribute('hidden');
-      if (open) logPanel.removeAttribute('hidden');
-      else logPanel.setAttribute('hidden', '');
+      if (open) {
+        logPanel.removeAttribute('hidden');
+        root.classList.add('log-open');
+      } else {
+        logPanel.setAttribute('hidden', '');
+        root.classList.remove('log-open');
+      }
       logBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
     });
   }

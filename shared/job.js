@@ -195,6 +195,22 @@ export const HIGHLIGHT_KEYS = [
 export const CHANGE_LIMIT = 50;
 const CHANGE_ACTIONS = ['created', 'saved', 'tentative', 'moved'];
 
+function asDiffs(raw) {
+  if (!Array.isArray(raw)) return [];
+  const out = [];
+  for (const row of raw) {
+    if (!row || typeof row !== 'object') continue;
+    const field = String(row.field || '').trim();
+    if (!field) continue;
+    out.push({
+      field,
+      from: row.from == null || row.from === '' ? '—' : String(row.from),
+      to: row.to == null || row.to === '' ? '—' : String(row.to),
+    });
+  }
+  return out;
+}
+
 export function asChanges(raw) {
   if (!Array.isArray(raw)) return [];
   const out = [];
@@ -208,6 +224,7 @@ export function asChanges(raw) {
       at,
       by: String(row.by || '').trim() || null,
       action,
+      diffs: asDiffs(row.diffs),
     });
   }
   return out.length > CHANGE_LIMIT ? out.slice(-CHANGE_LIMIT) : out;

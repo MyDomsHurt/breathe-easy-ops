@@ -26,6 +26,7 @@ let form = {
   updated_by: '',
   updated_at: '',
   highlight: {},
+  changes: [],
 };
 
 function $(sel) {
@@ -77,6 +78,37 @@ function fieldClass(key) {
   return held(key) ? ' is-hold' : '';
 }
 
+function formatLogAt(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return String(iso || '');
+  return d.toLocaleString('en-HK', {
+    timeZone: 'Asia/Hong_Kong',
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+}
+
+function logPanelHtml() {
+  const rows = Array.isArray(form.changes) ? form.changes.slice().reverse() : [];
+  const body = rows.length
+    ? `<ul class="log-list">${rows.map((row) => `<li>${escapeAttr(formatLogAt(row.at))} · ${escapeAttr(row.by || '—')} · ${escapeAttr(row.action)}</li>`).join('')}</ul>`
+    : '<p class="log-empty">No changes yet</p>';
+  return `
+    <div class="log-wrap">
+      <button type="button" class="icon-btn log-btn" id="toggleLog" aria-expanded="false" title="Change log" aria-label="Change log">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+          <path d="M8 7h8M8 11h8M8 15h5"/>
+        </svg>
+      </button>
+      <div id="changeLog" class="log-panel" hidden>${body}</div>
+    </div>`;
+}
+
 export function openBooking(prefill = {}) {
   const jobs = allJobs();
   const editing = Boolean(prefill.job_id);
@@ -105,6 +137,7 @@ export function openBooking(prefill = {}) {
     updated_by: prefill.updated_by || '',
     updated_at: prefill.updated_at || '',
     highlight: highlightOf(prefill),
+    changes: Array.isArray(prefill.changes) ? prefill.changes : [],
     invoice: prefill.invoice || '',
     receipt: prefill.receipt,
     source: prefill.source,
@@ -157,7 +190,10 @@ function renderForm() {
             <h2>${editing ? 'Edit booking' : 'New booking'}</h2>
             <p>${headWhen}${form.status === 'tentative' ? ' · Tentative' : ''}</p>
           </div>
-          <button class="icon-btn" data-close="1" aria-label="Close">✕</button>
+          <div class="head-btns">
+            ${editing ? logPanelHtml() : ''}
+            <button class="icon-btn" data-close="1" aria-label="Close">✕</button>
+          </div>
         </div>
       </div>
       <div class="drawer-body">
@@ -286,6 +322,18 @@ function bindForm() {
   root.querySelectorAll('[data-close]').forEach((el) => {
     el.addEventListener('click', closeBooking);
   });
+  const logBtn = $('#toggleLog');
+  const logPanel = $('#changeLog');
+  if (logBtn && logPanel) {
+    logBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const open = logPanel.hasAttribute('hidden');
+      if (open) logPanel.removeAttribute('hidden');
+      else logPanel.setAttribute('hidden', '');
+      logBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+  }
   $('#clientSearch').addEventListener('input', (e) => {
     form.client_name = e.target.value;
     renderHits(e.target.value);
@@ -422,6 +470,7 @@ function save(status = 'confirmed') {
   delete payload.created_at;
   delete payload.updated_by;
   delete payload.updated_at;
+  delete payload.changes;
   delete payload.highlight_time;
   delete payload.highlight_notes;
   const job = form.job_id ? updateJob(form.job_id, payload) : addJob(payload);

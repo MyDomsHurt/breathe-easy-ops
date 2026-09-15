@@ -46,6 +46,7 @@ export const CANONICAL_FIELDS = [
   'created_at',
   'updated_by',
   'updated_at',
+  'changes',
   'highlight',
   'highlight_members',
   'deleted',
@@ -90,6 +91,7 @@ export function normalizeJob(raw, opts) {
     created_at: asUpdatedAt(input.created_at, false),
     updated_by: textOrNull(input.updated_by),
     updated_at: asUpdatedAt(input.updated_at, options.now),
+    changes: asChanges(input.changes),
     highlight: asHighlight(input),
     highlight_members: asFlag(input.highlight_members),
     deleted: input.deleted === true || input.deleted === 'true',
@@ -189,6 +191,31 @@ export const HIGHLIGHT_KEYS = [
   'invoice',
   'type',
 ];
+
+export const CHANGE_LIMIT = 50;
+const CHANGE_ACTIONS = ['created', 'saved', 'tentative', 'moved'];
+
+export function asChanges(raw) {
+  if (!Array.isArray(raw)) return [];
+  const out = [];
+  for (const row of raw) {
+    if (!row || typeof row !== 'object') continue;
+    const action = String(row.action || '').trim();
+    if (!CHANGE_ACTIONS.includes(action)) continue;
+    const at = String(row.at || '').trim();
+    if (!at) continue;
+    out.push({
+      at,
+      by: String(row.by || '').trim() || null,
+      action,
+    });
+  }
+  return out.length > CHANGE_LIMIT ? out.slice(-CHANGE_LIMIT) : out;
+}
+
+export function appendChange(list, entry) {
+  return asChanges([...(Array.isArray(list) ? list : []), entry]);
+}
 
 function asFlag(value) {
   return value === true || value === 'true';

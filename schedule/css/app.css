@@ -992,6 +992,48 @@ button.day-col-head:hover { background: #e0f2fe; }
 .drawer-head h2 { margin: 0; font-size: 18px; letter-spacing: -0.03em; }
 .drawer-head p { margin: 4px 0 0; color: var(--muted); font-size: 13px; font-weight: 500; }
 
+.head-btns {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  position: relative;
+}
+.log-wrap { position: relative; }
+.log-btn[aria-expanded="true"] { background: #f8fafc; }
+.log-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 5;
+  width: min(360px, calc(100vw - 48px));
+  max-height: 240px;
+  overflow: auto;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(15, 39, 68, 0.16);
+}
+.log-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.log-list li {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink);
+  padding: 5px 0;
+  border-bottom: 1px solid #eef2f6;
+  line-height: 1.35;
+}
+.log-list li:last-child { border-bottom: 0; }
+.log-empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
 .drawer-body {
   padding: 16px 20px 8px;
   overflow: auto;

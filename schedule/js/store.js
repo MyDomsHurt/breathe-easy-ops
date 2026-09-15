@@ -14,7 +14,7 @@ import {
   defaultAdapter,
   loadExistingCanonicalJobs,
 } from '../../shared/store.js';
-import { fromScheduleJob } from '../../shared/job.js';
+import { appendChange, asChanges, fromScheduleJob } from '../../shared/job.js';
 import { shouldUseFirestore } from '../../shared/firebase-config.js';
 import { CREW_SOURCE, cellTeamMembers, crewNoteId, isCrewNote } from './team-day.js';
 
@@ -144,7 +144,7 @@ function currentActorEmail() {
   }
 }
 
-function stampAudit(job, prev) {
+function stampAudit(job, prev, action) {
   const email = currentActorEmail();
   const now = new Date().toISOString();
   const next = { ...job };
@@ -157,13 +157,19 @@ function stampAudit(job, prev) {
   }
   next.updated_by = email;
   next.updated_at = now;
+  const prior = prev && prev.changes != null ? prev.changes : next.changes;
+  if (action && !isCrewNote(next)) {
+    next.changes = appendChange(prior, { at: now, by: email, action });
+  } else {
+    next.changes = asChanges(prior);
+  }
   return next;
 }
 
-function writeJob(job) {
+function writeJob(job, action) {
   const id = job && job.job_id;
   const prev = id ? getJob(id) : null;
-  return ops.upsertJob(stampAudit({ ...job, deleted: false }, prev));
+  return ops.upsertJob(stampAudit({ ...job, deleted: false }, prev, action));
 }
 
 function eraseJob(id) {
@@ -177,7 +183,7 @@ function updateKind(before, after) {
 }
 
 export function addJob(input) {
-  const job = writeJob(toCanonical(input));
+  const job = writeJob(toCanonical(input), 'created');
   pushHistory({ type: 'add', job: snapshot(job) });
   emit();
   return job;
@@ -250,7 +256,12 @@ export function setTeamDayHighlight(date, team, on) {
 export function updateJob(id, input) {
   const prev = getJob(id);
   if (!prev) return null;
-  const job = writeJob(toCanonical({ ...input, job_id: id }, prev));
+  const next = toCanonical({ ...input, job_id: id }, prev);
+  const kind = updateKind(prev, next);
+  let action = 'saved';
+  if (kind === 'move') action = 'moved';
+  else if (next.status === 'tentative') action = 'tentative';
+  const job = writeJob(next, action);
   pushHistory({
     type: 'update',
     kind: updateKind(prev, job),
@@ -279,7 +290,7 @@ export function reorderStack(orderedIds) {
   recording = false;
   for (const { prev, i } of current) {
     befores.push(snapshot(prev));
-    const next = writeJob(toCanonical({ ...prev, stack_order: i }, prev));
+    const next = writeJob(toCanonical({ ...prev, stack_order: i }, prev), 'moved');
     afters.push(snapshot(next));
   }
   recording = true;

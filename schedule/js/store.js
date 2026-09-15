@@ -131,8 +131,39 @@ function toCanonical(input, prev) {
   });
 }
 
+function currentActorEmail() {
+  try {
+    const email = typeof firebase !== 'undefined'
+      && firebase.auth
+      && firebase.auth().currentUser
+      && firebase.auth().currentUser.email;
+    const s = String(email || '').trim();
+    return s || null;
+  } catch {
+    return null;
+  }
+}
+
+function stampAudit(job, prev) {
+  const email = currentActorEmail();
+  const now = new Date().toISOString();
+  const next = { ...job };
+  if (prev) {
+    next.created_by = prev.created_by || null;
+    next.created_at = prev.created_at || null;
+  } else {
+    if (!next.created_by) next.created_by = email;
+    if (!next.created_at) next.created_at = now;
+  }
+  next.updated_by = email;
+  next.updated_at = now;
+  return next;
+}
+
 function writeJob(job) {
-  return ops.upsertJob({ ...job, deleted: false });
+  const id = job && job.job_id;
+  const prev = id ? getJob(id) : null;
+  return ops.upsertJob(stampAudit({ ...job, deleted: false }, prev));
 }
 
 function eraseJob(id) {

@@ -20,6 +20,10 @@ let form = {
   notes: '',
   notes_long: '',
   status: 'confirmed',
+  created_by: '',
+  created_at: '',
+  updated_by: '',
+  updated_at: '',
 };
 
 function $(sel) {
@@ -81,6 +85,10 @@ export function openBooking(prefill = {}) {
     notes: prefill.notes || '',
     notes_long: prefill.notes_long || '',
     status: jobStatus(prefill),
+    created_by: prefill.created_by || '',
+    created_at: prefill.created_at || '',
+    updated_by: prefill.updated_by || '',
+    updated_at: prefill.updated_at || '',
     invoice: prefill.invoice,
     receipt: prefill.receipt,
     source: prefill.source,
@@ -239,10 +247,13 @@ function renderForm() {
         </section>
       </div>
       <div class="drawer-foot">
-        ${editing ? '<button class="ghost-btn danger-btn" id="deleteBooking" type="button">Cancel job</button>' : '<span class="foot-spacer"></span>'}
-        <div class="foot-actions">
-          <button class="ghost-btn tent-btn ${form.status === 'tentative' ? 'on' : ''}" id="saveTentative" type="button">Tentative</button>
-          <button class="primary-btn" id="saveBooking" type="button">Save</button>
+        ${editing ? `<p class="foot-audit">Created by ${escapeAttr(String(form.created_by || '').trim() || '—')} · Last edit ${escapeAttr(String(form.updated_by || '').trim() || '—')}</p>` : ''}
+        <div class="foot-row">
+          ${editing ? '<button class="ghost-btn danger-btn" id="deleteBooking" type="button">Cancel job</button>' : '<span class="foot-spacer"></span>'}
+          <div class="foot-actions">
+            <button class="ghost-btn tent-btn ${form.status === 'tentative' ? 'on' : ''}" id="saveTentative" type="button">Tentative</button>
+            <button class="primary-btn" id="saveBooking" type="button">Save</button>
+          </div>
         </div>
       </div>
     </aside>
@@ -373,6 +384,10 @@ function save(status = 'confirmed') {
       : null,
     stack_order: keepOrder ? prev.stack_order : nextStackOrder(jobs, form.date, form.team_lead, form.job_id),
   };
+  delete payload.created_by;
+  delete payload.created_at;
+  delete payload.updated_by;
+  delete payload.updated_at;
   const job = form.job_id ? updateJob(form.job_id, payload) : addJob(payload);
   closeBooking();
   window.dispatchEvent(new CustomEvent('be:booked', { detail: job }));

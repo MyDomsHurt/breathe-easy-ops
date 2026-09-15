@@ -2,6 +2,7 @@ import { DISTRICTS, JOB_TYPES, PAYMENTS, TEAMS, TEAM_META, UNIT_TYPES } from './
 import { nextStackOrder, overlapWarning, suggestTeams, teamMembersOnDay } from './capacity.js';
 import { addJob, allJobs, removeJob, updateJob } from './store.js';
 import { uniqueClientsFrom } from './seed.js';
+import { highlightOf } from '../../shared/job.js';
 import { acsLabel, acsTotal, emptyUnits, formatDay, jobStatus, jobTypeOf, NOTES1_MAX, parseAcs, shortTime } from './utils.js';
 
 let form = {
@@ -24,8 +25,7 @@ let form = {
   created_at: '',
   updated_by: '',
   updated_at: '',
-  highlight_time: false,
-  highlight_notes: false,
+  highlight: {},
 };
 
 function $(sel) {
@@ -64,6 +64,19 @@ function paymentStatusFromLabel(label) {
   return String(label || '').trim().toLowerCase() === 'unpaid' ? 'UNPAID' : 'PAID';
 }
 
+function held(key) {
+  return !!(form.highlight && form.highlight[key]);
+}
+
+function holdChip(key, label) {
+  const on = held(key);
+  return `<button type="button" class="hold-chip${on ? ' on' : ''}" data-hold="${key}" aria-pressed="${on ? 'true' : 'false'}" title="Hold ${label}">Hold</button>`;
+}
+
+function fieldClass(key) {
+  return held(key) ? ' is-hold' : '';
+}
+
 export function openBooking(prefill = {}) {
   const jobs = allJobs();
   const editing = Boolean(prefill.job_id);
@@ -91,9 +104,8 @@ export function openBooking(prefill = {}) {
     created_at: prefill.created_at || '',
     updated_by: prefill.updated_by || '',
     updated_at: prefill.updated_at || '',
-    highlight_time: prefill.highlight_time === true || prefill.highlight_time === 'true',
-    highlight_notes: prefill.highlight_notes === true || prefill.highlight_notes === 'true',
-    invoice: prefill.invoice,
+    highlight: highlightOf(prefill),
+    invoice: prefill.invoice || '',
     receipt: prefill.receipt,
     source: prefill.source,
   };
@@ -150,8 +162,8 @@ function renderForm() {
       </div>
       <div class="drawer-body">
         <section class="form-block form-block-lead">
-          <div class="field">
-            <label>Team</label>
+          <div class="field${fieldClass('team')}">
+            <label>Team ${holdChip('team', 'team')}</label>
             ${warn ? `<div class="team-warn">${warn}. You can still book.</div>` : ''}
             <div class="team-picker">
               ${TEAMS.map((team) => `
@@ -165,48 +177,48 @@ function renderForm() {
         </section>
 
         <section class="form-block">
-          <div class="field field-primary">
-            <label>Client</label>
+          <div class="field field-primary${fieldClass('client')}">
+            <label>Client ${holdChip('client', 'client')}</label>
             <div class="typeahead">
               <input id="clientSearch" type="search" placeholder="Name or mobile" value="${escapeAttr(form.client_name)}" autocomplete="off" />
               <div id="clientHits" class="typeahead-list" hidden></div>
             </div>
           </div>
           <div class="grid-2">
-            <div class="field">
-              <label>Date</label>
+            <div class="field${fieldClass('date')}">
+              <label>Date ${holdChip('date', 'date')}</label>
               <input id="dateInput" type="date" value="${form.date}" />
             </div>
-            <div class="field">
-              <label>Time <button type="button" class="piece-mark${form.highlight_time ? ' on' : ''}" id="markTime" aria-pressed="${form.highlight_time ? 'true' : 'false'}" title="Highlight time on the board"></button></label>
-              <input id="timeInput" class="${form.highlight_time ? 'hi-field' : ''}" value="${escapeAttr(form.time)}" />
+            <div class="field${fieldClass('time')}">
+              <label>Time ${holdChip('time', 'time')}</label>
+              <input id="timeInput" value="${escapeAttr(form.time)}" />
             </div>
           </div>
         </section>
 
         <section class="form-block form-block-quiet">
           <div class="grid-2">
-            <div class="field">
-              <label>Mobile</label>
+            <div class="field${fieldClass('mobile')}">
+              <label>Mobile ${holdChip('mobile', 'mobile')}</label>
               <input id="mobileInput" value="${escapeAttr(form.mobile)}" />
             </div>
-            <div class="field">
-              <label>District</label>
+            <div class="field${fieldClass('district')}">
+              <label>District ${holdChip('district', 'district')}</label>
               <select id="districtInput">
                 <option value="">Select</option>
                 ${Object.entries(DISTRICTS).map(([k, v]) => `<option value="${k}" ${form.district === k ? 'selected' : ''}>${v.short} · ${v.label}</option>`).join('')}
               </select>
             </div>
           </div>
-          <div class="field">
-            <label>Address</label>
+          <div class="field${fieldClass('address')}">
+            <label>Address ${holdChip('address', 'address')}</label>
             <input id="addressInput" value="${escapeAttr(form.address)}" />
           </div>
         </section>
 
         <section class="form-block">
-          <div class="field">
-            <label>ACs</label>
+          <div class="field${fieldClass('acs')}">
+            <label>ACs ${holdChip('acs', 'ACs')}</label>
             <div class="unit-strip">
               ${UNIT_TYPES.map((u) => `
                 <div class="unit ${(form.units[u.id] || 0) ? 'on' : ''}">
@@ -219,34 +231,38 @@ function renderForm() {
                 </div>`).join('')}
             </div>
           </div>
-          <div class="field">
-            <label>Notes 1 <button type="button" class="piece-mark${form.highlight_notes ? ' on' : ''}" id="markNotes" aria-pressed="${form.highlight_notes ? 'true' : 'false'}" title="Highlight notes on the board"></button> <span id="notes1Count" class="notes-count">${String(form.notes || '').length}/${NOTES1_MAX}</span></label>
-            <textarea id="notesInput" class="${form.highlight_notes ? 'hi-field' : ''}" rows="3" maxlength="${NOTES1_MAX}" placeholder="Shown on the board">${escapeAttr(form.notes)}</textarea>
+          <div class="field${fieldClass('notes')}">
+            <label>Notes 1 ${holdChip('notes', 'notes')} <span id="notes1Count" class="notes-count">${String(form.notes || '').length}/${NOTES1_MAX}</span></label>
+            <textarea id="notesInput" rows="3" maxlength="${NOTES1_MAX}" placeholder="Shown on the board">${escapeAttr(form.notes)}</textarea>
           </div>
-          <div class="field">
-            <label>Notes 2</label>
+          <div class="field${fieldClass('notes_long')}">
+            <label>Notes 2 ${holdChip('notes_long', 'notes 2')}</label>
             <textarea id="notesLongInput" class="notes-long" rows="5" placeholder="Extra detail — drawer only">${escapeAttr(form.notes_long)}</textarea>
           </div>
         </section>
 
         <section class="form-block form-block-meta">
           <div class="grid-3">
-            <div class="field">
-              <label>Type</label>
+            <div class="field${fieldClass('type')}">
+              <label>Type ${holdChip('type', 'type')}</label>
               <select id="typeInput">
                 ${JOB_TYPES.map((t) => `<option value="${t.id}" ${form.job_type === t.id ? 'selected' : ''}>${t.label}</option>`).join('')}
               </select>
             </div>
-            <div class="field">
-              <label>Payment</label>
+            <div class="field${fieldClass('payment')}">
+              <label>Payment ${holdChip('payment', 'payment')}</label>
               <select id="payInput">
                 ${PAYMENTS.map((p) => `<option ${form.payment === p ? 'selected' : ''}>${p}</option>`).join('')}
               </select>
             </div>
-            <div class="field">
-              <label>Amount</label>
+            <div class="field${fieldClass('amount')}">
+              <label>Amount ${holdChip('amount', 'amount')}</label>
               <input id="amountInput" type="number" min="0" step="10" value="${form.amount === '' || form.amount == null ? '' : form.amount}" placeholder="HKD" />
             </div>
+          </div>
+          <div class="field${fieldClass('invoice')}" style="margin-top:10px">
+            <label>Invoice ${holdChip('invoice', 'invoice')}</label>
+            <input id="invoiceInput" value="${escapeAttr(form.invoice || '')}" placeholder="Inv" />
           </div>
         </section>
       </div>
@@ -293,20 +309,23 @@ function bindForm() {
     if (count) count.textContent = `${form.notes.length}/${NOTES1_MAX}`;
   });
   $('#notesLongInput').addEventListener('input', (e) => { form.notes_long = e.target.value; });
-  function bindPieceMark(id, key, fieldSel) {
-    const btn = $(id);
-    if (!btn) return;
+  $('#invoiceInput').addEventListener('input', (e) => { form.invoice = e.target.value; });
+  root.querySelectorAll('[data-hold]').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
-      form[key] = !form[key];
-      btn.classList.toggle('on', form[key]);
-      btn.setAttribute('aria-pressed', form[key] ? 'true' : 'false');
-      const field = fieldSel ? $(fieldSel) : null;
-      if (field) field.classList.toggle('hi-field', form[key]);
+      e.stopPropagation();
+      const key = btn.dataset.hold;
+      const next = { ...(form.highlight || {}) };
+      if (next[key]) delete next[key];
+      else next[key] = true;
+      form.highlight = next;
+      const on = !!next[key];
+      btn.classList.toggle('on', on);
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      const field = btn.closest('.field');
+      if (field) field.classList.toggle('is-hold', on);
     });
-  }
-  bindPieceMark('markTime', 'highlight_time', 'timeInput');
-  bindPieceMark('markNotes', 'highlight_notes', 'notesInput');
+  });
   root.querySelectorAll('[data-unit]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const id = btn.dataset.unit;
@@ -393,8 +412,8 @@ function save(status = 'confirmed') {
     units: form.units,
     notes,
     notes_long: form.notes_long,
-    highlight_time: !!form.highlight_time,
-    highlight_notes: !!form.highlight_notes,
+    invoice: form.invoice || '',
+    highlight: highlightOf({ highlight: form.highlight }),
     time: String(form.time || '').trim(),
     payment: form.payment,
     payment_status: paymentStatusFromLabel(form.payment),
@@ -408,6 +427,8 @@ function save(status = 'confirmed') {
   delete payload.created_at;
   delete payload.updated_by;
   delete payload.updated_at;
+  delete payload.highlight_time;
+  delete payload.highlight_notes;
   const job = form.job_id ? updateJob(form.job_id, payload) : addJob(payload);
   closeBooking();
   window.dispatchEvent(new CustomEvent('be:booked', { detail: job }));

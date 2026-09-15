@@ -46,8 +46,7 @@ export const CANONICAL_FIELDS = [
   'created_at',
   'updated_by',
   'updated_at',
-  'highlight_time',
-  'highlight_notes',
+  'highlight',
   'highlight_members',
   'deleted',
   'slot',
@@ -91,8 +90,7 @@ export function normalizeJob(raw, opts) {
     created_at: asUpdatedAt(input.created_at, false),
     updated_by: textOrNull(input.updated_by),
     updated_at: asUpdatedAt(input.updated_at, options.now),
-    highlight_time: asFlag(input.highlight_time),
-    highlight_notes: asFlag(input.highlight_notes),
+    highlight: asHighlight(input),
     highlight_members: asFlag(input.highlight_members),
     deleted: input.deleted === true || input.deleted === 'true',
     slot: textOrNull(input.slot),
@@ -101,7 +99,7 @@ export function normalizeJob(raw, opts) {
 
   if (options.keepUnknown !== false) {
     for (const key of Object.keys(input)) {
-      if (KNOWN.has(key) || key === 'units') continue;
+      if (KNOWN.has(key) || key === 'units' || key === 'highlight_time' || key === 'highlight_notes') continue;
       if (job[key] === undefined) job[key] = input[key];
     }
   }
@@ -175,8 +173,46 @@ function asOptionalNumber(value, fallback) {
   return fallback == null ? null : fallback;
 }
 
+export const HIGHLIGHT_KEYS = [
+  'team',
+  'client',
+  'date',
+  'time',
+  'mobile',
+  'district',
+  'address',
+  'acs',
+  'notes',
+  'notes_long',
+  'payment',
+  'amount',
+  'invoice',
+  'type',
+];
+
 function asFlag(value) {
   return value === true || value === 'true';
+}
+
+function asHighlight(input) {
+  const src = input && input.highlight && typeof input.highlight === 'object' && !Array.isArray(input.highlight)
+    ? input.highlight
+    : {};
+  const out = {};
+  for (const key of HIGHLIGHT_KEYS) {
+    if (asFlag(src[key])) out[key] = true;
+  }
+  if (asFlag(input && input.highlight_time)) out.time = true;
+  if (asFlag(input && input.highlight_notes)) out.notes = true;
+  return out;
+}
+
+export function highlightOf(job) {
+  return asHighlight(job || {});
+}
+
+export function isHeld(job, key) {
+  return !!highlightOf(job)[key];
 }
 
 function asUpdatedAt(value, now) {

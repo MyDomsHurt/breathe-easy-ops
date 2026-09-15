@@ -1057,13 +1057,32 @@ button.day-col-head:hover { background: #e0f2fe; }
   letter-spacing: 0.01em;
 }
 .log-sentence {
-  margin: 0 0 8px;
+  margin: 0 0 10px;
   font-size: 14px;
   font-weight: 500;
-  color: var(--ink);
-  line-height: 1.45;
+  color: #64748b;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .log-sentence:last-child { margin-bottom: 0; }
+.log-field {
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.log-old {
+  color: #94a3b8;
+  font-weight: 500;
+  text-decoration: line-through;
+  text-decoration-color: #cbd5e1;
+}
+.log-new {
+  color: #0f766e;
+  font-weight: 700;
+}
+.log-fallback { color: var(--ink); }
 .log-empty {
   margin: 28px 22px;
   font-size: 14px;

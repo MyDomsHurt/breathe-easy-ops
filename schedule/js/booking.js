@@ -92,8 +92,8 @@ function formatLogAt(iso) {
   });
 }
 
-function diffSentence(diff) {
-  return `${diff.field} changed from ${diff.from} to ${diff.to}`;
+function diffSentenceHtml(diff) {
+  return `<p class="log-sentence"><span class="log-field">${escapeAttr(diff.field)}</span> changed from <span class="log-old">${escapeAttr(diff.from)}</span> to <span class="log-new">${escapeAttr(diff.to)}</span></p>`;
 }
 
 function logFallback(action) {
@@ -112,8 +112,8 @@ function changeRailHtml() {
     body = rows.map((row) => {
       const diffs = Array.isArray(row.diffs) ? row.diffs : [];
       const sentences = diffs.length
-        ? diffs.map((d) => `<p class="log-sentence">${escapeAttr(diffSentence(d))}</p>`).join('')
-        : `<p class="log-sentence">${escapeAttr(logFallback(row.action))}</p>`;
+        ? diffs.map((d) => diffSentenceHtml(d)).join('')
+        : `<p class="log-sentence log-fallback">${escapeAttr(logFallback(row.action))}</p>`;
       return `<article class="log-entry">
         <p class="log-meta">${escapeAttr(formatLogAt(row.at))} · ${escapeAttr(displayNameForEmail(row.by))}</p>
         ${sentences}

@@ -311,6 +311,18 @@ function bindBoardClicks() {
       paint();
       return;
     }
+    const removeSlot = e.target.closest('[data-remove-slot]');
+    if (removeSlot) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (removeSlot.disabled) return;
+      const n = Number(removeSlot.dataset.removeSlotCount) || 6;
+      const jobs = Number(removeSlot.dataset.removeSlotJobs) || 0;
+      const floor = Math.max(6, jobs);
+      setTeamDaySlots(removeSlot.dataset.removeSlot, removeSlot.dataset.removeSlotTeam, Math.max(floor, n - 1));
+      paint();
+      return;
+    }
     const emptySlot = e.target.closest('[data-empty-slot]');
     if (emptySlot && emptySlot.classList.contains('is-locked')) {
       e.preventDefault();
@@ -448,6 +460,11 @@ function bindBoardDrag() {
     } else {
       setDropHint(null, null);
       cell.classList.add('drop-ok');
+      const emptyOver = e.target.closest('[data-empty-slot]');
+      document.querySelectorAll('#boardMount .empty-slot.drop-ok').forEach((el) => {
+        if (el !== emptyOver) el.classList.remove('drop-ok');
+      });
+      if (emptyOver) emptyOver.classList.add('drop-ok');
     }
   });
   mount.addEventListener('drop', (e) => {
@@ -484,6 +501,7 @@ function bindBoardDrag() {
       ...job,
       date,
       team_lead: team,
+      time: job.time,
       stack_order: nextStackOrder(allJobs(), date, team, id),
     });
     if (!moved) return;

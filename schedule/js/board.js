@@ -175,6 +175,7 @@ function cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs) {
     <div class="cell-day-tools">
       <button type="button" class="day-full-btn${full ? ' on' : ''}" data-day-full="${esc(date)}" data-day-full-team="${esc(team)}" aria-pressed="${full ? 'true' : 'false'}">Day full</button>
       <button type="button" class="add-slot-btn" data-add-slot="${esc(date)}" data-add-slot-team="${esc(team)}" data-add-slot-count="${slots}" title="Add a slot">+ slot</button>
+      <button type="button" class="add-slot-btn" data-remove-slot="${esc(date)}" data-remove-slot-team="${esc(team)}" data-remove-slot-count="${slots}" data-remove-slot-jobs="${shown.length}" title="Remove an empty slot"${slots <= Math.max(6, shown.length) ? ' disabled' : ''}>− slot</button>
     </div>
     <div class="job-chips">${body}</div>
   </div>`;

@@ -348,7 +348,9 @@ export function setTeamDaySlots(date, team, count) {
     ? String(prevNote.team_members || '').trim()
     : cellTeamMembers(allJobs(), date, team);
   const n = Number(count);
-  const slots = Number.isFinite(n) && n >= 6 ? Math.min(24, Math.floor(n)) : 6;
+  const jobs = allJobs().filter((j) => !isCrewNote(j) && j.date === date && j.team_lead === team).length;
+  const floor = Math.max(6, jobs);
+  const slots = Number.isFinite(n) ? Math.min(24, Math.max(floor, Math.floor(n))) : floor;
   writeJob(toCanonical({
     job_id: noteId,
     date,

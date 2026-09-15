@@ -725,6 +725,14 @@ button.day-col-head:hover { background: #e0f2fe; }
   border-color: #64748b;
   color: #334155;
 }
+.add-slot-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.empty-slot.drop-ok {
+  border-color: #0284c7;
+  background: #e0f2fe;
+}
 .empty-slot {
   display: block;
   width: 100%;

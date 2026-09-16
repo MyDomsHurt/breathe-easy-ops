@@ -101,6 +101,15 @@ function mapsHref(raw) {
   return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q);
 }
 
+function formatMobile(raw) {
+  let d = String(raw || '').replace(/[^\d]/g, '');
+  if (!d) return '';
+  if (d.indexOf('852') === 0 && d.length >= 11) d = d.slice(-8);
+  if (d.length > 8) d = d.slice(-8);
+  if (d.length === 8) return d.slice(0, 4) + ' ' + d.slice(4);
+  return d;
+}
+
 function timeToMinutes(t) {
   if (!t) return 9999;
   const s = String(t).toLowerCase().replace(/\s+/g, '');
@@ -988,32 +997,26 @@ function jobCard(j) {
   }
 
   const shownAddr = displayAddress(j.address);
+  const mapsUrl = mapsHref(j.address);
   const shortAddr = shownAddr
-    ? '<p class="compact-addr">' + esc(shownAddr) + '</p>'
+    ? (mapsUrl
+      ? '<a class="compact-addr" href="' + esc(mapsUrl) + '" target="_blank" rel="noopener noreferrer">' + esc(shownAddr) + '</a>'
+      : '<p class="compact-addr">' + esc(shownAddr) + '</p>')
     : '';
   const unitsBit = liveAcsBadges(j.acs) || (j.acs
     ? '<span class="compact-units">' + esc(j.acs) + '</span>'
     : '');
   const payWord = compactPayMark(j);
-  const tel = j.mobile ? String(j.mobile).replace(/[^\d+]/g, '') : '';
-  const phoneBit = j.mobile
-    ? '<p class="detailed-phone">' + esc(j.mobile) + '</p>'
+  const shownMobile = formatMobile(j.mobile);
+  const tel = shownMobile ? shownMobile.replace(/\s/g, '') : '';
+  const phoneBit = shownMobile
+    ? '<a class="detailed-phone" href="tel:' + esc(tel) + '">' + esc(shownMobile) + '</a>'
     : '';
   const notes1 = j.notes
     ? '<p class="compact-notes">' + esc(j.notes) + '</p>'
     : '';
   const notes2 = j.notes_long
     ? '<p class="detailed-notes2">' + esc(j.notes_long) + '</p>'
-    : '';
-  const mapsUrl = mapsHref(j.address);
-  const callBtn = tel
-    ? '<a class="card-action card-action-call" href="tel:' + esc(tel) + '">Call</a>'
-    : '';
-  const mapBtn = mapsUrl
-    ? '<a class="card-action card-action-map" href="' + esc(mapsUrl) + '" target="_blank" rel="noopener noreferrer">Open map</a>'
-    : '';
-  const actions = (callBtn || mapBtn)
-    ? '<div class="card-actions">' + callBtn + mapBtn + '</div>'
     : '';
   const left = hold ? '#ca8a04' : dist.border;
   return '<article class="job-card job-card-detailed' + (hold ? ' is-tentative' : '') + '" data-id="' + esc(j.job_id) + '" style="border-left:4px solid ' + left + '">' +
@@ -1024,11 +1027,10 @@ function jobCard(j) {
       '</div>' +
       '<div class="compact-col compact-col-main">' +
         '<span class="compact-name">' + esc(j.client_name) + '</span>' +
-        shortAddr +
         phoneBit +
+        shortAddr +
         notes1 +
         notes2 +
-        actions +
       '</div>' +
       '<div class="compact-col compact-col-meta">' +
         '<span class="compact-type">' + compactTypeMark(j) + '</span>' +
@@ -1040,7 +1042,7 @@ function jobCard(j) {
 function bindCardClicks() {
   document.querySelectorAll('.job-card').forEach(card => {
     card.addEventListener('click', (e) => {
-      if (e.target.closest('.card-actions') || e.target.closest('a.card-action')) return;
+      if (e.target.closest('a')) return;
       const job = filtered.find(j => j.job_id === card.dataset.id) || allJobs.find(j => j.job_id === card.dataset.id);
       if (job) openModal(job);
     });

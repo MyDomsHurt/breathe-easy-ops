@@ -568,6 +568,7 @@ main {
   text-overflow: ellipsis;
 }
 .job-card-detailed .compact-addr {
+  display: block;
   margin: 6px 0 0;
   padding-top: 6px;
   border-top: 1px solid #e2e8f0;
@@ -575,6 +576,7 @@ main {
   font-weight: 500;
   line-height: 1.35;
   color: #334155;
+  text-decoration: none;
   overflow: hidden;
   max-height: calc(1.35em * 3);
   text-overflow: clip;
@@ -583,6 +585,7 @@ main {
   word-break: break-word;
 }
 .job-card-detailed .detailed-phone {
+  display: block;
   margin: 6px 0 0;
   padding-top: 6px;
   border-top: 1px solid #e2e8f0;
@@ -591,6 +594,7 @@ main {
   font-variant-numeric: tabular-nums;
   line-height: 1.3;
   color: #0f172a;
+  text-decoration: none;
 }
 .job-card-detailed .compact-notes {
   margin: 6px 0 0;
@@ -629,34 +633,6 @@ main {
 }
 .job-card-detailed .compact-pay.is-unpaid {
   color: #d97706;
-}
-.job-card-detailed .card-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 10px;
-}
-.job-card-detailed .card-action {
-  flex: 1 1 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
-  padding: 0 12px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 700;
-  text-decoration: none;
-  box-sizing: border-box;
-}
-.job-card-detailed .card-action-call {
-  background: #ecfdf5;
-  color: #065f46;
-  border: 1px solid #a7f3d0;
-}
-.job-card-detailed .card-action-map {
-  background: #f0f9ff;
-  color: #075985;
-  border: 1px solid #bae6fd;
 }
 .lunch-row {
   grid-column: 1 / -1;

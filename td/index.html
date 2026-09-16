@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/app.css?v=37" />
+  <link rel="stylesheet" href="css/app.css?v=38" />
   <link rel="stylesheet" href="css/be-shell.css?v=3" />
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen" style="font-family:'Libre Franklin',system-ui,sans-serif">
@@ -94,10 +94,6 @@
       <div class="tech-bar-row tech-bar-tech">
         <label class="sr-only" for="techTeamSelect">Technician</label>
         <select id="techTeamSelect" class="tech-select" aria-label="Technician"></select>
-        <div id="densityToggle" class="density-seg" role="group" aria-label="Card density">
-          <button type="button" id="densityCompact">Compact</button>
-          <button type="button" id="densityDetailed">Detailed</button>
-        </div>
       </div>
       <div class="tech-bar-row range-seg">
         <button type="button" id="prevDay" class="day-step" aria-label="Previous day">‹</button>
@@ -143,8 +139,8 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
   <script src="js/auth.js"></script>
   <script type="module" src="js/live-jobs.js"></script>
-  <script src="js/app.js?v=32"></script>
-  <script src="js/shell-ui.js?v=2"></script>
+  <script src="js/app.js?v=33"></script>
+  <script src="js/shell-ui.js?v=3"></script>
   <script src="js/unit-stats.js"></script>
   <script src="js/app-nav.js"></script>
   <script>

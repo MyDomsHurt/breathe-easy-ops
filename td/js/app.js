@@ -26,7 +26,6 @@ function teamFromEmail(email) {
   return EMAIL_TO_TEAM[key] || 'Matthew';
 }
 let viewMode = 'date';
-let compactMode = localStorage.getItem('be-density') !== 'detailed';
 
 const TEAMS = ['Matthew', 'Tiago', 'Nick', 'Alun', 'Iggi', 'Josh'];
 const TEAM_COLORS = {
@@ -482,17 +481,6 @@ function bindEvents() {
       if (jump) selectRange(jump.dataset.jumpRange);
     });
   }
-  function setDensity(isCompact) {
-    compactMode = isCompact;
-    localStorage.setItem('be-density', compactMode ? 'compact' : 'detailed');
-    applyCompactUI();
-    render();
-  }
-  const densityCompact = document.getElementById('densityCompact');
-  const densityDetailed = document.getElementById('densityDetailed');
-  if (densityCompact) densityCompact.addEventListener('click', () => setDensity(true));
-  if (densityDetailed) densityDetailed.addEventListener('click', () => setDensity(false));
-  applyCompactUI();
   window.addEventListener('resize', syncHeaderHeight);
   syncHeaderHeight();
 }
@@ -545,17 +533,6 @@ function shiftDay(delta) {
   applyFilters();
 }
 
-function applyCompactUI() {
-  document.body.classList.toggle('compact', compactMode);
-  function paint(btn, on) {
-    if (!btn) return;
-    btn.classList.toggle('is-on', on);
-    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-  }
-  paint(document.getElementById('densityCompact'), compactMode);
-  paint(document.getElementById('densityDetailed'), !compactMode);
-}
-
 function applyRoleUI() {
   viewMode = 'date';
   const rangeBar = document.getElementById('techRangeBar');
@@ -571,7 +548,6 @@ function applyRoleUI() {
   if (!currentFilters.team || currentFilters.team === 'all') currentFilters.team = 'Matthew';
   buildTeamButtons();
   paintRangeButtons(currentFilters.range);
-  applyCompactUI();
   syncHeaderHeight();
 }
 
@@ -937,7 +913,7 @@ function isTentative(j) {
 }
 
 function jobsGridClass() {
-  return compactMode ? 'grid compact-grid' : 'grid gap-1.5';
+  return 'grid gap-1.5';
 }
 
 function compactTypeMark(j) {
@@ -957,44 +933,7 @@ function compactPayMark(j) {
 
 function jobCard(j) {
   const hold = isTentative(j);
-  const returnBadge = j.is_return ? '<span class="return-badge shrink-0 whitespace-nowrap text-white text-[10px] font-semibold px-1.5 py-0.5 rounded">RETURN</span>' : '';
-  const tentBadge = hold ? '<span class="tentative-badge shrink-0 whitespace-nowrap text-white text-[10px] font-semibold px-1.5 py-0.5 rounded">Tentative</span>' : '';
-  const isPaid = jobIsPaid(j);
-  const rightBadge = isPaid
-    ? '<span class="text-[10px] font-bold tracking-wide px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">PAID</span>'
-    : '';
   const dist = DISTRICT_COLORS[j.district] || DISTRICT_FALLBACK;
-
-  if (compactMode) {
-    const edge = hold ? '#ca8a04' : dist.border;
-    const shownAddr = displayAddress(j.address);
-    const notes1 = j.notes
-      ? '<p class="compact-notes">' + esc(j.notes) + '</p>'
-      : '';
-    const shortAddr = shownAddr
-      ? '<p class="compact-addr">' + esc(shownAddr) + '</p>'
-      : '';
-    const unitsBit = liveAcsBadges(j.acs) || (j.acs
-      ? '<span class="compact-units">' + esc(j.acs) + '</span>'
-      : '');
-    const payWord = compactPayMark(j);
-    return '<article class="job-card compact-card cursor-pointer active:opacity-90 overflow-hidden' + (hold ? ' is-tentative' : '') + '" data-id="' + esc(j.job_id) + '" style="border-left:4px solid ' + edge + '">' +
-      '<div class="compact-row">' +
-        '<div class="compact-col compact-col-time">' +
-          '<span class="compact-time">' + esc(displayTime(j)) + '</span>' +
-          unitsBit +
-        '</div>' +
-        '<div class="compact-col compact-col-main">' +
-          '<span class="compact-name">' + esc(j.client_name) + '</span>' +
-          shortAddr +
-          notes1 +
-        '</div>' +
-        '<div class="compact-col compact-col-meta">' +
-          '<span class="compact-type">' + compactTypeMark(j) + '</span>' +
-          '<span class="compact-pay' + (payWord === 'Unpaid' ? ' is-unpaid' : '') + '">' + payWord + '</span>' +
-        '</div>' +
-      '</div></article>';
-  }
 
   const shownAddr = displayAddress(j.address);
   const mapsUrl = mapsHref(j.address);

@@ -453,9 +453,12 @@ function bindEvents() {
   document.getElementById('modalBackdrop').addEventListener('click', closeModal);
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
   applyRoleUI();
-  document.querySelectorAll('.range-btn').forEach(btn => {
-    btn.addEventListener('click', () => selectRange(btn.dataset.range));
-  });
+  const rangeSelect = document.getElementById('rangeSelect');
+  if (rangeSelect) {
+    rangeSelect.addEventListener('change', function () {
+      selectRange(rangeSelect.value);
+    });
+  }
   const prevDay = document.getElementById('prevDay');
   const nextDay = document.getElementById('nextDay');
   if (prevDay) prevDay.addEventListener('click', () => shiftDay(-1));
@@ -497,20 +500,14 @@ function syncHeaderHeight() {
 }
 
 function paintRangeButtons(range) {
+  const sel = document.getElementById('rangeSelect');
+  if (!sel) return;
   const dayView = range === 'today' || range === 'day';
-  document.querySelectorAll('.range-btn').forEach(b => {
-    const on = b.dataset.range === 'today'
-      ? dayView
-      : b.dataset.range === range;
-    b.classList.toggle('bg-brand-600', on);
-    b.classList.toggle('text-white', on);
-    b.classList.toggle('bg-slate-100', !on);
-    b.classList.toggle('text-slate-700', !on);
-  });
-  const todayBtn = document.querySelector('[data-range="today"]');
-  if (todayBtn) {
+  sel.value = dayView ? 'today' : range;
+  const todayOpt = sel.querySelector('option[value="today"]');
+  if (todayOpt) {
     const iso = selectedDayISO();
-    todayBtn.textContent = (range === 'day' && iso !== todayISO()) ? formatDate(iso) : 'Today';
+    todayOpt.textContent = (range === 'day' && iso !== todayISO()) ? formatDate(iso) : 'Today';
   }
 }
 

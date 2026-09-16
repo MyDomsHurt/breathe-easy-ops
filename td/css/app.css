@@ -156,7 +156,7 @@ body.compact .compact-name {
   text-overflow: ellipsis;
 }
 body.compact .compact-addr {
-  margin: 2px 0 0;
+  margin: 6px 0 0;
   font-size: 13px;
   font-weight: 500;
   line-height: 1.35;
@@ -173,7 +173,7 @@ body.compact .compact-notes {
   font-size: 12px;
   font-weight: 500;
   line-height: 1.4;
-  color: #64748b;
+  color: #9900FF;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -551,6 +551,9 @@ main {
 
 #modal {
   z-index: 200;
+}
+#modalBody .modal-notes-2 {
+  color: #0f172a;
 }
 .van-copy-row {
   display: flex;

@@ -1071,7 +1071,8 @@ function openModal(j) {
   if (j.notes_long) rows.push(['Notes 2', esc(j.notes_long)]);
   rows.push(['Job ID', j.job_id]);
   document.getElementById('modalBody').innerHTML = rows.map(function(pair) {
-    return '<div><dt class="text-xs font-medium text-slate-400 uppercase tracking-wide">' + pair[0] + '</dt><dd class="mt-0.5 text-slate-800 break-words">' + pair[1] + '</dd></div>';
+    const note2 = pair[0] === 'Notes 2' ? ' modal-notes-2' : '';
+    return '<div><dt class="text-xs font-medium text-slate-400 uppercase tracking-wide">' + pair[0] + '</dt><dd class="mt-0.5 text-slate-800 break-words' + note2 + '">' + pair[1] + '</dd></div>';
   }).join('') +
     '<div class="van-copy-row">' +
       '<button type="button" id="copyVanBtn" class="van-copy-btn">Copy van request</button>' +

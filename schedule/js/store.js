@@ -546,4 +546,45 @@ export async function importExistingJobs() {
   return { count: jobs.length, stats };
 }
 
+const SEP_DEC_FROM = '2026-09-01';
+const SEP_DEC_TO = '2026-12-31';
+
+function inSepDec2026(date) {
+  const d = String(date || '');
+  return d >= SEP_DEC_FROM && d <= SEP_DEC_TO;
+}
+
+/**
+ * Soft-delete Sep–Dec 2026 jobs, then upsert the sheet JSON.
+ * Does not touch August or earlier. Not Import existing jobs.
+ */
+export async function replaceSepDecFromSheet() {
+  if (!ops) throw new Error('Store is not ready');
+  const url = new URL('../data/sheet-import-sep-dec-2026.json', import.meta.url);
+  const res = await fetch(url.href);
+  if (!res.ok) throw new Error('Could not load sheet-import-sep-dec-2026.json');
+  const rows = await res.json();
+  if (!Array.isArray(rows)) throw new Error('Sheet import is not a list');
+
+  let removed = 0;
+  for (const job of ops.listJobs({ includeDeleted: true })) {
+    if (!job || job.deleted) continue;
+    if (!inSepDec2026(job.date)) continue;
+    ops.removeJob(job.job_id);
+    removed += 1;
+  }
+
+  let written = 0;
+  for (const row of rows) {
+    const name = String(row && row.client_name || '').trim();
+    const date = String(row && row.date || '').trim();
+    if (!name) continue;
+    if (!inSepDec2026(date)) continue;
+    writeJob(fromScheduleJob({ ...row, deleted: false }), 'created');
+    written += 1;
+  }
+  emit();
+  return { removed, written };
+}
+
 export { jobTypeOf };

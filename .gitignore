@@ -9,3 +9,4 @@ dist
 .netlify
 td/shared/
 schedule/shared/
+schedule/data/sheet-import-sep-dec-2026.json

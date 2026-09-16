@@ -968,22 +968,16 @@ function jobCard(j) {
   const dist = DISTRICT_COLORS[j.district] || DISTRICT_FALLBACK;
 
   const shownAddr = displayAddress(j.address);
-  const mapsUrl = mapsHref(j.address);
-  const pinIco = '<svg class="tap-hint" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 1.4A4.6 4.6 0 0 0 3.4 6c0 3.4 4.6 8.6 4.6 8.6s4.6-5.2 4.6-8.6A4.6 4.6 0 0 0 8 1.4zm0 6.3A1.7 1.7 0 1 1 8 4.3a1.7 1.7 0 0 1 0 3.4z"/></svg>';
-  const phoneIco = '<svg class="tap-hint" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M3.3 2.2c.3-.4.8-.5 1.2-.3l2.1 1c.4.2.6.6.5 1.1L6.7 6.3c1.3 2.3 3 4 5.3 5.3l2.3-.4c.4-.1.9.1 1.1.5l1 2.1c.2.4.1.9-.3 1.2l-1.2 1.2c-.4.4-1 .6-1.6.4C7.3 15.6.4 8.7.6 2.7c0-.5.2-1.1.6-1.5L3.3 2.2z"/></svg>';
   const shortAddr = shownAddr
-    ? (mapsUrl
-      ? '<a class="compact-addr" href="' + esc(mapsUrl) + '" target="_blank" rel="noopener noreferrer">' + pinIco + esc(shownAddr) + '</a>'
-      : '<p class="compact-addr">' + esc(shownAddr) + '</p>')
+    ? '<p class="compact-addr">' + esc(shownAddr) + '</p>'
     : '';
   const unitsBit = liveAcsBadges(j.acs) || (j.acs
     ? '<span class="compact-units">' + esc(j.acs) + '</span>'
     : '');
   const payWord = compactPayMark(j);
   const shownMobile = formatMobile(j.mobile);
-  const tel = shownMobile ? shownMobile.replace(/\s/g, '') : '';
   const phoneBit = shownMobile
-    ? '<a class="detailed-phone" href="tel:' + esc(tel) + '">' + phoneIco + esc(shownMobile) + '</a>'
+    ? '<p class="detailed-phone">' + esc(shownMobile) + '</p>'
     : '';
   const notes1 = j.notes
     ? '<p class="compact-notes">' + esc(j.notes) + '</p>'

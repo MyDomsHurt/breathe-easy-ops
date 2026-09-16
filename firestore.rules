@@ -4,7 +4,6 @@ rules_version = '2';
 // Rules after this change. The app does not deploy rules.
 //   iggi.king@gmail.com
 //   info@breathe-easyhk.com
-//   itstartswiththemind@gmail.com
 //   jefflamb1992@gmail.com
 //   joshua@breathe-easyhk.com
 //   matthewgross2001@gmail.com
@@ -22,7 +21,6 @@ service cloud.firestore {
         && request.auth.token.email.lower() in [
           'iggi.king@gmail.com',
           'info@breathe-easyhk.com',
-          'itstartswiththemind@gmail.com',
           'jefflamb1992@gmail.com',
           'joshua@breathe-easyhk.com',
           'matthewgross2001@gmail.com',

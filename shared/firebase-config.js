@@ -16,7 +16,6 @@ export const FIREBASE_CONFIG = {
 export const ALLOWLIST = [
   'iggi.king@gmail.com',
   'info@breathe-easyhk.com',
-  'itstartswiththemind@gmail.com',
   'jefflamb1992@gmail.com',
   'joshua@breathe-easyhk.com',
   'matthewgross2001@gmail.com',
@@ -34,6 +33,12 @@ export const USER_NAMES = {
   'ruby@breathe-easyhk.com': 'Ruby',
   'joshua@breathe-easyhk.com': 'Josh',
   'perry@breathe-easyhk.com': 'Perry',
+  'iggi.king@gmail.com': 'Iggi',
+  'matthewgross2001@gmail.com': 'Matthew',
+  'n.marie.lamb@gmail.com': 'Naiyie',
+  'neltrestium@gmail.com': 'Nick',
+  'sudor23@gmail.com': 'Alun',
+  'tiagogiri334@gmail.com': 'Tiago',
 };
 
 export function displayNameForEmail(email) {

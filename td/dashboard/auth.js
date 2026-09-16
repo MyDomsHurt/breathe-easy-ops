@@ -12,7 +12,6 @@
   const ALLOWED = [
     "iggi.king@gmail.com",
     "info@breathe-easyhk.com",
-    "itstartswiththemind@gmail.com",
     "jefflamb1992@gmail.com",
     "joshua@breathe-easyhk.com",
     "matthewgross2001@gmail.com",

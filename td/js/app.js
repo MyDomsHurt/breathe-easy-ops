@@ -878,11 +878,12 @@ function renderByDate(container) {
   const dates = Object.keys(dateSet).sort();
   const gridCls = jobsGridClass();
   const today = todayISO();
-  container.innerHTML = dates.map(date => {
+  container.innerHTML = dates.map(function (date, i) {
     const jobs = (groups[date] || []).slice().sort((a, b) => jobSortMinutes(a) - jobSortMinutes(b));
     const returns = jobs.filter(j => j.is_return).length;
     const kind = date === today ? 'today' : (date === tomorrowISO() ? 'tomorrow' : (date < today ? 'past' : 'upcoming'));
-    return '<section class="day-section day-' + kind + '">' +
+    const stripe = i % 2 === 0 ? 'day-a' : 'day-b';
+    return '<section class="day-section day-' + kind + ' ' + stripe + '">' +
       '<div class="day-header-sticky">' +
         '<div class="flex items-center justify-between">' +
           '<h3 class="font-semibold text-brand-800">' +

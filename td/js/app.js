@@ -987,27 +987,54 @@ function jobCard(j) {
       '</div></article>';
   }
 
-  const showTeam = currentFilters.team === 'all';
-  const unitsBit = liveAcsBadges(j.acs);
   const shownAddr = displayAddress(j.address);
-  const addressBlock = shownAddr
-    ? '<p class="live-addr">' + esc(shownAddr) + '</p>'
+  const shortAddr = shownAddr
+    ? '<p class="compact-addr">' + esc(shownAddr) + '</p>'
     : '';
-  const notesBlock = j.notes
-    ? '<p class="live-notes">' + esc(j.notes) + '</p>'
+  const unitsBit = liveAcsBadges(j.acs) || (j.acs
+    ? '<span class="compact-units">' + esc(j.acs) + '</span>'
+    : '');
+  const payWord = compactPayMark(j);
+  const tel = j.mobile ? String(j.mobile).replace(/[^\d+]/g, '') : '';
+  const phoneBit = j.mobile
+    ? '<p class="detailed-phone">' + esc(j.mobile) + '</p>'
+    : '';
+  const notes1 = j.notes
+    ? '<p class="compact-notes">' + esc(j.notes) + '</p>'
+    : '';
+  const notes2 = j.notes_long
+    ? '<p class="detailed-notes2">' + esc(j.notes_long) + '</p>'
+    : '';
+  const mapsUrl = mapsHref(j.address);
+  const callBtn = tel
+    ? '<a class="card-action card-action-call" href="tel:' + esc(tel) + '">Call</a>'
+    : '';
+  const mapBtn = mapsUrl
+    ? '<a class="card-action card-action-map" href="' + esc(mapsUrl) + '" target="_blank" rel="noopener noreferrer">Open map</a>'
+    : '';
+  const actions = (callBtn || mapBtn)
+    ? '<div class="card-actions">' + callBtn + mapBtn + '</div>'
     : '';
   const left = hold ? '#ca8a04' : dist.border;
   return '<article class="job-card job-card-detailed' + (hold ? ' is-tentative' : '') + '" data-id="' + esc(j.job_id) + '" style="border-left:4px solid ' + left + '">' +
-    '<div class="live-name-row">' +
-      '<p class="live-name">' + esc(j.client_name) + (showTeam ? ' \u00b7 ' + esc(j.team_lead) : '') + '</p>' +
-      '<div class="live-badges">' + tentBadge + returnBadge + rightBadge + '</div>' +
-    '</div>' +
-    '<div class="live-time-row">' +
-      '<span class="live-time">' + esc(displayTime(j)) + '</span>' + unitsBit +
-    '</div>' +
-    addressBlock +
-    notesBlock +
-  '</article>';
+    '<div class="compact-row">' +
+      '<div class="compact-col compact-col-time">' +
+        '<span class="compact-time">' + esc(displayTime(j)) + '</span>' +
+        unitsBit +
+      '</div>' +
+      '<div class="compact-col compact-col-main">' +
+        '<span class="compact-name">' + esc(j.client_name) + '</span>' +
+        shortAddr +
+        phoneBit +
+        notes1 +
+        notes2 +
+        actions +
+      '</div>' +
+      '<div class="compact-col compact-col-meta">' +
+        '<span class="compact-type">' + compactTypeMark(j) + '</span>' +
+        '<span class="compact-pay' + (payWord === 'Unpaid' ? ' is-unpaid' : '') + '">' + payWord + '</span>' +
+      '</div>' +
+    '</div></article>';
 }
 
 function bindCardClicks() {

@@ -961,18 +961,19 @@ function jobCard(j) {
       ? '<span class="compact-units">' + esc(j.acs) + '</span>'
       : '');
     const typeWord = compactTypeMark(j);
-    const marks = (typeWord ? '<span class="compact-mark">' + typeWord + '</span>' : '') +
+    const marks = (teamChip || '') +
+      (typeWord ? '<span class="compact-mark">' + typeWord + '</span>' : '') +
       (isPaid ? '<span class="compact-mark">Paid</span>' : '');
-    return '<article class="job-card compact-card cursor-pointer active:opacity-90 overflow-hidden' + (hold ? ' is-tentative' : '') + '" data-id="' + esc(j.job_id) + '" style="border-left:3px solid ' + edge + '">' +
+    return '<article class="job-card compact-card cursor-pointer active:opacity-90 overflow-hidden' + (hold ? ' is-tentative' : '') + '" data-id="' + esc(j.job_id) + '" style="border-left:4px solid ' + edge + '">' +
       '<div class="compact-row">' +
-        '<div class="compact-time-row">' +
+        '<div class="compact-head">' +
           '<span class="compact-time">' + esc(displayTime(j)) + '</span>' +
           unitsBit +
+          '<p class="compact-name">' + esc(j.client_name) + '</p>' +
+          (marks ? '<span class="compact-marks">' + marks + '</span>' : '') +
         '</div>' +
-        '<p class="compact-name">' + esc(j.client_name) + '</p>' +
         notes1 +
         shortAddr +
-        ((teamChip || marks) ? '<div class="compact-meta">' + teamChip + marks + '</div>' : '') +
       '</div></article>';
   }
 

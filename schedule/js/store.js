@@ -563,7 +563,8 @@ export async function replaceSepDecFromSheet() {
   const url = new URL('../data/sheet-import-sep-dec-2026.json', import.meta.url);
   const res = await fetch(url.href);
   if (!res.ok) throw new Error('Could not load sheet-import-sep-dec-2026.json');
-  const rows = await res.json();
+  const payload = await res.json();
+  const rows = Array.isArray(payload) ? payload : (payload && payload.jobs);
   if (!Array.isArray(rows)) throw new Error('Sheet import is not a list');
 
   let removed = 0;

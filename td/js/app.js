@@ -972,8 +972,8 @@ function jobCard(j) {
         '</div>' +
         '<div class="compact-col compact-col-main">' +
           '<p class="compact-name">' + esc(j.client_name) + '</p>' +
-          notes1 +
           shortAddr +
+          notes1 +
         '</div>' +
         '<div class="compact-col compact-col-meta">' +
           '<span class="compact-type">' + compactTypeMark(j) + '</span>' +

@@ -964,6 +964,7 @@ function jobCard(j) {
     const unitsBit = liveAcsBadges(j.acs) || (j.acs
       ? '<span class="compact-units">' + esc(j.acs) + '</span>'
       : '');
+    const payWord = compactPayMark(j);
     return '<article class="job-card compact-card cursor-pointer active:opacity-90 overflow-hidden' + (hold ? ' is-tentative' : '') + '" data-id="' + esc(j.job_id) + '" style="border-left:4px solid ' + edge + '">' +
       '<div class="compact-row">' +
         '<div class="compact-col compact-col-time">' +
@@ -977,7 +978,7 @@ function jobCard(j) {
         '</div>' +
         '<div class="compact-col compact-col-meta">' +
           '<span class="compact-type">' + compactTypeMark(j) + '</span>' +
-          '<span class="compact-pay">' + compactPayMark(j) + '</span>' +
+          '<span class="compact-pay' + (payWord === 'Unpaid' ? ' is-unpaid' : '') + '">' + payWord + '</span>' +
         '</div>' +
       '</div></article>';
   }

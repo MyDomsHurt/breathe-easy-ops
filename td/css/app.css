@@ -379,10 +379,10 @@ main {
   border: 1px solid #666666;
 }
 .day-section.day-a {
-  background: #666666;
+  background: #D9DEE6;
 }
 .day-section.day-b {
-  background: #D0E0E3;
+  background: #EEF2F6;
 }
 .day-header-sticky {
   position: sticky;
@@ -394,22 +394,18 @@ main {
   border-bottom: 1px solid transparent;
 }
 .day-section.day-a .day-header-sticky {
-  background: #666666;
-  border-bottom-color: #666666;
-}
-.day-section.day-a .day-header-sticky h3,
-.day-section.day-a .day-header-sticky h3 span,
-.day-section.day-a .day-whos-on {
-  color: #fff !important;
+  background: #D9DEE6;
+  border-bottom-color: #D9DEE6;
 }
 .day-section.day-b .day-header-sticky {
-  background: #D0E0E3;
-  border-bottom-color: #D0E0E3;
+  background: #EEF2F6;
+  border-bottom-color: #EEF2F6;
 }
-.day-section.day-b .day-header-sticky h3 {
-  color: #1e293b;
+.day-section .day-header-sticky h3,
+.day-section .day-header-sticky h3 span:not(.text-amber-600) {
+  color: #1e293b !important;
 }
-.day-section.day-b .day-whos-on {
+.day-section .day-whos-on {
   color: #334155;
 }
 .day-section.day-past {

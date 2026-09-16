@@ -945,9 +945,7 @@ function jobCard(j) {
   const dist = DISTRICT_COLORS[j.district] || DISTRICT_FALLBACK;
 
   if (compactMode) {
-    const distBar = hold
-      ? 'border-left: 3px solid #ca8a04; background:#fef9c3;'
-      : 'border-left: 3px solid ' + dist.border + '; background:' + dist.bg + ';';
+    const edge = hold ? '#ca8a04' : dist.border;
     const showTeam = currentFilters.team === 'all';
     const teamChip = showTeam
       ? '<span class="compact-team">' + esc(j.team_lead) + '</span>'
@@ -959,24 +957,22 @@ function jobCard(j) {
     const shortAddr = shownAddr
       ? '<p class="compact-addr">' + esc(shownAddr) + '</p>'
       : '';
-    const unitsBit = j.acs
+    const unitsBit = liveAcsBadges(j.acs) || (j.acs
       ? '<span class="compact-units">' + esc(j.acs) + '</span>'
-      : '';
+      : '');
     const typeWord = compactTypeMark(j);
     const marks = (typeWord ? '<span class="compact-mark">' + typeWord + '</span>' : '') +
       (isPaid ? '<span class="compact-mark">Paid</span>' : '');
-    return '<article class="job-card compact-card cursor-pointer active:opacity-90 overflow-hidden' + (hold ? ' is-tentative' : '') + '" data-id="' + esc(j.job_id) + '" style="' + distBar + '">' +
+    return '<article class="job-card compact-card cursor-pointer active:opacity-90 overflow-hidden' + (hold ? ' is-tentative' : '') + '" data-id="' + esc(j.job_id) + '" style="border-left:3px solid ' + edge + '">' +
       '<div class="compact-row">' +
-        '<span class="compact-time">' + esc(displayTime(j)) + '</span>' +
-        '<div class="compact-body">' +
-          '<div class="compact-head">' +
-            '<p class="compact-name">' + esc(j.client_name) + '</p>' +
-            (marks ? '<span class="compact-marks">' + marks + '</span>' : '') +
-          '</div>' +
-          notes1 +
-          shortAddr +
-          ((teamChip || unitsBit) ? '<div class="compact-meta">' + teamChip + unitsBit + '</div>' : '') +
+        '<div class="compact-time-row">' +
+          '<span class="compact-time">' + esc(displayTime(j)) + '</span>' +
+          unitsBit +
         '</div>' +
+        '<p class="compact-name">' + esc(j.client_name) + '</p>' +
+        notes1 +
+        shortAddr +
+        ((teamChip || marks) ? '<div class="compact-meta">' + teamChip + marks + '</div>' : '') +
       '</div></article>';
   }
 

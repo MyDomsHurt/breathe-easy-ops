@@ -156,7 +156,9 @@ body.compact .compact-name {
   text-overflow: ellipsis;
 }
 body.compact .compact-addr {
-  margin: 6px 0 0;
+  margin: 5px 0 0;
+  padding-top: 5px;
+  border-top: 1px solid #e2e8f0;
   font-size: 13px;
   font-weight: 500;
   line-height: 1.35;
@@ -169,7 +171,9 @@ body.compact .compact-addr {
   word-break: break-word;
 }
 body.compact .compact-notes {
-  margin: 3px 0 0;
+  margin: 5px 0 0;
+  padding-top: 5px;
+  border-top: 1px solid #e2e8f0;
   font-size: 12px;
   font-weight: 500;
   line-height: 1.4;
@@ -369,7 +373,15 @@ main {
 .day-section {
   position: relative;
   overflow: visible;
-  margin-bottom: 1.1rem;
+  margin-bottom: 0.85rem;
+  padding: 0 0.4rem 0.55rem;
+  border-radius: 10px;
+}
+.day-section.day-a {
+  background: #e8edf2;
+}
+.day-section.day-b {
+  background: #e8f1f7;
 }
 .day-header-sticky {
   position: sticky;
@@ -377,16 +389,16 @@ main {
   z-index: 2;
   background: #f1f5f9;
   padding: 0.4rem 0.5rem;
-  margin: 0 -0.5rem 0.35rem;
+  margin: 0 -0.4rem 0.4rem;
   border-bottom: 1px solid #e2e8f0;
 }
 .day-section.day-a .day-header-sticky {
-  background: #e2e8f0;
-  border-bottom-color: #cbd5e1;
+  background: #d5dde6;
+  border-bottom-color: #c0c9d4;
 }
 .day-section.day-b .day-header-sticky {
-  background: #e8f1f8;
-  border-bottom-color: #d4e4f0;
+  background: #d4e5f0;
+  border-bottom-color: #c2d7e6;
 }
 .day-section.day-past {
   opacity: 0.88;

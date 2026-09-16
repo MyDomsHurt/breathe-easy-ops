@@ -207,10 +207,17 @@ function getGpsPin() {
 }
 
 function displayTime(j) {
-  if (j.time) return j.time;
-  const s = String(j.client_name || '');
-  const m = s.match(/(\d{1,2}(?:[.:]\d{2})?\s*(?:am|pm)?)/i);
-  return m ? m[1].replace(/\s+/g, '') : '\u2014';
+  const raw = j && j.time ? String(j.time).trim() : '';
+  let token = raw;
+  if (!token) {
+    const s = String(j && j.client_name || '');
+    const m = s.match(/(\d{1,2}(?:[.:]\d{2})?\s*(?:am|pm)?)/i);
+    token = m ? m[1] : '';
+  } else {
+    token = token.split(/\s*>\s*/)[0].trim();
+  }
+  if (!token) return '\u2014';
+  return formatLunch24(token) || token.replace(/\s+/g, '');
 }
 
 function liveAcsBadges(acs) {
@@ -872,9 +879,7 @@ function renderByDate(container) {
   Object.keys(groups).forEach(function (d) { dateSet[d] = true; });
   visibleCrewNotes().forEach(function (j) { if (j.date) dateSet[j.date] = true; });
   const dates = Object.keys(dateSet).sort();
-  const gridCls = compactMode
-    ? 'grid grid-cols-2 gap-1.5'
-    : 'grid gap-1.5';
+  const gridCls = jobsGridClass();
   const today = todayISO();
   container.innerHTML = dates.map(date => {
     const jobs = (groups[date] || []).slice().sort((a, b) => jobSortMinutes(a) - jobSortMinutes(b));
@@ -907,7 +912,7 @@ function renderByTeam(container) {
     return '<section><div class="flex items-center justify-between mb-2"><h3 class="font-semibold"><span class="inline-block px-2 py-0.5 rounded ' +
       (TEAM_COLORS[team] || 'bg-slate-100') + ' team-chip mr-1">' + team + '</span><span class="text-slate-400 font-normal text-sm">' +
       jobs.length + ' jobs' + (returns ? ' \u00b7 ' + returns + ' returns' : '') + '</span></h3>' +
-      '</div><div class="' + (compactMode ? 'grid grid-cols-2 gap-1.5' : 'grid gap-1.5') + '">' + (function () {
+      '</div><div class="' + jobsGridClass() + '">' + (function () {
         const byDate = groupBy(jobs, function (j) { return j.date; });
         return Object.keys(byDate).sort().map(function (d) {
           return cardsWithLunch(byDate[d], d, team);
@@ -921,6 +926,17 @@ function isTentative(j) {
   return String(j && j.status || '').toLowerCase() === 'tentative';
 }
 
+function jobsGridClass() {
+  return compactMode ? 'grid compact-grid' : 'grid gap-1.5';
+}
+
+function compactTypeMark(j) {
+  const t = String(j && j.job_type || '').toLowerCase().trim();
+  if ((j && j.is_return) || t === 'return') return 'Return';
+  if (t === 'influencer' || t === 'collab') return 'Collab';
+  return '';
+}
+
 function jobCard(j) {
   const hold = isTentative(j);
   const returnBadge = j.is_return ? '<span class="return-badge shrink-0 whitespace-nowrap text-white text-[10px] font-semibold px-1.5 py-0.5 rounded">RETURN</span>' : '';
@@ -929,32 +945,40 @@ function jobCard(j) {
   const rightBadge = isPaid
     ? '<span class="text-[10px] font-bold tracking-wide px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">PAID</span>'
     : '';
-  const units = j.acs
-    ? '<span class="inline-flex items-center text-[11px] font-semibold bg-white/80 border border-slate-200 text-slate-800 px-1.5 py-0.5 rounded">' + esc(j.acs) + '</span>'
-    : '';
   const dist = DISTRICT_COLORS[j.district] || DISTRICT_FALLBACK;
 
   if (compactMode) {
     const distBar = hold
-      ? 'border-left: 4px solid #ca8a04; background:#fef9c3;'
-      : 'border-left: 4px solid ' + dist.border + '; background:' + dist.bg + ';';
+      ? 'border-left: 3px solid #ca8a04; background:#fef9c3;'
+      : 'border-left: 3px solid ' + dist.border + '; background:' + dist.bg + ';';
     const showTeam = currentFilters.team === 'all';
     const teamChip = showTeam
-      ? '<span class="text-[10px] font-medium px-1 py-0.5 rounded ' + (TEAM_COLORS[j.team_lead] || 'bg-slate-100') + '">' + esc(j.team_lead) + '</span>'
+      ? '<span class="compact-team">' + esc(j.team_lead) + '</span>'
       : '';
     const shownAddr = displayAddress(j.address);
-    const shortAddr = shownAddr
-      ? '<p class="text-[10px] leading-tight text-slate-600 mt-1 line-clamp-2">' + esc(shownAddr) + '</p>'
+    const notes1 = j.notes
+      ? '<p class="compact-notes">' + esc(j.notes) + '</p>'
       : '';
-    return '<article class="job-card compact-card rounded-xl cursor-pointer active:opacity-90 overflow-hidden' + (hold ? ' is-tentative' : '') + '" data-id="' + esc(j.job_id) + '" style="' + distBar + '">' +
-      '<div class="p-2 min-h-[100px] flex flex-col">' +
-        '<div class="flex items-start justify-between gap-1 min-w-0">' +
-          '<p class="font-semibold text-[12px] leading-tight line-clamp-1 text-slate-800 min-w-0 flex-1 pr-1">' + esc(j.client_name) + '</p>' +
-          tentBadge + returnBadge +
-        '</div>' +
-        '<p class="text-[12px] font-semibold text-slate-700 mt-0.5">' + esc(displayTime(j)) + '</p>' +
-        shortAddr +
-        '<div class="flex items-center gap-1.5 flex-wrap shrink-0 mt-auto pt-1.5">' + teamChip + units +
+    const shortAddr = shownAddr
+      ? '<p class="compact-addr">' + esc(shownAddr) + '</p>'
+      : '';
+    const unitsBit = j.acs
+      ? '<span class="compact-units">' + esc(j.acs) + '</span>'
+      : '';
+    const typeWord = compactTypeMark(j);
+    const marks = (typeWord ? '<span class="compact-mark">' + typeWord + '</span>' : '') +
+      (isPaid ? '<span class="compact-mark">Paid</span>' : '');
+    return '<article class="job-card compact-card cursor-pointer active:opacity-90 overflow-hidden' + (hold ? ' is-tentative' : '') + '" data-id="' + esc(j.job_id) + '" style="' + distBar + '">' +
+      '<div class="compact-row">' +
+        '<span class="compact-time">' + esc(displayTime(j)) + '</span>' +
+        '<div class="compact-body">' +
+          '<div class="compact-head">' +
+            '<p class="compact-name">' + esc(j.client_name) + '</p>' +
+            (marks ? '<span class="compact-marks">' + marks + '</span>' : '') +
+          '</div>' +
+          notes1 +
+          shortAddr +
+          ((teamChip || unitsBit) ? '<div class="compact-meta">' + teamChip + unitsBit + '</div>' : '') +
         '</div>' +
       '</div></article>';
   }

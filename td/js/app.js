@@ -100,6 +100,38 @@ function mapsHref(raw) {
   return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q);
 }
 
+function mapsDirQuery(raw) {
+  return cleanAddressForMaps(raw) || '';
+}
+
+function mapsDirHref(destRaw, originRaw) {
+  const dest = mapsDirQuery(destRaw);
+  if (!dest) return null;
+  let url = 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(dest);
+  if (originRaw) {
+    const origin = mapsDirQuery(originRaw);
+    if (!origin) return null;
+    url += '&origin=' + encodeURIComponent(origin);
+  }
+  return url;
+}
+
+function nextJobSameDayLead(j) {
+  if (!j || !j.date || !j.team_lead) return null;
+  const rows = (allJobs || []).filter(function (x) {
+    return x && !x.deleted && !isCrewNote(x)
+      && x.date === j.date
+      && x.team_lead === j.team_lead;
+  }).slice().sort(function (a, b) {
+    const d = jobSortMinutes(a) - jobSortMinutes(b);
+    if (d) return d;
+    return String(a.job_id || '').localeCompare(String(b.job_id || ''));
+  });
+  const idx = rows.findIndex(function (x) { return x.job_id === j.job_id; });
+  if (idx < 0) return null;
+  return rows[idx + 1] || null;
+}
+
 function formatMobile(raw) {
   let d = String(raw || '').replace(/[^\d]/g, '');
   if (!d) return '';
@@ -1014,11 +1046,29 @@ function openModal(j) {
   document.getElementById('modalTitle').textContent = j.client_name;
   document.getElementById('modalSub').textContent = formatDate(j.date) + ' \u00b7 ' + displayTime(j) + ' \u00b7 ' + j.team_lead;
   const shownAddr = displayAddress(j.address);
-  const mapsUrl = mapsHref(j.address);
-  const mapsLink = mapsUrl
-    ? '<a href="' + mapsUrl + '" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-2 mt-2 w-full px-3 py-3 rounded-xl bg-sky-50 border border-sky-200 text-sky-800 font-bold text-sm active:bg-sky-100">Open in Maps</a>'
+  const placeUrl = mapsHref(j.address);
+  const dirUrl = mapsDirHref(j.address);
+  const nextJob = nextJobSameDayLead(j);
+  const nextUrl = (nextJob && mapsDirQuery(j.address) && mapsDirQuery(nextJob.address))
+    ? mapsDirHref(nextJob.address, j.address)
+    : null;
+  const mapBtns = [];
+  if (placeUrl) {
+    mapBtns.push('<a href="' + esc(placeUrl) + '" target="_blank" rel="noopener noreferrer">Open place</a>');
+  }
+  if (dirUrl) {
+    mapBtns.push('<a href="' + esc(dirUrl) + '" target="_blank" rel="noopener noreferrer">Directions</a>');
+  }
+  if (nextUrl) {
+    const nextName = nextJob.client_name ? ' title="To ' + esc(nextJob.client_name) + '"' : '';
+    mapBtns.push('<a href="' + esc(nextUrl) + '" target="_blank" rel="noopener noreferrer"' + nextName + '>To next</a>');
+  }
+  const mapsRow = mapBtns.length
+    ? '<div class="job-map-actions">' + mapBtns.join('') + '</div>'
     : '';
-  const addressHtml = shownAddr ? '<div class="text-slate-800 break-words">' + esc(shownAddr) + '</div>' + mapsLink : '\u2014';
+  const addressHtml = shownAddr
+    ? '<div class="text-slate-800 break-words">' + esc(shownAddr) + '</div>' + mapsRow
+    : '\u2014';
   const tel = j.mobile ? String(j.mobile).replace(/[^\d+]/g, '') : '';
   const mobileHtml = tel
     ? '<a href="tel:' + esc(tel) + '" class="inline-flex items-center justify-center min-h-[44px] font-semibold text-emerald-800">' + esc(j.mobile) + '</a>'

@@ -971,7 +971,7 @@ function jobCard(j) {
           unitsBit +
         '</div>' +
         '<div class="compact-col compact-col-main">' +
-          '<p class="compact-name">' + esc(j.client_name) + '</p>' +
+          '<span class="compact-name">' + esc(j.client_name) + '</span>' +
           shortAddr +
           notes1 +
         '</div>' +

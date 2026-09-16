@@ -931,7 +931,15 @@ function compactTypeMark(j) {
   const t = String(j && j.job_type || '').toLowerCase().trim();
   if ((j && j.is_return) || t === 'return') return 'Return';
   if (t === 'influencer' || t === 'collab') return 'Collab';
-  return '';
+  if (t === 'inspection') return 'Inspection';
+  if (t === 'other') return 'Other';
+  return 'Service';
+}
+
+function compactPayMark(j) {
+  const pay = String(j && j.payment || '').trim().toLowerCase();
+  if (pay === 'free') return 'Free';
+  return jobIsPaid(j) ? 'Paid' : 'Unpaid';
 }
 
 function jobCard(j) {
@@ -946,10 +954,6 @@ function jobCard(j) {
 
   if (compactMode) {
     const edge = hold ? '#ca8a04' : dist.border;
-    const showTeam = currentFilters.team === 'all';
-    const teamChip = showTeam
-      ? '<span class="compact-team">' + esc(j.team_lead) + '</span>'
-      : '';
     const shownAddr = displayAddress(j.address);
     const notes1 = j.notes
       ? '<p class="compact-notes">' + esc(j.notes) + '</p>'
@@ -960,20 +964,21 @@ function jobCard(j) {
     const unitsBit = liveAcsBadges(j.acs) || (j.acs
       ? '<span class="compact-units">' + esc(j.acs) + '</span>'
       : '');
-    const typeWord = compactTypeMark(j);
-    const marks = (teamChip || '') +
-      (typeWord ? '<span class="compact-mark">' + typeWord + '</span>' : '') +
-      (isPaid ? '<span class="compact-mark">Paid</span>' : '');
     return '<article class="job-card compact-card cursor-pointer active:opacity-90 overflow-hidden' + (hold ? ' is-tentative' : '') + '" data-id="' + esc(j.job_id) + '" style="border-left:4px solid ' + edge + '">' +
       '<div class="compact-row">' +
-        '<div class="compact-head">' +
+        '<div class="compact-col compact-col-time">' +
           '<span class="compact-time">' + esc(displayTime(j)) + '</span>' +
           unitsBit +
-          '<p class="compact-name">' + esc(j.client_name) + '</p>' +
-          (marks ? '<span class="compact-marks">' + marks + '</span>' : '') +
         '</div>' +
-        notes1 +
-        shortAddr +
+        '<div class="compact-col compact-col-main">' +
+          '<p class="compact-name">' + esc(j.client_name) + '</p>' +
+          notes1 +
+          shortAddr +
+        '</div>' +
+        '<div class="compact-col compact-col-meta">' +
+          '<span class="compact-type">' + compactTypeMark(j) + '</span>' +
+          '<span class="compact-pay">' + compactPayMark(j) + '</span>' +
+        '</div>' +
       '</div></article>';
   }
 

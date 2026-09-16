@@ -275,10 +275,13 @@ function selectedDayISO() {
 }
 
 function formatDayHeading(iso) {
-  const label = formatDate(iso);
-  if (iso === todayISO()) return '<span class="day-flag day-flag-today">Today</span> ' + label;
-  if (iso === tomorrowISO()) return '<span class="day-flag day-flag-tomorrow">Tomorrow</span> ' + label;
-  return label;
+  return formatDate(iso);
+}
+
+function dayWhenBadge(iso) {
+  if (iso === todayISO()) return '<span class="day-flag day-flag-today">Today</span>';
+  if (iso === tomorrowISO()) return '<span class="day-flag day-flag-tomorrow">Tomorrow</span>';
+  return '';
 }
 
 function sortJobs(rows) {
@@ -860,10 +863,8 @@ function dayWhosOnHtml(jobs, date) {
   const lines = leads.map(function (team) {
     const members = cellTeamMembersFor(date, team);
     const who = members ? esc(members) : '\u2014';
-    if (leads.length === 1) {
-      return 'Who\u2019s on \u00b7 ' + who;
-    }
-    return esc(team) + ' \u00b7 Who\u2019s on \u00b7 ' + who;
+    if (leads.length === 1) return who;
+    return esc(team) + ' \u00b7 ' + who;
   });
   return '<div class="day-whos-on">' + lines.map(function (line) {
     return '<div>' + line + '</div>';
@@ -883,8 +884,10 @@ function renderByDate(container) {
     const returns = jobs.filter(j => j.is_return).length;
     const kind = date === today ? 'today' : (date === tomorrowISO() ? 'tomorrow' : (date < today ? 'past' : 'upcoming'));
     const stripe = i % 2 === 0 ? 'day-a' : 'day-b';
+    const when = dayWhenBadge(date);
     return '<section class="day-section day-' + kind + ' ' + stripe + '">' +
-      '<div class="day-header-sticky">' +
+      '<div class="day-header-sticky' + (when ? ' has-when' : '') + '">' +
+        (when ? '<div class="day-when">' + when + '</div>' : '') +
         '<div class="flex items-center justify-between">' +
           '<h3 class="font-semibold text-brand-800">' +
             formatDayHeading(date) + '<span class="text-slate-400 font-normal text-sm ml-2">' + jobs.length + ' job' + (jobs.length !== 1 ? 's' : '') + '</span>' +
@@ -1135,7 +1138,10 @@ function groupBy(arr, keyFn) {
 function formatDate(iso) {
   if (!iso) return '\u2014';
   const d = new Date(iso + 'T00:00:00');
-  return d.toLocaleDateString('en-HK', { weekday: 'short', day: 'numeric', month: 'short' });
+  const wd = d.toLocaleDateString('en-GB', { weekday: 'short' });
+  const day = d.getDate();
+  const mo = d.toLocaleDateString('en-GB', { month: 'short' });
+  return wd + ', ' + day + ' ' + mo;
 }
 
 function formatMoney(n) {

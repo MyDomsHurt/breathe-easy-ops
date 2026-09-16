@@ -391,24 +391,34 @@ main {
 .day-section.day-past {
   opacity: 0.88;
 }
+.day-when {
+  margin: 0 0 0.28rem;
+  line-height: 1;
+}
+.day-header-sticky.has-when {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
 .day-flag {
   display: inline-block;
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  padding: 0.12rem 0.4rem;
+  padding: 0.14rem 0.5rem;
   border-radius: 999px;
-  margin-right: 0.25rem;
+  margin: 0;
   vertical-align: middle;
 }
 .day-flag-today {
-  background: #0284c7;
-  color: #fff;
+  background: #fff;
+  color: #0f172a;
+  border: 1px solid #94a3b8;
 }
 .day-flag-tomorrow {
-  background: #e0f2fe;
-  color: #075985;
+  background: #0f172a;
+  color: #fff;
+  border: 1px solid #0f172a;
 }
 .day-section.day-today .day-header-sticky {
   border-bottom-width: 2px;

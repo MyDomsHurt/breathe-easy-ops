@@ -84,7 +84,21 @@ function badge(t){
   return `<span class="badge ${x}">${t}</span>`;
 }
 
-async function loadData(){
+function finishLoadedData(){
+  const keys = allWeekKeys();
+  if(keys.length){
+    DATA.weeks = keys;
+    DATA.weekLabels = keys.map(weekLabelFor);
+  }
+  if(DATA.ranking){
+    DATA.ranking = DATA.ranking.map(t => {
+      const live = DATA.technicians[t.name];
+      return live ? Object.assign({}, t, live) : t;
+    });
+  }
+}
+
+async function loadJsonFallback(){
   const [res, wres] = await Promise.all([fetch('data.json'), fetch('weeks.json')]);
   DATA = await res.json();
   const weeks = await wres.json();
@@ -101,18 +115,36 @@ async function loadData(){
       DATA.technicians[name].weeks = weeks[name];
     }
   }
-  const keys = allWeekKeys();
-  if(keys.length){
-    DATA.weeks = keys;
-    DATA.weekLabels = keys.map(weekLabelFor);
-  }
-  if(DATA.ranking){
-    DATA.ranking = DATA.ranking.map(t => {
-      const live = DATA.technicians[t.name];
-      return live ? Object.assign({}, t, live) : t;
-    });
-  }
+  finishLoadedData();
 }
+
+async function loadData(){
+  try {
+    if (typeof window.BELoadPerfJobs === 'function') {
+      const jobs = await window.BELoadPerfJobs();
+      if (jobs && jobs.length && typeof window.BEApplyScoredData === 'function') {
+        const scored = window.BEApplyScoredData(jobs);
+        if (scored && scored.technicians) {
+          DATA = scored;
+          finishLoadedData();
+          return;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Live Performance score unavailable, using data.json', err);
+  }
+  await loadJsonFallback();
+}
+
+window.BEOnPerfJobsChanged = function BEOnPerfJobsChanged(jobs){
+  if (typeof window.BEApplyScoredData !== 'function') return;
+  const scored = window.BEApplyScoredData(jobs);
+  if (!scored || !scored.technicians) return;
+  DATA = scored;
+  finishLoadedData();
+  if (typeof route === 'function') route();
+};
 
 function setNav(active){
   const names = techNames();

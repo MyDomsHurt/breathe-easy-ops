@@ -30,9 +30,10 @@ window.renderCompetePage = function renderCompetePage(){
   destroyCharts();
   setNav('#/standings');
   const names = techNames();
-  const thisWeekKey = latestMondayWeek();
+  const tf = resolveTimeframe(TIMEFRAME);
+  const copy = periodStripCopy(tf);
   const rankMetric = isUnitsView() ? 'unitsDay' : 'day';
-  const race = rankedTechs(thisWeekKey ? [thisWeekKey] : [], rankMetric);
+  const race = rankedTechs(tf.weeks, rankMetric);
   const ytd = rankedTechs(ytdWeekKeys(), rankMetric);
   const hideTrend = TIMEFRAME === 'this_week' && thisWeekEarnedDayCount() < 2;
   const eight = lastEightWeekKeys();
@@ -52,28 +53,8 @@ window.renderCompetePage = function renderCompetePage(){
   const ytdExplain = isUnitsView()
     ? `1 Jan through ${DATA.generated}. Gap is units/day behind #1.`
     : `1 Jan through ${DATA.generated}. Gap is pts/day behind #1.`;
-
-  document.getElementById('app').innerHTML = `
-    <div class="page-header">
-      <h1>Standings</h1>
-      <p>This week’s race, then last-8-week pace, then year to date · Updated ${DATA.generated}</p>
-    </div>
-    <section class="this-week" aria-label="This week race">
-      <div class="this-week-kicker">This week</div>
-      <p class="this-week-range">Monday through today · ${weekSpanLabel(thisWeekKey)} · ranked by ${dayLab.toLowerCase()}</p>
-      <div class="table-wrap race-wrap">
-        <table>
-          <thead><tr>
-            <th>#</th><th>Technician</th>
-            <th class="num">${dayLab}</th>
-            <th class="num">${totLab}</th>
-            <th class="num hide-sm">Gap</th>
-          </tr></thead>
-          <tbody>${competeRowsHtml(race, false)}</tbody>
-        </table>
-      </div>
-    </section>
-    ${trendHtml}
+  const showYtd = TIMEFRAME !== 'ytd';
+  const ytdHtml = showYtd ? `
     <div class="section">
       <div class="section-title">Year to date</div>
       <p class="explain">${ytdExplain}</p>
@@ -87,7 +68,30 @@ window.renderCompetePage = function renderCompetePage(){
         </tr></thead>
         <tbody>${competeRowsHtml(ytd, true)}</tbody>
       </table></div>
-    </div>`;
+    </div>` : '';
+
+  document.getElementById('app').innerHTML = `
+    <div class="page-header">
+      <h1>Standings</h1>
+      <p>${copy.kicker} · Updated ${DATA.generated}</p>
+    </div>
+    <section class="this-week" aria-label="${copy.kicker}">
+      <div class="this-week-kicker">${copy.kicker}</div>
+      <p class="this-week-range">${copy.range} · ranked by ${dayLab.toLowerCase()}</p>
+      <div class="table-wrap race-wrap">
+        <table>
+          <thead><tr>
+            <th>#</th><th>Technician</th>
+            <th class="num">${dayLab}</th>
+            <th class="num">${totLab}</th>
+            <th class="num hide-sm">Gap</th>
+          </tr></thead>
+          <tbody>${competeRowsHtml(race, false)}</tbody>
+        </table>
+      </div>
+    </section>
+    ${trendHtml}
+    ${ytdHtml}`;
 
   if(hideTrend) return;
   const series = names.map(n => ({ name: n, pace: paceSeries(n, eight) }));

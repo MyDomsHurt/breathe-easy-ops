@@ -17,25 +17,24 @@ window.renderTechPage = function renderTechPage(name){
   }
   setNav('#/tech/' + name);
   const color = TECH_COLORS[name] || '#1481c3';
-  const thisWeekKey = latestMondayWeek();
-  const thisWeek = thisWeekKey ? techWindowStats(name, [thisWeekKey]) : {
-    points: 0, pointsDay: 0, units: 0, returns: 0, days: 0
-  };
+  const tf = resolveTimeframe(TIMEFRAME);
+  const copy = periodStripCopy(tf);
+  const period = tf.weeks.length ? techWindowStats(name, tf.weeks) : emptyWindowStats();
   const series = paceSeries(name, lastEightWeekKeys());
   const unitsOn = isUnitsView();
-  const stripTotal = unitsOn ? fmtUnits(thisWeek.units) : fmt(thisWeek.points, 1);
-  const stripDay = unitsOn ? fmt(thisWeek.unitsDay, 2) : fmt(thisWeek.pointsDay, 2);
+  const stripTotal = unitsOn ? fmtUnits(period.units) : fmt(period.points, 1);
+  const stripDay = unitsOn ? fmt(period.unitsDay, 2) : fmt(period.pointsDay, 2);
   const chartLabel = viewDayLabel();
   const chartData = unitsOn ? series.unitsDay : series.pointsDay;
 
   document.getElementById('app').innerHTML = `
     <div class="page-header">
       <h1><span class="tech-dot" style="background:${color};width:12px;height:12px;display:inline-block;border-radius:50%;margin-right:8px;vertical-align:middle"></span>${name}</h1>
-      <p>This week through today · Updated ${DATA.generated}</p>
+      <p>${copy.kicker} · Updated ${DATA.generated}</p>
     </div>
-    <section class="this-week" aria-label="This week">
-      <div class="this-week-kicker">This week</div>
-      <p class="this-week-range">Monday through today · ${weekSpanLabel(thisWeekKey)}</p>
+    <section class="this-week" aria-label="${copy.kicker}">
+      <div class="this-week-kicker">${copy.kicker}</div>
+      <p class="this-week-range">${copy.range}</p>
       <div class="this-week-stats">
         <div class="this-week-stat">
           <div class="label">${viewTotalLabel()}</div>
@@ -47,7 +46,7 @@ window.renderTechPage = function renderTechPage(name){
         </div>
         <div class="this-week-stat">
           <div class="label">Returns</div>
-          <div class="value">${fmt(thisWeek.returns)}</div>
+          <div class="value">${fmt(period.returns)}</div>
         </div>
       </div>
     </section>

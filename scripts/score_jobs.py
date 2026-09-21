@@ -747,6 +747,16 @@ def score_jobs(jobs, today):
         for n in TECH_ORDER
     }
     job_counts = {n: 0 for n in TECH_ORDER}
+    per_tech_day = {
+        n: defaultdict(lambda: {"points": 0.0, "units": 0.0, "returns": 0})
+        for n in TECH_ORDER
+    }
+
+    def add_day(lead, d, points=0.0, units=0.0, returns=0):
+        day = per_tech_day[lead][d]
+        day["points"] += points
+        day["units"] += units
+        day["returns"] += returns
 
     for job in jobs:
         if job.get("deleted") is True or job.get("deleted") == "true":
@@ -781,6 +791,7 @@ def score_jobs(jobs, today):
             bucket["days"].add(d)
             bucket["jobs"] += 1
             job_counts[lead] += 1
+            add_day(lead, d, returns=1)
             continue
 
         counts, sure, reason = units_from_job(job)
@@ -790,6 +801,7 @@ def score_jobs(jobs, today):
             bucket["days"].add(d)
             bucket["jobs"] += 1
             job_counts[lead] += 1
+            add_day(lead, d, returns=1)
             continue
         if reason == "zero_skip":
             continue
@@ -798,6 +810,7 @@ def score_jobs(jobs, today):
             bucket["days"].add(d)
             bucket["jobs"] += 1
             job_counts[lead] += 1
+            add_day(lead, d)
             continue
         if not sure:
             exceptions.append({
@@ -818,6 +831,7 @@ def score_jobs(jobs, today):
         bucket["days"].add(d)
         bucket["jobs"] += 1
         job_counts[lead] += 1
+        add_day(lead, d, points=pts, units=units)
         for k in UNIT_TYPES:
             bucket["types"][k] += counts.get(k) or 0.0
 
@@ -875,6 +889,18 @@ def score_jobs(jobs, today):
         "ranking": ranking,
         "technicians": {
             n: {k: v for k, v in technicians[n].items() if k != "_jobs"}
+            for n in TECH_ORDER
+        },
+        "daily": {
+            n: [
+                {
+                    "date": d,
+                    "points": r2(v["points"]),
+                    "units": r1(v["units"]),
+                    "returns": int(v["returns"]),
+                }
+                for d, v in sorted(per_tech_day[n].items())
+            ]
             for n in TECH_ORDER
         },
     }

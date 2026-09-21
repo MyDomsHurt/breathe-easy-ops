@@ -1,5 +1,5 @@
 /* Breathe-Easy Dashboard
- * Competition | Full Team | Personal
+ * Standings | Full Team | Personal
  * Timeframe + metric controls · full-year weeks.json
  * Returns (R) tracked as count only — 0 points
  */
@@ -110,13 +110,13 @@ async function loadData(){
 
 function setNav(active){
   const names = techNames();
-  const competeActive = active === '#/compete' ? ' active' : '';
+  const standingsOn = active === '#/standings' || active === '#/compete';
   const teamActive = active === '#/team' ? ' active' : '';
   $('nav-links').innerHTML =
     names.map(n => `<a href="#/tech/${n}" class="${active === ('#/tech/'+n) ? 'active' : ''}">${n}</a>`).join('') +
     `<span class="nav-sep"></span>` +
     `<a href="#/team" class="${teamActive}">Full Team</a>` +
-    `<a href="#/compete" class="nav-compete${competeActive}">Competition</a>`;
+    `<a href="#/standings" class="nav-compete${standingsOn ? ' active' : ''}">Standings</a>`;
 }
 
 function allWeekKeys(){
@@ -135,6 +135,60 @@ function earnedCutoff(){
 function earnedWeekKeys(){
   const cutoff = earnedCutoff();
   return allWeekKeys().filter(k => k <= cutoff);
+}
+function addDaysIso(iso, n){
+  const d = new Date(iso + 'T12:00:00');
+  d.setDate(d.getDate() + n);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function thisWeekDayKeys(){
+  const mon = latestMondayWeek();
+  const cutoff = earnedCutoff();
+  if(!mon) return [];
+  const out = [];
+  for(let d = mon; d <= cutoff; d = addDaysIso(d, 1)) out.push(d);
+  return out;
+}
+function dayLabel(iso){
+  const d = new Date(iso + 'T12:00:00');
+  if(isNaN(d)) return iso;
+  return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()] + ' ' + String(d.getDate()).padStart(2, '0');
+}
+function paceSeries(name, weekKeys){
+  const thisWeek = TIMEFRAME === 'this_week' || (weekKeys.length === 1 && weekKeys[0] === latestMondayWeek());
+  if(thisWeek && DATA.daily){
+    const dates = thisWeekDayKeys();
+    const map = {};
+    ((DATA.daily[name] || [])).forEach(r => { map[r.date] = r; });
+    return {
+      grain: 'day',
+      labels: dates.map(dayLabel),
+      pointsDay: dates.map(d => (map[d] && map[d].points) || 0),
+      unitsDay: dates.map(d => (map[d] && map[d].units) || 0),
+    };
+  }
+  return {
+    grain: 'week',
+    labels: weekKeys.map(weekLabelFor),
+    pointsDay: weekKeys.map(w => {
+      const r = (DATA.technicians[name].weeks || []).find(x => x.week === w);
+      return r ? (r.pointsDay || 0) : null;
+    }),
+    unitsDay: weekKeys.map(w => {
+      const r = (DATA.technicians[name].weeks || []).find(x => x.week === w);
+      return r ? (r.unitsDay || 0) : null;
+    }),
+  };
+}
+function lineChartOptions(){
+  return {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 12 } } },
+    scales: {
+      x: { grid: { display: false } },
+      y: { grid: { color: 'rgba(14,77,145,0.08)' }, beginAtZero: true }
+    }
+  };
 }
 function weekLabelFor(weekKey){
   for(const n of techNames()){
@@ -365,7 +419,7 @@ function renderTech(name){
 function route(){
   const hash = location.hash || '#/team';
   if(hash.startsWith('#/tech/')) renderTech(decodeURIComponent(hash.replace('#/tech/', '')));
-  else if(hash === '#/compete') renderCompetition();
+  else if(hash === '#/standings' || hash === '#/compete') renderCompetition();
   else renderTeam();
 }
 window.addEventListener('hashchange', route);

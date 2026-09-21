@@ -4,19 +4,22 @@
  */
 function competeRowsHtml(sorted, extraDays){
   const lead = sorted[0];
+  const dayKey = viewDayKey();
+  const unitsOn = isUnitsView();
   return sorted.map((t, i) => {
-    const gap = i === 0 ? null : (lead ? lead.pointsDay - t.pointsDay : 0);
+    const gap = i === 0 ? null : (lead ? (lead[dayKey] || 0) - (t[dayKey] || 0) : 0);
     const gapHtml = gap == null
       ? '<span class="gap-lead">Lead</span>'
       : `<span class="gap-behind">-${fmt(gap, 2)}</span>`;
     const daysCell = extraDays
       ? `<td class="num hide-sm">${fmt(t.days)}</td>`
       : '';
+    const total = unitsOn ? fmt(t.units) : fmt(t.points, 1);
     return `<tr class="${i===0?'lead-row':''}">
       <td><span class="rank-num ${i===0?'r1':i===1?'r2':i===2?'r3':''}">${i+1}</span></td>
       <td class="name"><span class="tech-dot" style="background:${TECH_COLORS[t.name]}"></span>${t.name}</td>
-      <td class="num"><strong>${fmt(t.pointsDay, 2)}</strong></td>
-      <td class="num">${fmt(t.points, 1)}</td>
+      <td class="num"><strong>${fmt(t[dayKey], 2)}</strong></td>
+      <td class="num">${total}</td>
       ${daysCell}
       <td class="num hide-sm">${gapHtml}</td>
     </tr>`;
@@ -28,26 +31,27 @@ window.renderCompetePage = function renderCompetePage(){
   setNav('#/standings');
   const names = techNames();
   const thisWeekKey = latestMondayWeek();
-  const race = rankedTechs(thisWeekKey ? [thisWeekKey] : [], 'day');
-  const ytd = rankedTechs(ytdWeekKeys(), 'day');
+  const rankMetric = isUnitsView() ? 'unitsDay' : 'day';
+  const race = rankedTechs(thisWeekKey ? [thisWeekKey] : [], rankMetric);
+  const ytd = rankedTechs(ytdWeekKeys(), rankMetric);
   const hideTrend = TIMEFRAME === 'this_week' && thisWeekEarnedDayCount() < 2;
   const eight = lastEightWeekKeys();
+  const dayLab = viewDayLabel();
+  const totLab = viewTotalLabel();
   const trendHtml = hideTrend ? '' : `
     <div class="section">
       <div class="section-title">Last 8 weeks</div>
       <div class="chart-grid">
         <div class="chart-card full">
-          <h3>Points / day</h3>
+          <h3>${dayLab}</h3>
           <p class="chart-explain">One labeled line per technician · weekly pace.</p>
-          <div class="chart-wrap"><canvas id="s-points"></canvas></div>
-        </div>
-        <div class="chart-card full">
-          <h3>Units / day</h3>
-          <p class="chart-explain">One labeled line per technician · weekly pace.</p>
-          <div class="chart-wrap"><canvas id="s-units"></canvas></div>
+          <div class="chart-wrap"><canvas id="s-pace"></canvas></div>
         </div>
       </div>
     </div>`;
+  const ytdExplain = isUnitsView()
+    ? `1 Jan through ${DATA.generated}. Gap is units/day behind #1.`
+    : `1 Jan through ${DATA.generated}. Gap is pts/day behind #1.`;
 
   document.getElementById('app').innerHTML = `
     <div class="page-header">
@@ -56,13 +60,13 @@ window.renderCompetePage = function renderCompetePage(){
     </div>
     <section class="this-week" aria-label="This week race">
       <div class="this-week-kicker">This week</div>
-      <p class="this-week-range">Monday through today · ${weekSpanLabel(thisWeekKey)} · ranked by pts/day</p>
+      <p class="this-week-range">Monday through today · ${weekSpanLabel(thisWeekKey)} · ranked by ${dayLab.toLowerCase()}</p>
       <div class="table-wrap race-wrap">
         <table>
           <thead><tr>
             <th>#</th><th>Technician</th>
-            <th class="num">Pts/Day</th>
-            <th class="num">Points</th>
+            <th class="num">${dayLab}</th>
+            <th class="num">${totLab}</th>
             <th class="num hide-sm">Gap</th>
           </tr></thead>
           <tbody>${competeRowsHtml(race, false)}</tbody>
@@ -72,12 +76,12 @@ window.renderCompetePage = function renderCompetePage(){
     ${trendHtml}
     <div class="section">
       <div class="section-title">Year to date</div>
-      <p class="explain">1 Jan through ${DATA.generated}. Pts/Day = points ÷ workdays. Gap is pts/day behind #1.</p>
+      <p class="explain">${ytdExplain}</p>
       <div class="table-wrap"><table>
         <thead><tr>
           <th>#</th><th>Technician</th>
-          <th class="num">Pts/Day</th>
-          <th class="num">Points</th>
+          <th class="num">${dayLab}</th>
+          <th class="num">${totLab}</th>
           <th class="num hide-sm">Days</th>
           <th class="num hide-sm">Gap</th>
         </tr></thead>
@@ -88,27 +92,14 @@ window.renderCompetePage = function renderCompetePage(){
   if(hideTrend) return;
   const series = names.map(n => ({ name: n, pace: paceSeries(n, eight) }));
   const labels = series[0] ? series[0].pace.labels : [];
-  charts.push(new Chart(document.getElementById('s-points'), {
+  const dataKey = isUnitsView() ? 'unitsDay' : 'pointsDay';
+  charts.push(new Chart(document.getElementById('s-pace'), {
     type: 'line',
     data: {
       labels,
       datasets: series.map(s => ({
         label: s.name,
-        data: s.pace.pointsDay,
-        borderColor: TECH_COLORS[s.name],
-        backgroundColor: TECH_COLORS[s.name] + '22',
-        tension: 0.3, pointRadius: 3, borderWidth: 2, spanGaps: true, fill: false
-      }))
-    },
-    options: lineChartOptions()
-  }));
-  charts.push(new Chart(document.getElementById('s-units'), {
-    type: 'line',
-    data: {
-      labels,
-      datasets: series.map(s => ({
-        label: s.name,
-        data: s.pace.unitsDay,
+        data: s.pace[dataKey],
         borderColor: TECH_COLORS[s.name],
         backgroundColor: TECH_COLORS[s.name] + '22',
         tension: 0.3, pointRadius: 3, borderWidth: 2, spanGaps: true, fill: false

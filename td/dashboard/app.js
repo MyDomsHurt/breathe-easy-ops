@@ -61,7 +61,7 @@ const TECH_COLORS = {
 
 let DATA = null, charts = [];
 let TIMEFRAME = 'this_week';
-let METRIC = 'day'; // day | points | unitsDay
+let VIEW = 'points'; // points | units
 
 function techNames(){
   const keys = DATA && DATA.technicians ? Object.keys(DATA.technicians) : TECH_ORDER;
@@ -333,6 +333,7 @@ function teamWindowStats(weekKeys){
   return {
     points, days, units, returns,
     pointsDay: days ? Math.round((points / days) * 100) / 100 : 0,
+    unitsDay: days ? Math.round((units / days) * 100) / 100 : 0,
     byTech,
   };
 }
@@ -353,6 +354,22 @@ function trendInWindow(stats){
   return 'Stable';
 }
 
+function isUnitsView(){
+  return VIEW === 'units';
+}
+function viewDayKey(){
+  return isUnitsView() ? 'unitsDay' : 'pointsDay';
+}
+function viewTotalKey(){
+  return isUnitsView() ? 'units' : 'points';
+}
+function viewDayLabel(){
+  return isUnitsView() ? 'Units / day' : 'Pts / day';
+}
+function viewTotalLabel(){
+  return isUnitsView() ? 'Units' : 'Points';
+}
+
 function renderPeriodBar(){
   const bar = $('period-bar');
   if(!bar) return;
@@ -364,6 +381,13 @@ function renderPeriodBar(){
     `<div class="period-bar-inner">` +
       `<span class="period-label">Period</span>` +
       `<div class="rank-modes">${tfBtns}</div>` +
+    `</div>` +
+    `<div class="period-bar-inner">` +
+      `<span class="period-label">Show</span>` +
+      `<div class="rank-modes">` +
+        `<button type="button" class="rank-mode-btn ${VIEW==='points'?'active':''}" data-view="points">Points</button>` +
+        `<button type="button" class="rank-mode-btn ${VIEW==='units'?'active':''}" data-view="units">Units</button>` +
+      `</div>` +
       `<span class="period-active">${tf.label}</span>` +
     `</div>`;
 }
@@ -374,9 +398,16 @@ function bindPeriodBar(){
   bar.dataset.bound = '1';
   bar.addEventListener('click', (e) => {
     const tfBtn = e.target.closest('[data-tf]');
-    if(!tfBtn) return;
-    TIMEFRAME = tfBtn.getAttribute('data-tf');
-    route();
+    if(tfBtn){
+      TIMEFRAME = tfBtn.getAttribute('data-tf');
+      route();
+      return;
+    }
+    const viewBtn = e.target.closest('[data-view]');
+    if(viewBtn){
+      VIEW = viewBtn.getAttribute('data-view');
+      route();
+    }
   });
 }
 

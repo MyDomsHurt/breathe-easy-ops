@@ -22,6 +22,11 @@ window.renderTechPage = function renderTechPage(name){
     points: 0, pointsDay: 0, units: 0, returns: 0, days: 0
   };
   const series = paceSeries(name, lastEightWeekKeys());
+  const unitsOn = isUnitsView();
+  const stripTotal = unitsOn ? fmtUnits(thisWeek.units) : fmt(thisWeek.points, 1);
+  const stripDay = unitsOn ? fmt(thisWeek.unitsDay, 2) : fmt(thisWeek.pointsDay, 2);
+  const chartLabel = viewDayLabel();
+  const chartData = unitsOn ? series.unitsDay : series.pointsDay;
 
   document.getElementById('app').innerHTML = `
     <div class="page-header">
@@ -33,16 +38,12 @@ window.renderTechPage = function renderTechPage(name){
       <p class="this-week-range">Monday through today · ${weekSpanLabel(thisWeekKey)}</p>
       <div class="this-week-stats">
         <div class="this-week-stat">
-          <div class="label">Points</div>
-          <div class="value">${fmt(thisWeek.points, 1)}</div>
+          <div class="label">${viewTotalLabel()}</div>
+          <div class="value">${stripTotal}</div>
         </div>
         <div class="this-week-stat">
-          <div class="label">Pts / Day</div>
-          <div class="value">${fmt(thisWeek.pointsDay, 2)}</div>
-        </div>
-        <div class="this-week-stat">
-          <div class="label">Units</div>
-          <div class="value">${fmtUnits(thisWeek.units)}</div>
+          <div class="label">${viewDayLabel()}</div>
+          <div class="value">${stripDay}</div>
         </div>
         <div class="this-week-stat">
           <div class="label">Returns</div>
@@ -54,38 +55,20 @@ window.renderTechPage = function renderTechPage(name){
       <div class="section-title">Last 8 weeks</div>
       <div class="chart-grid">
         <div class="chart-card full">
-          <h3>Units / day</h3>
+          <h3>${chartLabel}</h3>
           <p class="chart-explain">${name} only · weekly pace, last 8 earned weeks.</p>
-          <div class="chart-wrap"><canvas id="p-units"></canvas></div>
-        </div>
-        <div class="chart-card full">
-          <h3>Points / day</h3>
-          <p class="chart-explain">${name} only · weekly pace, last 8 earned weeks.</p>
-          <div class="chart-wrap"><canvas id="p-points"></canvas></div>
+          <div class="chart-wrap"><canvas id="p-pace"></canvas></div>
         </div>
       </div>
     </div>`;
 
-  charts.push(new Chart(document.getElementById('p-units'), {
+  charts.push(new Chart(document.getElementById('p-pace'), {
     type: 'line',
     data: {
       labels: series.labels,
       datasets: [{
-        label: 'Units / day',
-        data: series.unitsDay,
-        borderColor: color, backgroundColor: color + '22',
-        fill: true, tension: 0.3, pointRadius: 4, borderWidth: 2.5, spanGaps: true
-      }]
-    },
-    options: lineChartOptions()
-  }));
-  charts.push(new Chart(document.getElementById('p-points'), {
-    type: 'line',
-    data: {
-      labels: series.labels,
-      datasets: [{
-        label: 'Points / day',
-        data: series.pointsDay,
+        label: chartLabel,
+        data: chartData,
         borderColor: color, backgroundColor: color + '22',
         fill: true, tension: 0.3, pointRadius: 4, borderWidth: 2.5, spanGaps: true
       }]

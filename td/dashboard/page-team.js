@@ -47,6 +47,14 @@ window.renderTeamPage = function renderTeamPage(){
   };
   const ytd = teamWindowStats(ytdWeekKeys());
   const thisWeekRange = thisWeekKey ? weekSpanLabel(thisWeekKey) : '—';
+  const unitsOn = isUnitsView();
+  const stripTotal = unitsOn ? fmt(thisWeek.units) : fmt(thisWeek.points, 1);
+  const stripDay = unitsOn ? fmt(thisWeek.unitsDay, 2) : fmt(thisWeek.pointsDay, 2);
+  const ytdTotal = unitsOn ? fmt(ytd.units) : fmt(ytd.points, 1);
+  const ytdDay = unitsOn ? fmt(ytd.unitsDay, 2) : fmt(ytd.pointsDay, 2);
+  const dayExplain = unitsOn
+    ? `YTD total ÷ YTD workdays (${fmt(ytd.days)} days).`
+    : `YTD total ÷ YTD workdays (${fmt(ytd.days)} days).`;
 
   document.getElementById('app').innerHTML = `
     <div class="page-header">
@@ -58,16 +66,12 @@ window.renderTeamPage = function renderTeamPage(){
       <p class="this-week-range">Monday through today · ${thisWeekRange}</p>
       <div class="this-week-stats">
         <div class="this-week-stat">
-          <div class="label">Crew points</div>
-          <div class="value">${fmt(thisWeek.points, 1)}</div>
+          <div class="label">Crew ${viewTotalLabel()}</div>
+          <div class="value">${stripTotal}</div>
         </div>
         <div class="this-week-stat">
-          <div class="label">Pts / Day</div>
-          <div class="value">${fmt(thisWeek.pointsDay, 2)}</div>
-        </div>
-        <div class="this-week-stat">
-          <div class="label">Units</div>
-          <div class="value">${fmt(thisWeek.units)}</div>
+          <div class="label">${viewDayLabel()}</div>
+          <div class="value">${stripDay}</div>
         </div>
         <div class="this-week-stat">
           <div class="label">Returns</div>
@@ -78,10 +82,9 @@ window.renderTeamPage = function renderTeamPage(){
     <div class="section">
       <div class="section-title">Year to date</div>
       <div class="kpi-row">
-        <div class="kpi-card"><div class="label">Team points</div><div class="value">${fmt(ytd.points,1)}</div><div class="kpi-explain">1 Jan through ${DATA.generated}.</div></div>
-        <div class="kpi-card"><div class="label">Pts / Day</div><div class="value">${fmt(ytd.pointsDay,2)}</div><div class="kpi-explain">YTD points ÷ YTD workdays (${fmt(ytd.days)} days).</div></div>
-        <div class="kpi-card"><div class="label">Units</div><div class="value">${fmt(ytd.units)}</div><div class="kpi-explain">Unweighted units year to date.</div></div>
-        <div class="kpi-card"><div class="label">Team returns</div><div class="value">${fmt(ytd.returns)}</div><div class="kpi-explain">Return visits tracked · ${fmt(retW,1)} pts each.</div></div>
+        <div class="kpi-card"><div class="label">${viewTotalLabel()}</div><div class="value">${ytdTotal}</div><div class="kpi-explain">1 Jan through ${DATA.generated}.</div></div>
+        <div class="kpi-card"><div class="label">${viewDayLabel()}</div><div class="value">${ytdDay}</div><div class="kpi-explain">${dayExplain}</div></div>
+        <div class="kpi-card"><div class="label">Returns</div><div class="value">${fmt(ytd.returns)}</div><div class="kpi-explain">Return visits tracked · ${fmt(retW,1)} each.</div></div>
       </div>
     </div>`;
 };

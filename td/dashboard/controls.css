@@ -1,0 +1,43 @@
+/* Timeframe + metric controls */
+.controls-bar{
+  margin-bottom:22px;
+  padding:14px 16px;
+  background:var(--white);
+  border:1px solid var(--line);
+  border-radius:var(--r);
+  box-shadow:var(--shadow);
+}
+.controls-row{
+  display:flex;
+  align-items:flex-start;
+  gap:12px;
+  margin-bottom:10px;
+  flex-wrap:wrap;
+}
+.controls-row:last-of-type{margin-bottom:0}
+.controls-label{
+  flex:0 0 56px;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--mute);
+  padding-top:10px;
+}
+.controls-bar .rank-modes{margin-bottom:0;flex:1}
+.controls-active{
+  margin:10px 0 0;
+  font-size:12px;
+  color:var(--ink-2);
+}
+.controls-active strong{color:var(--ink)}
+.metric-modes .rank-mode-btn.active{
+  background:var(--teal, #0d9488);
+  border-color:var(--teal, #0d9488);
+  box-shadow:0 4px 14px rgba(13,148,136,.25);
+}
+.tech-dot{
+  display:inline-block;
+  width:8px;height:8px;border-radius:50%;
+  margin-right:8px;vertical-align:middle;
+}

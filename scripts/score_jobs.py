@@ -91,6 +91,8 @@ EQUIPMENT_UNKNOWN = {
 }
 LEAD_MAP = {n.lower(): n for n in TECH_ORDER}
 LEAD_MAP["josh"] = "Josh"
+LEAD_MAP["jut"] = "Josh"
+PAREN_S_RE = re.compile(r"\(\s*S\s*\)", re.I)
 
 POINTS_TABLE = [
     {"type": "S", "points": 1, "note": "Split — baseline"},
@@ -160,10 +162,32 @@ def is_crew(job):
     return source == "team-day-crew" or jid.startswith("crew-")
 
 
+def units_dict_counts(job):
+    units = job.get("units")
+    if not isinstance(units, dict):
+        return None
+    counts = empty_units()
+    for k, v in units.items():
+        typ = canonical_type(str(k))
+        if typ and typ != "BEP":
+            try:
+                add_unit(counts, typ, float(v or 0))
+            except (TypeError, ValueError):
+                continue
+    return counts if any(counts.values()) else None
+
+
+def is_empty_acs(job):
+    acs = job.get("acs")
+    return acs is None or str(acs).strip() == ""
+
+
 def is_return(job):
     if job.get("is_return") is True:
         return True
-    return str(job.get("job_type") or "").strip().lower() == "return"
+    if str(job.get("job_type") or "").strip().lower() == "return":
+        return True
+    return is_empty_acs(job) and units_dict_counts(job) is None
 
 
 def job_date(job):
@@ -559,19 +583,45 @@ def parse_plain_units(text):
     return counts, unknown
 
 
+def is_team_meeting(acs):
+    return bool(re.search(r"team\s*meeting", acs or "", re.I))
+
+
+def is_leak_note(acs):
+    return bool(re.search(r"\bleak(?:ing)?\b", acs or "", re.I))
+
+
+def is_refund_note(acs):
+    return bool(re.search(r"\brefunds?\b", acs or "", re.I))
+
+
+def is_call_note(acs):
+    return bool(re.search(r"\bcall\b", acs or "", re.I))
+
+
 def parse_acs(acs):
-    """Return (counts, sure, reason). sure=False → exception, not scored."""
+    """Return (counts, sure, reason). sure=False → exception, not scored.
+
+    reason "zero_skip" = 0 pts, not a workday (team meeting).
+    reason "zero_day" = 0 pts, workday (leak / refund / call notes).
+    """
     raw = str(acs or "").replace("\u00a0", " ").strip()
     if not raw:
-        return empty_units(), False, "empty ACS"
+        return empty_units(), True, "empty_return"
+    if is_team_meeting(raw):
+        return empty_units(), True, "zero_skip"
+    if is_leak_note(raw):
+        return empty_units(), True, "zero_day"
+    if is_refund_note(raw) and not has_unit_tokens(raw) and not PAREN_S_RE.search(raw):
+        return empty_units(), True, "zero_day"
+    if is_call_note(raw) and not has_unit_tokens(raw) and not PAREN_S_RE.search(raw):
+        return empty_units(), True, "zero_day"
     if re.fullmatch(
-        r"(PH|LEAK|LEAKING|INTERVIEW|FILMING|TECHNICIAN INTERVIEW)",
+        r"(PH|INTERVIEW|FILMING|TECHNICIAN INTERVIEW)",
         raw,
         re.I,
     ):
         return empty_units(), False, f"non-unit ACS: {raw}"
-    if re.search(r"team\s*meeting", raw, re.I):
-        return empty_units(), False, "non-job ACS: team meeting"
 
     segment = last_unit_segment(raw)
     segment = strip_half_price(segment)
@@ -580,6 +630,8 @@ def parse_acs(acs):
         return empty_units(), False, "ambiguous half-clean"
 
     counts, unknown = parse_plain_units(rewritten)
+    if not any(counts.values()) and (PAREN_S_RE.search(raw) or PAREN_S_RE.search(rewritten)):
+        add_unit(counts, "S", 1)
     if not any(counts.values()):
         if unknown:
             return empty_units(), False, f"unparsed ACS: {raw}"
@@ -588,22 +640,12 @@ def parse_acs(acs):
 
 
 def units_from_job(job):
-    acs = job.get("acs")
-    if acs is None or str(acs).strip() == "":
-        units = job.get("units")
-        if isinstance(units, dict):
-            counts = empty_units()
-            for k, v in units.items():
-                typ = canonical_type(str(k))
-                if typ and typ != "BEP":
-                    try:
-                        add_unit(counts, typ, float(v or 0))
-                    except (TypeError, ValueError):
-                        continue
-            if any(counts.values()):
-                return counts, True, ""
-        return empty_units(), False, "empty ACS"
-    return parse_acs(acs)
+    dict_counts = units_dict_counts(job)
+    if is_empty_acs(job):
+        if dict_counts:
+            return dict_counts, True, ""
+        return empty_units(), True, "empty_return"
+    return parse_acs(job.get("acs"))
 
 
 def points_for(counts):
@@ -714,6 +756,8 @@ def score_jobs(jobs, today):
         d = job_date(job)
         if not d.startswith("2026"):
             continue
+        if d > today:
+            continue
         lead_raw = str(job.get("team_lead") or "").strip()
         lead = LEAD_MAP.get(lead_raw.lower())
         if lead is None:
@@ -740,6 +784,21 @@ def score_jobs(jobs, today):
             continue
 
         counts, sure, reason = units_from_job(job)
+        if reason == "empty_return":
+            bucket = per_tech_week[lead][monday_of(d)]
+            bucket["returns"] += 1
+            bucket["days"].add(d)
+            bucket["jobs"] += 1
+            job_counts[lead] += 1
+            continue
+        if reason == "zero_skip":
+            continue
+        if reason == "zero_day":
+            bucket = per_tech_week[lead][monday_of(d)]
+            bucket["days"].add(d)
+            bucket["jobs"] += 1
+            job_counts[lead] += 1
+            continue
         if not sure:
             exceptions.append({
                 "job_id": job.get("job_id"),
@@ -800,7 +859,7 @@ def score_jobs(jobs, today):
             "half-clean=0.5; half-price ignored; arrow=actual cleaned; "
             "BEP=0; returns=0 pts; team_lead only"
         ),
-        "cutoff": f"2026 jobs through {end}",
+        "cutoff": f"earned through {today}",
         "pointsTable": POINTS_TABLE,
         "rules": RULES,
         "team": {

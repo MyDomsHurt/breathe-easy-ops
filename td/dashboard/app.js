@@ -234,25 +234,24 @@ function periodDayKeys(tf){
   if(!tf || !tf.weeks || !tf.weeks.length) return [];
   const mon = tf.weeks[0];
   const sunday = addDaysIso(mon, 6);
-  let end = sunday;
-  if(tf.id === 'this_week'){
-    const today = earnedCutoff();
-    if(today && today < end) end = today;
-  }
   const out = [];
-  for(let d = mon; d <= end; d = addDaysIso(d, 1)) out.push(d);
+  for(let d = mon; d <= sunday; d = addDaysIso(d, 1)) out.push(d);
   return out;
 }
 function pointsChartFor(name, tf){
   const daily = tf.id === 'this_week' || tf.id === 'last_week';
   if(daily){
     const dates = periodDayKeys(tf);
+    const today = earnedCutoff();
     const map = {};
     ((DATA.daily && DATA.daily[name]) || []).forEach(r => { map[r.date] = r.points || 0; });
     return {
       grain: 'day',
       labels: dates.map(dayLabel),
-      data: dates.map(d => map[d] || 0),
+      data: dates.map(d => {
+        if(tf.id === 'this_week' && today && d > today) return null;
+        return map[d] || 0;
+      }),
       title: 'Points',
       explain: 'Daily points'
     };

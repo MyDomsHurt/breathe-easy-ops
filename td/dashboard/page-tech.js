@@ -2,13 +2,6 @@
  * This-week strip first, then units/day and points/day for that person.
  * Last 8 earned weeks, weekly pace. Josh is not on the board.
  */
-function fmtUnits(n){
-  if(n == null || isNaN(n)) return '\u2014';
-  const x = Number(n);
-  const d = Math.round(Math.abs(x) * 10) % 10 === 0 ? 0 : 1;
-  return fmt(x, d);
-}
-
 window.renderTechPage = function renderTechPage(name){
   destroyCharts();
   if(!DATA.technicians[name] || techNames().indexOf(name) === -1){
@@ -30,7 +23,7 @@ window.renderTechPage = function renderTechPage(name){
   document.getElementById('app').innerHTML = `
     <div class="page-header">
       <h1><span class="tech-dot" style="background:${color};width:12px;height:12px;display:inline-block;border-radius:50%;margin-right:8px;vertical-align:middle"></span>${name}</h1>
-      <p>${copy.kicker} · Updated ${DATA.generated}</p>
+      <p>${tf.label} · Updated ${DATA.generated}</p>
     </div>
     <section class="this-week" aria-label="${copy.kicker}">
       <div class="this-week-kicker">${copy.kicker}</div>

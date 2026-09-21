@@ -45,17 +45,10 @@ function periodStripCopy(tf){
   if(!tf || !tf.weeks || !tf.weeks.length){
     return { kicker: (tf && tf.label) || 'Period', range: 'No data in this period' };
   }
-  if(tf.id === 'this_week'){
-    return {
-      kicker: 'This week',
-      range: 'Monday through today · ' + weekSpanLabel(tf.weeks[0])
-    };
-  }
-  const firstSpan = weekSpanLabel(tf.weeks[0]);
-  const lastSpan = weekSpanLabel(tf.weeks[tf.weeks.length - 1]);
-  const start = firstSpan.split(' – ')[0];
-  const end = lastSpan.split(' – ').pop();
-  return { kicker: tf.label, range: start + ' – ' + end };
+  return {
+    kicker: tf.id === 'this_week' ? 'This week' : tf.label,
+    range: periodRangeLabel(tf.weeks, tf.id)
+  };
 }
 
 window.renderTeamPage = function renderTeamPage(){
@@ -67,9 +60,9 @@ window.renderTeamPage = function renderTeamPage(){
   const period = tf.weeks.length ? teamWindowStats(tf.weeks) : emptyWindowStats();
   const ytd = teamWindowStats(ytdWeekKeys());
   const unitsOn = isUnitsView();
-  const stripTotal = unitsOn ? fmt(period.units) : fmt(period.points, 1);
+  const stripTotal = unitsOn ? fmtUnits(period.units) : fmt(period.points, 1);
   const stripDay = unitsOn ? fmt(period.unitsDay, 2) : fmt(period.pointsDay, 2);
-  const ytdTotal = unitsOn ? fmt(ytd.units) : fmt(ytd.points, 1);
+  const ytdTotal = unitsOn ? fmtUnits(ytd.units) : fmt(ytd.points, 1);
   const ytdDay = unitsOn ? fmt(ytd.unitsDay, 2) : fmt(ytd.pointsDay, 2);
   const showYtd = TIMEFRAME !== 'ytd';
   const ytdHtml = showYtd ? `
@@ -85,7 +78,7 @@ window.renderTeamPage = function renderTeamPage(){
   document.getElementById('app').innerHTML = `
     <div class="page-header">
       <h1>Full Team</h1>
-      <p>${copy.kicker} · Updated ${DATA.generated}</p>
+      <p>${tf.label} · Updated ${DATA.generated}</p>
     </div>
     <section class="this-week" aria-label="${copy.kicker}">
       <div class="this-week-kicker">${copy.kicker}</div>

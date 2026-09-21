@@ -72,6 +72,12 @@ function fmt(n, d=0){
   if(n==null || isNaN(n)) return '\u2014';
   return Number(n).toLocaleString('en-HK', {maximumFractionDigits:d, minimumFractionDigits:d});
 }
+function fmtUnits(n){
+  if(n == null || isNaN(n)) return '\u2014';
+  const x = Number(n);
+  const d = Math.round(Math.abs(x) * 10) % 10 === 0 ? 0 : 1;
+  return fmt(x, d);
+}
 function destroyCharts(){ charts.forEach(c => c.destroy()); charts = []; }
 function badge(t){
   const x = (t || 'Stable').toLowerCase();
@@ -157,6 +163,17 @@ function dayLabel(iso){
 }
 function lastEightWeekKeys(){
   return earnedWeekKeys().slice(-8);
+}
+function periodRangeLabel(weeks, id){
+  if(!weeks || !weeks.length) return 'No data in this period';
+  if(id === 'this_week'){
+    return 'Monday through today · ' + weekSpanLabel(weeks[0]);
+  }
+  const firstSpan = weekSpanLabel(weeks[0]);
+  const lastSpan = weekSpanLabel(weeks[weeks.length - 1]);
+  const start = firstSpan.split(' – ')[0];
+  const end = lastSpan.split(' – ').pop();
+  return start + ' – ' + end;
 }
 function thisWeekEarnedDayCount(){
   return thisWeekDayKeys().length;
@@ -274,22 +291,11 @@ const TF_PRESETS = [
   { id: 'ytd', short: 'YTD' },
 ];
 
-const METRIC_PRESETS = [
-  { id: 'day', short: 'Pts / Day' },
-  { id: 'points', short: 'Total points' },
-  { id: 'unitsDay', short: 'Units / Day' },
-];
-
-function metricLabel(id){
-  return ({ day: 'Pts/Day', points: 'Points', unitsDay: 'Units/Day' })[id] || 'Pts/Day';
-}
-function metricFmt(id, v){
-  if(id === 'points') return fmt(v, 1);
-  return fmt(v, 2);
-}
 function metricValue(stats, id){
-  if(id === 'points') return stats.points;
   if(id === 'unitsDay') return stats.unitsDay;
+  if(id === 'pointsDay' || id === 'day') return stats.pointsDay;
+  if(id === 'points') return stats.points;
+  if(id === 'units') return stats.units;
   return stats.pointsDay;
 }
 

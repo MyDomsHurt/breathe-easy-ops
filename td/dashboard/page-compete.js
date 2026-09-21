@@ -14,7 +14,7 @@ function competeRowsHtml(sorted, extraDays){
     const daysCell = extraDays
       ? `<td class="num hide-sm">${fmt(t.days)}</td>`
       : '';
-    const total = unitsOn ? fmt(t.units) : fmt(t.points, 1);
+    const total = unitsOn ? fmtUnits(t.units) : fmt(t.points, 1);
     return `<tr class="${i===0?'lead-row':''}">
       <td><span class="rank-num ${i===0?'r1':i===1?'r2':i===2?'r3':''}">${i+1}</span></td>
       <td class="name"><span class="tech-dot" style="background:${TECH_COLORS[t.name]}"></span>${t.name}</td>
@@ -32,7 +32,7 @@ window.renderCompetePage = function renderCompetePage(){
   const names = techNames();
   const tf = resolveTimeframe(TIMEFRAME);
   const copy = periodStripCopy(tf);
-  const rankMetric = isUnitsView() ? 'unitsDay' : 'day';
+  const rankMetric = viewDayKey();
   const race = rankedTechs(tf.weeks, rankMetric);
   const ytd = rankedTechs(ytdWeekKeys(), rankMetric);
   const hideTrend = TIMEFRAME === 'this_week' && thisWeekEarnedDayCount() < 2;
@@ -73,7 +73,7 @@ window.renderCompetePage = function renderCompetePage(){
   document.getElementById('app').innerHTML = `
     <div class="page-header">
       <h1>Standings</h1>
-      <p>${copy.kicker} · Updated ${DATA.generated}</p>
+      <p>${tf.label} · Updated ${DATA.generated}</p>
     </div>
     <section class="this-week" aria-label="${copy.kicker}">
       <div class="this-week-kicker">${copy.kicker}</div>

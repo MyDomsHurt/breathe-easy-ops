@@ -61,7 +61,6 @@ const TECH_COLORS = {
 
 let DATA = null, charts = [];
 let TIMEFRAME = 'this_week';
-let VIEW = 'points'; // points | units
 
 function techNames(){
   const keys = DATA && DATA.technicians ? Object.keys(DATA.technicians) : TECH_ORDER;
@@ -118,10 +117,31 @@ async function loadJsonFallback(){
   finishLoadedData();
 }
 
+function waitForBELoadPerfJobs(){
+  return new Promise(function (resolve) {
+    let n = 0;
+    function tick(){
+      if (typeof window.BELoadPerfJobs === 'function') {
+        resolve(window.BELoadPerfJobs);
+        return;
+      }
+      n += 1;
+      if (n > 20) {
+        resolve(null);
+        return;
+      }
+      if (n < 4) queueMicrotask(tick);
+      else setTimeout(tick, 25);
+    }
+    queueMicrotask(tick);
+  });
+}
+
 async function loadData(){
   try {
-    if (typeof window.BELoadPerfJobs === 'function') {
-      const jobs = await window.BELoadPerfJobs();
+    const loader = await waitForBELoadPerfJobs();
+    if (loader) {
+      const jobs = await loader();
       if (jobs && jobs.length && typeof window.BEApplyScoredData === 'function') {
         const scored = window.BEApplyScoredData(jobs);
         if (scored && scored.technicians) {
@@ -210,19 +230,43 @@ function periodRangeLabel(weeks, id){
 function thisWeekEarnedDayCount(){
   return thisWeekDayKeys().length;
 }
-function paceSeries(name, weekKeys){
-  const keys = weekKeys && weekKeys.length ? weekKeys : lastEightWeekKeys();
+function periodDayKeys(tf){
+  if(!tf || !tf.weeks || !tf.weeks.length) return [];
+  const mon = tf.weeks[0];
+  const sunday = addDaysIso(mon, 6);
+  let end = sunday;
+  if(tf.id === 'this_week'){
+    const today = earnedCutoff();
+    if(today && today < end) end = today;
+  }
+  const out = [];
+  for(let d = mon; d <= end; d = addDaysIso(d, 1)) out.push(d);
+  return out;
+}
+function pointsChartFor(name, tf){
+  const daily = tf.id === 'this_week' || tf.id === 'last_week';
+  if(daily){
+    const dates = periodDayKeys(tf);
+    const map = {};
+    ((DATA.daily && DATA.daily[name]) || []).forEach(r => { map[r.date] = r.points || 0; });
+    return {
+      grain: 'day',
+      labels: dates.map(dayLabel),
+      data: dates.map(d => map[d] || 0),
+      title: 'Points',
+      explain: 'Daily points'
+    };
+  }
+  const keys = tf.weeks || [];
   return {
     grain: 'week',
     labels: keys.map(weekLabelFor),
-    pointsDay: keys.map(w => {
+    data: keys.map(w => {
       const r = (DATA.technicians[name].weeks || []).find(x => x.week === w);
-      return r ? (r.pointsDay || 0) : null;
+      return r ? (r.points || 0) : null;
     }),
-    unitsDay: keys.map(w => {
-      const r = (DATA.technicians[name].weeks || []).find(x => x.week === w);
-      return r ? (r.unitsDay || 0) : null;
-    }),
+    title: 'Points',
+    explain: 'Weekly points'
   };
 }
 function lineChartOptions(){
@@ -392,22 +436,6 @@ function trendInWindow(stats){
   return 'Stable';
 }
 
-function isUnitsView(){
-  return VIEW === 'units';
-}
-function viewDayKey(){
-  return isUnitsView() ? 'unitsDay' : 'pointsDay';
-}
-function viewTotalKey(){
-  return isUnitsView() ? 'units' : 'points';
-}
-function viewDayLabel(){
-  return isUnitsView() ? 'Units / day' : 'Pts / day';
-}
-function viewTotalLabel(){
-  return isUnitsView() ? 'Units' : 'Points';
-}
-
 function renderPeriodBar(){
   const bar = $('period-bar');
   if(!bar) return;
@@ -419,13 +447,6 @@ function renderPeriodBar(){
     `<div class="period-bar-inner">` +
       `<span class="period-label">Period</span>` +
       `<div class="rank-modes">${tfBtns}</div>` +
-    `</div>` +
-    `<div class="period-bar-inner">` +
-      `<span class="period-label">Show</span>` +
-      `<div class="rank-modes">` +
-        `<button type="button" class="rank-mode-btn ${VIEW==='points'?'active':''}" data-view="points">Points</button>` +
-        `<button type="button" class="rank-mode-btn ${VIEW==='units'?'active':''}" data-view="units">Units</button>` +
-      `</div>` +
       `<span class="period-active">${tf.label}</span>` +
     `</div>`;
 }
@@ -436,16 +457,9 @@ function bindPeriodBar(){
   bar.dataset.bound = '1';
   bar.addEventListener('click', (e) => {
     const tfBtn = e.target.closest('[data-tf]');
-    if(tfBtn){
-      TIMEFRAME = tfBtn.getAttribute('data-tf');
-      route();
-      return;
-    }
-    const viewBtn = e.target.closest('[data-view]');
-    if(viewBtn){
-      VIEW = viewBtn.getAttribute('data-view');
-      route();
-    }
+    if(!tfBtn) return;
+    TIMEFRAME = tfBtn.getAttribute('data-tf');
+    route();
   });
 }
 

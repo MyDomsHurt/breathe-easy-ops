@@ -59,21 +59,20 @@ window.renderTeamPage = function renderTeamPage(){
   const copy = periodStripCopy(tf);
   const period = tf.weeks.length ? teamWindowStats(tf.weeks) : emptyWindowStats();
   const ytd = teamWindowStats(ytdWeekKeys());
-  const unitsOn = isUnitsView();
-  const stripTotal = unitsOn ? fmtUnits(period.units) : fmt(period.points, 1);
-  const stripDay = unitsOn ? fmt(period.unitsDay, 2) : fmt(period.pointsDay, 2);
-  const ytdTotal = unitsOn ? fmtUnits(ytd.units) : fmt(ytd.points, 1);
-  const ytdDay = unitsOn ? fmt(ytd.unitsDay, 2) : fmt(ytd.pointsDay, 2);
+  const names = techNames();
   const showYtd = TIMEFRAME !== 'ytd';
   const ytdHtml = showYtd ? `
     <div class="section">
       <div class="section-title">Year to date</div>
       <div class="kpi-row">
-        <div class="kpi-card"><div class="label">${viewTotalLabel()}</div><div class="value">${ytdTotal}</div><div class="kpi-explain">1 Jan through ${DATA.generated}.</div></div>
-        <div class="kpi-card"><div class="label">${viewDayLabel()}</div><div class="value">${ytdDay}</div><div class="kpi-explain">YTD total ÷ YTD workdays (${fmt(ytd.days)} days).</div></div>
+        <div class="kpi-card"><div class="label">Pts / day</div><div class="value">${fmt(ytd.pointsDay, 2)}</div><div class="kpi-explain">YTD points ÷ YTD workdays (${fmt(ytd.days)} days).</div></div>
+        <div class="kpi-card"><div class="label">Points</div><div class="value">${fmt(ytd.points, 1)}</div><div class="kpi-explain">1 Jan through ${DATA.generated}.</div></div>
         <div class="kpi-card"><div class="label">Returns</div><div class="value">${fmt(ytd.returns)}</div><div class="kpi-explain">Return visits tracked · ${fmt(retW,1)} each.</div></div>
       </div>
     </div>` : '';
+  const chartSeries = names.map(n => ({ name: n, chart: pointsChartFor(n, tf) }));
+  const chartLabels = chartSeries[0] ? chartSeries[0].chart.labels : [];
+  const grain = chartSeries[0] ? chartSeries[0].chart.explain : 'Points';
 
   document.getElementById('app').innerHTML = `
     <div class="page-header">
@@ -85,12 +84,12 @@ window.renderTeamPage = function renderTeamPage(){
       <p class="this-week-range">${copy.range}</p>
       <div class="this-week-stats">
         <div class="this-week-stat">
-          <div class="label">Crew ${viewTotalLabel()}</div>
-          <div class="value">${stripTotal}</div>
+          <div class="label">Pts / day</div>
+          <div class="value">${fmt(period.pointsDay, 2)}</div>
         </div>
         <div class="this-week-stat">
-          <div class="label">${viewDayLabel()}</div>
-          <div class="value">${stripDay}</div>
+          <div class="label">Points</div>
+          <div class="value">${fmt(period.points, 1)}</div>
         </div>
         <div class="this-week-stat">
           <div class="label">Returns</div>
@@ -98,5 +97,31 @@ window.renderTeamPage = function renderTeamPage(){
         </div>
       </div>
     </section>
+    <div class="section">
+      <div class="section-title">Points</div>
+      <div class="chart-grid">
+        <div class="chart-card full">
+          <h3>Points</h3>
+          <p class="chart-explain">One line per technician · ${grain}.</p>
+          <div class="chart-wrap"><canvas id="t-pace"></canvas></div>
+        </div>
+      </div>
+    </div>
     ${ytdHtml}`;
+
+  if(!chartLabels.length) return;
+  charts.push(new Chart(document.getElementById('t-pace'), {
+    type: 'line',
+    data: {
+      labels: chartLabels,
+      datasets: chartSeries.map(s => ({
+        label: s.name,
+        data: s.chart.data,
+        borderColor: TECH_COLORS[s.name],
+        backgroundColor: TECH_COLORS[s.name] + '22',
+        tension: 0.3, pointRadius: 3, borderWidth: 2, spanGaps: true, fill: false
+      }))
+    },
+    options: lineChartOptions()
+  }));
 };

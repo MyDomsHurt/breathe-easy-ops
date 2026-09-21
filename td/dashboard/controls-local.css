@@ -85,9 +85,6 @@ header.be-shell .nav-links a[href="#/team"] {
   gap:10px;
   flex-wrap:wrap;
 }
-.period-bar-inner + .period-bar-inner{
-  margin-top:6px;
-}
 .period-bar .period-label{
   flex:0 0 auto;
   font-size:11px;

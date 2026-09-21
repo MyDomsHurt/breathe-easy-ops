@@ -13,12 +13,7 @@ window.renderTechPage = function renderTechPage(name){
   const tf = resolveTimeframe(TIMEFRAME);
   const copy = periodStripCopy(tf);
   const period = tf.weeks.length ? techWindowStats(name, tf.weeks) : emptyWindowStats();
-  const series = paceSeries(name, lastEightWeekKeys());
-  const unitsOn = isUnitsView();
-  const stripTotal = unitsOn ? fmtUnits(period.units) : fmt(period.points, 1);
-  const stripDay = unitsOn ? fmt(period.unitsDay, 2) : fmt(period.pointsDay, 2);
-  const chartLabel = viewDayLabel();
-  const chartData = unitsOn ? series.unitsDay : series.pointsDay;
+  const chart = pointsChartFor(name, tf);
 
   document.getElementById('app').innerHTML = `
     <div class="page-header">
@@ -30,12 +25,12 @@ window.renderTechPage = function renderTechPage(name){
       <p class="this-week-range">${copy.range}</p>
       <div class="this-week-stats">
         <div class="this-week-stat">
-          <div class="label">${viewTotalLabel()}</div>
-          <div class="value">${stripTotal}</div>
+          <div class="label">Pts / day</div>
+          <div class="value">${fmt(period.pointsDay, 2)}</div>
         </div>
         <div class="this-week-stat">
-          <div class="label">${viewDayLabel()}</div>
-          <div class="value">${stripDay}</div>
+          <div class="label">Points</div>
+          <div class="value">${fmt(period.points, 1)}</div>
         </div>
         <div class="this-week-stat">
           <div class="label">Returns</div>
@@ -44,23 +39,24 @@ window.renderTechPage = function renderTechPage(name){
       </div>
     </section>
     <div class="section">
-      <div class="section-title">Last 8 weeks</div>
+      <div class="section-title">Points</div>
       <div class="chart-grid">
         <div class="chart-card full">
-          <h3>${chartLabel}</h3>
-          <p class="chart-explain">${name} only · weekly pace, last 8 earned weeks.</p>
+          <h3>Points</h3>
+          <p class="chart-explain">${name} only · ${chart.explain}.</p>
           <div class="chart-wrap"><canvas id="p-pace"></canvas></div>
         </div>
       </div>
     </div>`;
 
+  if(!chart.labels.length) return;
   charts.push(new Chart(document.getElementById('p-pace'), {
     type: 'line',
     data: {
-      labels: series.labels,
+      labels: chart.labels,
       datasets: [{
-        label: chartLabel,
-        data: chartData,
+        label: name,
+        data: chart.data,
         borderColor: color, backgroundColor: color + '22',
         fill: true, tension: 0.3, pointRadius: 4, borderWidth: 2.5, spanGaps: true
       }]

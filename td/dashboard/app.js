@@ -154,27 +154,22 @@ function dayLabel(iso){
   if(isNaN(d)) return iso;
   return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()] + ' ' + String(d.getDate()).padStart(2, '0');
 }
+function lastEightWeekKeys(){
+  return earnedWeekKeys().slice(-8);
+}
+function thisWeekEarnedDayCount(){
+  return thisWeekDayKeys().length;
+}
 function paceSeries(name, weekKeys){
-  const thisWeek = TIMEFRAME === 'this_week' || (weekKeys.length === 1 && weekKeys[0] === latestMondayWeek());
-  if(thisWeek && DATA.daily){
-    const dates = thisWeekDayKeys();
-    const map = {};
-    ((DATA.daily[name] || [])).forEach(r => { map[r.date] = r; });
-    return {
-      grain: 'day',
-      labels: dates.map(dayLabel),
-      pointsDay: dates.map(d => (map[d] && map[d].points) || 0),
-      unitsDay: dates.map(d => (map[d] && map[d].units) || 0),
-    };
-  }
+  const keys = weekKeys && weekKeys.length ? weekKeys : lastEightWeekKeys();
   return {
     grain: 'week',
-    labels: weekKeys.map(weekLabelFor),
-    pointsDay: weekKeys.map(w => {
+    labels: keys.map(weekLabelFor),
+    pointsDay: keys.map(w => {
       const r = (DATA.technicians[name].weeks || []).find(x => x.week === w);
       return r ? (r.pointsDay || 0) : null;
     }),
-    unitsDay: weekKeys.map(w => {
+    unitsDay: keys.map(w => {
       const r = (DATA.technicians[name].weeks || []).find(x => x.week === w);
       return r ? (r.unitsDay || 0) : null;
     }),

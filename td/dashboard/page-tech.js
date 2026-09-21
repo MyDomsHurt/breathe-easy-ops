@@ -1,6 +1,6 @@
 /* Personal page (#/tech/{Name})
  * This-week strip first, then units/day and points/day for that person.
- * Daily on this week, weekly on longer periods. Josh is not on the board.
+ * Last 8 earned weeks, weekly pace. Josh is not on the board.
  */
 function fmtUnits(n){
   if(n == null || isNaN(n)) return '\u2014';
@@ -16,14 +16,12 @@ window.renderTechPage = function renderTechPage(name){
     return;
   }
   setNav('#/tech/' + name);
-  const tf = resolveTimeframe(TIMEFRAME);
   const color = TECH_COLORS[name] || '#1481c3';
   const thisWeekKey = latestMondayWeek();
   const thisWeek = thisWeekKey ? techWindowStats(name, [thisWeekKey]) : {
     points: 0, pointsDay: 0, units: 0, returns: 0, days: 0
   };
-  const series = paceSeries(name, tf.weeks);
-  const grain = series.grain === 'day' ? 'each day this week' : 'each week in ' + tf.label;
+  const series = paceSeries(name, lastEightWeekKeys());
 
   document.getElementById('app').innerHTML = `
     <div class="page-header">
@@ -52,24 +50,21 @@ window.renderTechPage = function renderTechPage(name){
         </div>
       </div>
     </section>
-    ${controlsHtml('tech')}
     <div class="section">
-      <div class="section-title">Pace · ${tf.label}</div>
+      <div class="section-title">Last 8 weeks</div>
       <div class="chart-grid">
         <div class="chart-card full">
           <h3>Units / day</h3>
-          <p class="chart-explain">${name} only · ${grain}.</p>
+          <p class="chart-explain">${name} only · weekly pace, last 8 earned weeks.</p>
           <div class="chart-wrap"><canvas id="p-units"></canvas></div>
         </div>
         <div class="chart-card full">
           <h3>Points / day</h3>
-          <p class="chart-explain">${name} only · ${grain}.</p>
+          <p class="chart-explain">${name} only · weekly pace, last 8 earned weeks.</p>
           <div class="chart-wrap"><canvas id="p-points"></canvas></div>
         </div>
       </div>
     </div>`;
-
-  bindControls('tech');
 
   charts.push(new Chart(document.getElementById('p-units'), {
     type: 'line',
@@ -82,9 +77,7 @@ window.renderTechPage = function renderTechPage(name){
         fill: true, tension: 0.3, pointRadius: 4, borderWidth: 2.5, spanGaps: true
       }]
     },
-    options: Object.assign({}, lineChartOptions(), {
-      plugins: { legend: { display: false } }
-    })
+    options: lineChartOptions()
   }));
   charts.push(new Chart(document.getElementById('p-points'), {
     type: 'line',
@@ -97,8 +90,6 @@ window.renderTechPage = function renderTechPage(name){
         fill: true, tension: 0.3, pointRadius: 4, borderWidth: 2.5, spanGaps: true
       }]
     },
-    options: Object.assign({}, lineChartOptions(), {
-      plugins: { legend: { display: false } }
-    })
+    options: lineChartOptions()
   }));
 };

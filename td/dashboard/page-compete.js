@@ -26,17 +26,33 @@ function competeRowsHtml(sorted, extraDays){
 window.renderCompetePage = function renderCompetePage(){
   destroyCharts();
   setNav('#/standings');
-  const tf = resolveTimeframe(TIMEFRAME);
   const names = techNames();
   const thisWeekKey = latestMondayWeek();
   const race = rankedTechs(thisWeekKey ? [thisWeekKey] : [], 'day');
   const ytd = rankedTechs(ytdWeekKeys(), 'day');
-  const grain = (TIMEFRAME === 'this_week') ? 'each day this week' : 'each week in ' + tf.label;
+  const hideTrend = TIMEFRAME === 'this_week' && thisWeekEarnedDayCount() < 2;
+  const eight = lastEightWeekKeys();
+  const trendHtml = hideTrend ? '' : `
+    <div class="section">
+      <div class="section-title">Last 8 weeks</div>
+      <div class="chart-grid">
+        <div class="chart-card full">
+          <h3>Points / day</h3>
+          <p class="chart-explain">One labeled line per technician · weekly pace.</p>
+          <div class="chart-wrap"><canvas id="s-points"></canvas></div>
+        </div>
+        <div class="chart-card full">
+          <h3>Units / day</h3>
+          <p class="chart-explain">One labeled line per technician · weekly pace.</p>
+          <div class="chart-wrap"><canvas id="s-units"></canvas></div>
+        </div>
+      </div>
+    </div>`;
 
   document.getElementById('app').innerHTML = `
     <div class="page-header">
       <h1>Standings</h1>
-      <p>This week’s race, then pace charts, then year to date · Updated ${DATA.generated}</p>
+      <p>This week’s race, then last-8-week pace, then year to date · Updated ${DATA.generated}</p>
     </div>
     <section class="this-week" aria-label="This week race">
       <div class="this-week-kicker">This week</div>
@@ -54,21 +70,7 @@ window.renderCompetePage = function renderCompetePage(){
       </div>
     </section>
     ${controlsHtml('standings')}
-    <div class="section">
-      <div class="section-title">Pace · ${tf.label}</div>
-      <div class="chart-grid">
-        <div class="chart-card full">
-          <h3>Points / day</h3>
-          <p class="chart-explain">One line per technician · ${grain}.</p>
-          <div class="chart-wrap"><canvas id="s-points"></canvas></div>
-        </div>
-        <div class="chart-card full">
-          <h3>Units / day</h3>
-          <p class="chart-explain">One line per technician · ${grain}.</p>
-          <div class="chart-wrap"><canvas id="s-units"></canvas></div>
-        </div>
-      </div>
-    </div>
+    ${trendHtml}
     <div class="section">
       <div class="section-title">Year to date</div>
       <p class="explain">1 Jan through ${DATA.generated}. Pts/Day = points ÷ workdays. Gap is pts/day behind #1.</p>
@@ -86,7 +88,8 @@ window.renderCompetePage = function renderCompetePage(){
 
   bindControls('standings');
 
-  const series = names.map(n => ({ name: n, pace: paceSeries(n, tf.weeks) }));
+  if(hideTrend) return;
+  const series = names.map(n => ({ name: n, pace: paceSeries(n, eight) }));
   const labels = series[0] ? series[0].pace.labels : [];
   charts.push(new Chart(document.getElementById('s-points'), {
     type: 'line',

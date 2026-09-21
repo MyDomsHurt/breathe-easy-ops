@@ -70,6 +70,51 @@ header.be-shell .nav-links .nav-compete {
 header.be-shell .nav-links a[href="#/team"] {
   order: -1;
 }
+
+.period-bar{
+  width:100%;
+  background:#fff;
+  border-top:1px solid var(--be-line, rgba(14,77,145,.12));
+  padding:8px 16px 10px;
+}
+.period-bar-inner{
+  max-width:1100px;
+  margin:0 auto;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.period-bar .period-label{
+  flex:0 0 auto;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:#5a6f8a;
+}
+.period-bar .rank-modes{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin:0;
+  flex:1 1 auto;
+  min-width:0;
+}
+.period-bar .rank-mode-btn{
+  padding:6px 12px;
+  font-size:12px;
+}
+.period-bar .period-active{
+  flex:0 0 auto;
+  font-size:12px;
+  font-weight:600;
+  color:#1a3558;
+  white-space:nowrap;
+}
+@media (max-width:640px){
+  .period-bar .period-active{display:none;}
+}
 @media (max-width: 768px) {
   header.be-shell .be-page-nav .nav-links,
   header.be-shell .nav-links {

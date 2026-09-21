@@ -69,7 +69,6 @@ window.renderCompetePage = function renderCompetePage(){
         </table>
       </div>
     </section>
-    ${controlsHtml('standings')}
     ${trendHtml}
     <div class="section">
       <div class="section-title">Year to date</div>
@@ -85,8 +84,6 @@ window.renderCompetePage = function renderCompetePage(){
         <tbody>${competeRowsHtml(ytd, true)}</tbody>
       </table></div>
     </div>`;
-
-  bindControls('standings');
 
   if(hideTrend) return;
   const series = names.map(n => ({ name: n, pace: paceSeries(n, eight) }));

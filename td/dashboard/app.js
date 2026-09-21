@@ -117,6 +117,7 @@ function setNav(active){
     `<span class="nav-sep"></span>` +
     `<a href="#/team" class="${teamActive}">Full Team</a>` +
     `<a href="#/standings" class="nav-compete${standingsOn ? ' active' : ''}">Standings</a>`;
+  renderPeriodBar();
 }
 
 function allWeekKeys(){
@@ -352,43 +353,30 @@ function trendInWindow(stats){
   return 'Stable';
 }
 
-function controlsHtml(scope){
+function renderPeriodBar(){
+  const bar = $('period-bar');
+  if(!bar) return;
   const tf = resolveTimeframe(TIMEFRAME);
   const tfBtns = TF_PRESETS.map(p =>
     `<button type="button" class="rank-mode-btn ${TIMEFRAME===p.id?'active':''}" data-tf="${p.id}">${p.short}</button>`
   ).join('');
-  const metBtns = METRIC_PRESETS.map(p =>
-    `<button type="button" class="rank-mode-btn metric-btn ${METRIC===p.id?'active':''}" data-metric="${p.id}">${p.short}</button>`
-  ).join('');
-  return `
-    <div class="controls-bar" data-scope="${scope}">
-      <div class="controls-row">
-        <span class="controls-label">Period</span>
-        <div class="rank-modes tf-modes">${tfBtns}</div>
-      </div>
-      <div class="controls-row">
-        <span class="controls-label">Rank by</span>
-        <div class="rank-modes metric-modes">${metBtns}</div>
-      </div>
-      <p class="controls-active">Showing <strong>${tf.label}</strong> · ${tf.weeks.length} week${tf.weeks.length===1?'':'s'} · ranked by <strong>${metricLabel(METRIC)}</strong></p>
-    </div>`;
+  bar.innerHTML =
+    `<div class="period-bar-inner">` +
+      `<span class="period-label">Period</span>` +
+      `<div class="rank-modes">${tfBtns}</div>` +
+      `<span class="period-active">${tf.label}</span>` +
+    `</div>`;
 }
 
-function bindControls(scope){
-  const bar = document.querySelector(`.controls-bar[data-scope="${scope}"]`);
-  if(!bar) return;
+function bindPeriodBar(){
+  const bar = $('period-bar');
+  if(!bar || bar.dataset.bound) return;
+  bar.dataset.bound = '1';
   bar.addEventListener('click', (e) => {
     const tfBtn = e.target.closest('[data-tf]');
-    if(tfBtn){
-      TIMEFRAME = tfBtn.getAttribute('data-tf');
-      route();
-      return;
-    }
-    const mBtn = e.target.closest('[data-metric]');
-    if(mBtn){
-      METRIC = mBtn.getAttribute('data-metric');
-      route();
-    }
+    if(!tfBtn) return;
+    TIMEFRAME = tfBtn.getAttribute('data-tf');
+    route();
   });
 }
 
@@ -418,6 +406,7 @@ function route(){
   else renderTeam();
 }
 window.addEventListener('hashchange', route);
+bindPeriodBar();
 loadData().then(() => { route(); }).catch(err => {
   console.error(err);
   $('app').innerHTML = '<p>Failed to load data.</p>';

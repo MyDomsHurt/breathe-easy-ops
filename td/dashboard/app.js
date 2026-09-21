@@ -268,6 +268,36 @@ function pointsChartFor(name, tf){
     explain: 'Weekly points'
   };
 }
+function unitsChartFor(name, tf){
+  const daily = tf.id === 'this_week' || tf.id === 'last_week';
+  if(daily){
+    const dates = periodDayKeys(tf);
+    const today = earnedCutoff();
+    const map = {};
+    ((DATA.daily && DATA.daily[name]) || []).forEach(r => { map[r.date] = r.units || 0; });
+    return {
+      grain: 'day',
+      labels: dates.map(dayLabel),
+      data: dates.map(d => {
+        if(tf.id === 'this_week' && today && d > today) return null;
+        return map[d] || 0;
+      }),
+      title: 'Units',
+      explain: 'Daily units'
+    };
+  }
+  const keys = tf.weeks || [];
+  return {
+    grain: 'week',
+    labels: keys.map(weekLabelFor),
+    data: keys.map(w => {
+      const r = (DATA.technicians[name].weeks || []).find(x => x.week === w);
+      return r ? (r.totalUnits || 0) : null;
+    }),
+    title: 'Units',
+    explain: 'Weekly units'
+  };
+}
 function lineChartOptions(){
   return {
     responsive: true, maintainAspectRatio: false,

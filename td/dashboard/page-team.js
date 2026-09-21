@@ -54,60 +54,40 @@ function periodStripCopy(tf){
 window.renderTeamPage = function renderTeamPage(){
   destroyCharts();
   setNav('#/team');
-  const retW = DATA.returnPointsWeight != null ? DATA.returnPointsWeight : 0;
   const tf = resolveTimeframe(TIMEFRAME);
   const copy = periodStripCopy(tf);
-  const period = tf.weeks.length ? teamWindowStats(tf.weeks) : emptyWindowStats();
-  const ytd = teamWindowStats(ytdWeekKeys());
-  const names = techNames();
-  const showYtd = TIMEFRAME !== 'ytd';
-  const ytdHtml = showYtd ? `
-    <div class="section">
-      <div class="section-title">Year to date</div>
-      <div class="kpi-row">
-        <div class="kpi-card"><div class="label">Pts / day</div><div class="value">${fmt(ytd.pointsDay, 2)}</div><div class="kpi-explain">YTD points ÷ YTD workdays (${fmt(ytd.days)} days).</div></div>
-        <div class="kpi-card"><div class="label">Points</div><div class="value">${fmt(ytd.points, 1)}</div><div class="kpi-explain">1 Jan through ${DATA.generated}.</div></div>
-        <div class="kpi-card"><div class="label">Returns</div><div class="value">${fmt(ytd.returns)}</div><div class="kpi-explain">Return visits tracked · ${fmt(retW,1)} each.</div></div>
-      </div>
-    </div>` : '';
-  const chartSeries = names.map(n => ({ name: n, chart: pointsChartFor(n, tf) }));
+  const empty = emptyWindowStats();
+  const names = TECH_ORDER.filter(n => techNames().indexOf(n) !== -1);
+  const cards = names.map(n => tf.weeks.length ? techWindowStats(n, tf.weeks) : empty);
+  const chartSeries = names.map(n => ({ name: n, chart: unitsChartFor(n, tf) }));
   const chartLabels = chartSeries[0] ? chartSeries[0].chart.labels : [];
-  const grain = chartSeries[0] ? chartSeries[0].chart.explain : 'Points';
+  const grain = chartSeries[0] ? chartSeries[0].chart.explain : 'Units';
+  const cardHtml = cards.map(s => `
+    <div class="kpi-card">
+      <div class="label">${s.name}</div>
+      <div class="value">${fmtUnits(s.units)}</div>
+      <div class="kpi-explain">Units</div>
+      <div class="kpi-explain">Units / day ${fmt(s.unitsDay, 2)}</div>
+      <div class="kpi-explain">Returns ${fmt(s.returns)}</div>
+    </div>`).join('');
 
   document.getElementById('app').innerHTML = `
     <div class="page-header">
       <h1>Full Team</h1>
       <p>${tf.label} · Updated ${DATA.generated}</p>
     </div>
-    <section class="this-week" aria-label="${copy.kicker}">
-      <div class="this-week-kicker">${copy.kicker}</div>
-      <p class="this-week-range">${copy.range}</p>
-      <div class="this-week-stats">
-        <div class="this-week-stat">
-          <div class="label">Pts / day</div>
-          <div class="value">${fmt(period.pointsDay, 2)}</div>
-        </div>
-        <div class="this-week-stat">
-          <div class="label">Points</div>
-          <div class="value">${fmt(period.points, 1)}</div>
-        </div>
-        <div class="this-week-stat">
-          <div class="label">Returns</div>
-          <div class="value">${fmt(period.returns)}</div>
-        </div>
-      </div>
-    </section>
+    <p class="this-week-range">${copy.kicker} · ${copy.range}</p>
+    <div class="kpi-row">${cardHtml}</div>
     <div class="section">
-      <div class="section-title">Points</div>
+      <div class="section-title">Units</div>
       <div class="chart-grid">
         <div class="chart-card full">
-          <h3>Points</h3>
-          <p class="chart-explain">One line per technician · ${grain}.</p>
+          <h3>Units</h3>
+          <p class="chart-explain">One line per lead · ${grain}.</p>
           <div class="chart-wrap"><canvas id="t-pace"></canvas></div>
         </div>
       </div>
-    </div>
-    ${ytdHtml}`;
+    </div>`;
 
   if(!chartLabels.length) return;
   charts.push(new Chart(document.getElementById('t-pace'), {

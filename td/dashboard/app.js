@@ -544,15 +544,13 @@ function trendInWindow(stats){
 function renderPeriodBar(){
   const bar = $('period-bar');
   if(!bar) return;
-  const tf = resolveTimeframe(TIMEFRAME);
-  const tfBtns = TF_PRESETS.map(p =>
-    `<button type="button" class="rank-mode-btn ${TIMEFRAME===p.id?'active':''}" data-tf="${p.id}">${p.short}</button>`
+  const opts = TF_PRESETS.map(p =>
+    `<option value="${p.id}"${TIMEFRAME===p.id?' selected':''}>${p.short}</option>`
   ).join('');
   bar.innerHTML =
     `<div class="period-bar-inner">` +
-      `<span class="period-label">Period</span>` +
-      `<div class="rank-modes">${tfBtns}</div>` +
-      `<span class="period-active">${tf.label}</span>` +
+      `<label class="period-label" for="period-select">Period</label>` +
+      `<select id="period-select" class="period-select" aria-label="Period">${opts}</select>` +
     `</div>`;
 }
 
@@ -560,10 +558,10 @@ function bindPeriodBar(){
   const bar = $('period-bar');
   if(!bar || bar.dataset.bound) return;
   bar.dataset.bound = '1';
-  bar.addEventListener('click', (e) => {
-    const tfBtn = e.target.closest('[data-tf]');
-    if(!tfBtn) return;
-    TIMEFRAME = tfBtn.getAttribute('data-tf');
+  bar.addEventListener('change', (e) => {
+    const sel = e.target.closest('#period-select');
+    if(!sel) return;
+    TIMEFRAME = sel.value;
     route();
   });
 }

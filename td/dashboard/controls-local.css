@@ -93,27 +93,16 @@ header.be-shell .nav-links a[href="#/team"] {
   text-transform:uppercase;
   color:#5a6f8a;
 }
-.period-bar .rank-modes{
-  display:flex;
-  flex-wrap:wrap;
-  gap:6px;
-  margin:0;
-  flex:1 1 auto;
-  min-width:0;
-}
-.period-bar .rank-mode-btn{
-  padding:6px 12px;
-  font-size:12px;
-}
-.period-bar .period-active{
-  flex:0 0 auto;
-  font-size:12px;
+.period-bar .period-select{
+  font:inherit;
+  font-size:13px;
   font-weight:600;
   color:#1a3558;
-  white-space:nowrap;
-}
-@media (max-width:640px){
-  .period-bar .period-active{display:none;}
+  padding:6px 10px;
+  border:1px solid var(--be-line, rgba(14,77,145,.12));
+  border-radius:8px;
+  background:#fff;
+  min-width:10em;
 }
 @media (max-width: 768px) {
   header.be-shell .be-page-nav .nav-links,

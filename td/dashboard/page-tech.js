@@ -111,6 +111,27 @@ window.renderTechPage = function renderTechPage(name){
     : (period.days || 0);
   const periodTotal = metricTotal(period);
   const periodDay = daysWorked ? Math.round((periodTotal / daysWorked) * 100) / 100 : 0;
+  const today = earnedCutoff();
+  let doneLeftHtml = '';
+  if(tf.id === 'this_week' && tf.weeks && tf.weeks.length && today){
+    const mon = tf.weeks[0];
+    const sunday = addDaysIso(mon, 6);
+    const doneStats = statsFromDaily(name, mon, today);
+    const tom = addDaysIso(today, 1);
+    const leftStats = tom <= sunday ? statsFromDaily(name, tom, sunday) : emptyWindowStats();
+    const doneVal = metricTotal(doneStats);
+    const leftVal = metricTotal(leftStats);
+    const fmtVal = v => isUnitsView() ? fmtUnits(v) : fmt(v, 1);
+    doneLeftHtml =
+      `<div class="this-week-stat">
+        <div class="label">Done</div>
+        <div class="value">${fmtVal(doneVal)}</div>
+      </div>
+      <div class="this-week-stat">
+        <div class="label">Left</div>
+        <div class="value">${fmtVal(leftVal)}</div>
+      </div>`;
+  }
   const mix = techMix(name, tf);
   const pieSlices = MIX_TYPES.filter(k => mix[k] > 0).map(k => ({
     type: k,
@@ -146,6 +167,7 @@ window.renderTechPage = function renderTechPage(name){
           <div class="label">${metricLabel()}</div>
           <div class="value">${isUnitsView() ? fmtUnits(periodTotal) : fmt(periodTotal, 1)}</div>
         </div>
+        ${doneLeftHtml}
         <div class="this-week-stat">
           <div class="label">${metricDayLabel()}</div>
           <div class="value">${fmt(periodDay, 2)}</div>

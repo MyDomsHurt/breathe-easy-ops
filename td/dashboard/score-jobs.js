@@ -588,16 +588,4 @@
 
   global.BEScoreJobs = scoreJobs;
   global.BEScoreHktToday = hktToday;
-  global.BEScoreJobLead = function (job) {
-    const raw = String(job && job.team_lead || '').trim();
-    return LEAD_MAP[raw.toLowerCase()] || '';
-  };
-  global.BEScoreJobIsCrew = isCrew;
-  global.BEScoreJobDate = jobDate;
-  global.BEScoreJobUnits = function (job) {
-    if (isReturn(job)) return { isReturn: true, counts: emptyUnits(), total: 0, points: 0 };
-    const u = unitsFromJob(job);
-    const counts = u[0];
-    return { isReturn: false, counts: counts, total: totalUnits(counts), points: pointsFor(counts), sure: u[1] };
-  };
 })(typeof window !== 'undefined' ? window : this);

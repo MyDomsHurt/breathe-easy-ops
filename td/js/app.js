@@ -529,6 +529,19 @@ function syncHeaderHeight() {
   }
   document.documentElement.style.setProperty('--tech-bar-h', barH + 'px');
   document.documentElement.style.setProperty('--day-sticky-top', (h + barH) + 'px');
+  const container = document.getElementById('jobsContainer');
+  if (container && container.classList.contains('jobs-week-strip')) {
+    const top = container.getBoundingClientRect().top;
+    const colH = Math.max(160, Math.floor(window.innerHeight - top - 8));
+    document.documentElement.style.setProperty('--week-col-h', colH + 'px');
+  }
+}
+
+function syncWeekStrip(container, dayCount) {
+  const on = (currentFilters.range === 'this_week' || currentFilters.range === 'next_week') && dayCount > 1;
+  if (container) container.classList.toggle('jobs-week-strip', on);
+  document.body.classList.toggle('jobs-week-view', on);
+  if (on) requestAnimationFrame(syncHeaderHeight);
 }
 
 function paintRangeButtons(range) {
@@ -828,6 +841,7 @@ function render() {
         return '<button type="button" data-jump-range="' + pair[0] + '" class="w-full px-4 py-3 rounded-xl text-sm font-semibold bg-brand-600 text-white active:scale-95">' + pair[1] + '</button>';
       }).join('');
     }
+    syncWeekStrip(container, 0);
     return;
   }
   empty.classList.add('hidden');
@@ -836,6 +850,7 @@ function render() {
     renderByDate(container);
   } else {
     document.getElementById('viewTitle').textContent = 'Jobs by Team';
+    syncWeekStrip(container, 0);
     renderByTeam(container);
   }
   syncHeaderHeight();
@@ -915,6 +930,7 @@ function renderByDate(container) {
       '</div>' +
       '<div class="' + gridCls + '">' + cardsWithLunch(jobs, date, currentFilters.team) + '</div></section>';
   }).join('');
+  syncWeekStrip(container, dates.length);
   bindCardClicks();
 }
 

@@ -376,6 +376,7 @@ body{
 .tech-line-wrap{height:260px}
 .tech-pie-card{display:flex;flex-direction:column;height:100%}
 .tech-pie-wrap{height:280px;min-height:280px;flex:none;overflow:hidden}
+.team-type-pie-wrap{height:220px;min-height:220px;overflow:hidden}
 @media (min-width:900px){
   .tech-desk.has-pie{
     display:grid;

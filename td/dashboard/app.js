@@ -265,6 +265,18 @@ function periodDayKeys(tf){
   for(let d = mon; d <= sunday; d = addDaysIso(d, 1)) out.push(d);
   return out;
 }
+function periodMixDates(tf){
+  if(!tf) return [];
+  if(tf.id === 'this_week' || tf.id === 'last_week') return periodDayKeys(tf);
+  if((tf.id === 'this_month' || tf.id === 'last_month') && tf.start && tf.end){
+    return daysInclusive(tf.start, tf.end);
+  }
+  const dates = [];
+  (tf.weeks || []).forEach(w => {
+    for(let d = w; d <= addDaysIso(w, 6); d = addDaysIso(d, 1)) dates.push(d);
+  });
+  return dates;
+}
 function pointsChartFor(name, tf){
   const daily = tf.id === 'this_week' || tf.id === 'last_week';
   const month = tf.id === 'this_month' || tf.id === 'last_month';
@@ -407,12 +419,14 @@ function shiftQuarter(quarterKey, delta){
 
 function statsFromDaily(name, start, end){
   const rows = ((DATA.daily && DATA.daily[name]) || []).filter(r => r.date >= start && r.date <= end);
-  let units = 0, points = 0, returns = 0, days = 0;
+  let units = 0, points = 0, returns = 0, days = 0, jobs = 0, jobDays = 0;
   rows.forEach(r => {
     units += r.units || 0;
     points += r.points || 0;
     returns += r.returns || 0;
-    if((r.units || 0) || (r.points || 0) || (r.returns || 0)) days += 1;
+    jobs += r.jobs || 0;
+    if((r.units || 0) || (r.points || 0) || (r.returns || 0) || (r.jobs || 0)) days += 1;
+    if((r.jobs || 0) > 0) jobDays += 1;
   });
   return {
     name: name,
@@ -420,6 +434,8 @@ function statsFromDaily(name, start, end){
     points: Math.round(points * 10) / 10,
     returns: returns,
     days: days,
+    jobs: jobs,
+    jobsDay: jobDays ? Math.round((jobs / jobDays) * 100) / 100 : 0,
     unitsDay: days ? Math.round((units / days) * 100) / 100 : 0,
     pointsDay: days ? Math.round((points / days) * 100) / 100 : 0,
     weeks: []
@@ -434,7 +450,11 @@ function periodTechStats(name, tf){
     return statsFromDaily(name, mon, addDaysIso(mon, 6));
   }
   if(!tf.weeks || !tf.weeks.length) return emptyWindowStats();
-  return techWindowStats(name, tf.weeks);
+  const s = techWindowStats(name, tf.weeks);
+  const fromDaily = statsFromDaily(name, tf.weeks[0], addDaysIso(tf.weeks[tf.weeks.length - 1], 6));
+  s.jobs = fromDaily.jobs;
+  s.jobsDay = fromDaily.jobsDay;
+  return s;
 }
 
 function resolveTimeframe(id){

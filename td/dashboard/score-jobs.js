@@ -450,11 +450,12 @@
       return perTechWeek[lead][week];
     }
     function addDay(lead, d, points, units, returns, types){
-      if (!perTechDay[lead][d]) perTechDay[lead][d] = { points: 0, units: 0, returns: 0, types: emptyUnits() };
+      if (!perTechDay[lead][d]) perTechDay[lead][d] = { points: 0, units: 0, returns: 0, jobs: 0, types: emptyUnits() };
       const day = perTechDay[lead][d];
       day.points += points || 0;
       day.units += units || 0;
       day.returns += returns || 0;
+      day.jobs += 1;
       if (types) {
         UNIT_TYPES.forEach(k => { day.types[k] += types[k] || 0; });
       }
@@ -556,7 +557,8 @@
           date: d,
           points: r2(row.points),
           units: r1(row.units),
-          returns: row.returns
+          returns: row.returns,
+          jobs: row.jobs || 0
         };
         UNIT_TYPES.forEach(k => { out[k] = r1((row.types && row.types[k]) || 0); });
         return out;

@@ -20,12 +20,13 @@ function techDayList(name, tf){
   function dayRow(d){
     const r = map[d];
     const future = today && d > today;
-    const booked = r && ((r.units || 0) || (r.returns || 0) || (r.points || 0));
+    const booked = r && ((r.units || 0) || (r.returns || 0) || (r.points || 0) || (r.jobs || 0));
     return {
       label: dayLabel(d),
       units: r ? (r.units || 0) : 0,
       points: r ? (r.points || 0) : 0,
       returns: r ? (r.returns || 0) : 0,
+      jobs: r ? (r.jobs || 0) : 0,
       blank: !!(future && !booked)
     };
   }
@@ -41,12 +42,18 @@ function techDayList(name, tf){
     const units = row ? (row.totalUnits || 0) : 0;
     const points = row ? (row.points || 0) : 0;
     const returns = row ? (row.returns || 0) : 0;
+    let jobs = 0;
+    const map = techDailyMap(name);
+    for(let d = w; d <= addDaysIso(w, 6); d = addDaysIso(d, 1)){
+      jobs += (map[d] && map[d].jobs) || 0;
+    }
     return {
       label: weekLabelFor(w),
       units: units,
       points: points,
       returns: returns,
-      blank: !!(future && !units && !returns && !points)
+      jobs: jobs,
+      blank: !!(future && !units && !returns && !points && !jobs)
     };
   });
 }
@@ -123,6 +130,7 @@ window.renderTechPage = function renderTechPage(name){
       <td>${r.label}</td>
       <td class="num">${r.blank ? '' : (isUnitsView() ? fmtUnits(r.units) : fmt(r.points, 1))}</td>
       <td class="num">${r.blank ? '' : fmt(r.returns)}</td>
+      <td class="num">${r.blank ? '' : fmt(r.jobs || 0)}</td>
     </tr>`
   ).join('');
 
@@ -150,6 +158,14 @@ window.renderTechPage = function renderTechPage(name){
           <div class="label">Days worked</div>
           <div class="value">${fmt(daysWorked)}</div>
         </div>
+        <div class="this-week-stat">
+          <div class="label">Jobs</div>
+          <div class="value">${fmt(period.jobs || 0)}</div>
+        </div>
+        <div class="this-week-stat">
+          <div class="label">Jobs / day</div>
+          <div class="value">${fmt(period.jobsDay || 0, 2)}</div>
+        </div>
       </div>
     </section>
     ${paceHtml}
@@ -173,7 +189,7 @@ window.renderTechPage = function renderTechPage(name){
       <div class="tech-days section">
         <div class="section-title">Days</div>
         <div class="table-wrap"><table>
-          <thead><tr><th>Date</th><th class="num">${metricLabel()}</th><th class="num">Returns</th></tr></thead>
+          <thead><tr><th>Date</th><th class="num">${metricLabel()}</th><th class="num">Returns</th><th class="num">Jobs</th></tr></thead>
           <tbody>${tableRows}</tbody>
         </table></div>
       </div>

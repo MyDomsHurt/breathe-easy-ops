@@ -61,6 +61,7 @@ const TECH_COLORS = {
 
 let DATA = null, charts = [];
 let TIMEFRAME = 'this_week';
+let VIEW = 'units'; // 'units' | 'points'
 
 function techNames(){
   const keys = DATA && DATA.technicians ? Object.keys(DATA.technicians) : TECH_ORDER;
@@ -266,16 +267,30 @@ function periodDayKeys(tf){
 }
 function pointsChartFor(name, tf){
   const daily = tf.id === 'this_week' || tf.id === 'last_week';
+  const month = tf.id === 'this_month' || tf.id === 'last_month';
+  const today = earnedCutoff();
+  const map = {};
+  ((DATA.daily && DATA.daily[name]) || []).forEach(r => { map[r.date] = r.points || 0; });
   if(daily){
     const dates = periodDayKeys(tf);
-    const today = earnedCutoff();
-    const map = {};
-    ((DATA.daily && DATA.daily[name]) || []).forEach(r => { map[r.date] = r.points || 0; });
     return {
       grain: 'day',
       labels: dates.map(dayLabel),
       data: dates.map(d => {
-        if(tf.id === 'this_week' && today && d > today) return null;
+        if(tf.id === 'this_week' && today && d > today) return map[d] ? map[d] : null;
+        return map[d] || 0;
+      }),
+      title: 'Points',
+      explain: 'Daily points'
+    };
+  }
+  if(month && tf.start && tf.end){
+    const dates = daysInclusive(tf.start, tf.end);
+    return {
+      grain: 'day',
+      labels: dates.map(dayLabel),
+      data: dates.map(d => {
+        if(today && d > today) return map[d] ? map[d] : null;
         return map[d] || 0;
       }),
       title: 'Points',
@@ -541,6 +556,25 @@ function trendInWindow(stats){
   return 'Stable';
 }
 
+function isUnitsView(){
+  return VIEW !== 'points';
+}
+function metricLabel(){
+  return isUnitsView() ? 'Units' : 'Points';
+}
+function metricDayLabel(){
+  return isUnitsView() ? 'Units / day' : 'Pts / day';
+}
+function metricTotal(s){
+  return isUnitsView() ? s.units : s.points;
+}
+function metricDay(s){
+  return isUnitsView() ? s.unitsDay : s.pointsDay;
+}
+function outputChartFor(name, tf){
+  return isUnitsView() ? unitsChartFor(name, tf) : pointsChartFor(name, tf);
+}
+
 function renderPeriodBar(){
   const bar = $('period-bar');
   if(!bar) return;
@@ -551,6 +585,11 @@ function renderPeriodBar(){
     `<div class="period-bar-inner">` +
       `<label class="period-label" for="period-select">Period</label>` +
       `<select id="period-select" class="period-select" aria-label="Period">${opts}</select>` +
+      `<label class="period-label" for="view-select">Show</label>` +
+      `<select id="view-select" class="period-select" aria-label="Show">` +
+        `<option value="units"${VIEW==='units'?' selected':''}>Units</option>` +
+        `<option value="points"${VIEW==='points'?' selected':''}>Points</option>` +
+      `</select>` +
     `</div>`;
 }
 
@@ -559,9 +598,10 @@ function bindPeriodBar(){
   if(!bar || bar.dataset.bound) return;
   bar.dataset.bound = '1';
   bar.addEventListener('change', (e) => {
-    const sel = e.target.closest('#period-select');
+    const sel = e.target.closest('select');
     if(!sel) return;
-    TIMEFRAME = sel.value;
+    if(sel.id === 'period-select') TIMEFRAME = sel.value;
+    if(sel.id === 'view-select') VIEW = sel.value;
     route();
   });
 }

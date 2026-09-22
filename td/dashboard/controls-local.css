@@ -102,7 +102,7 @@ header.be-shell .nav-links a[href="#/team"] {
   border:1px solid var(--be-line, rgba(14,77,145,.12));
   border-radius:8px;
   background:#fff;
-  min-width:10em;
+  min-width:8em;
 }
 @media (max-width: 768px) {
   header.be-shell .be-page-nav .nav-links,

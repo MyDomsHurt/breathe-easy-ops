@@ -63,15 +63,15 @@ window.renderTeamPage = function renderTeamPage(){
   const empty = emptyWindowStats();
   const names = TECH_ORDER.filter(n => techNames().indexOf(n) !== -1);
   const cards = names.map(n => periodTechStats(n, tf));
-  const chartSeries = names.map(n => ({ name: n, chart: unitsChartFor(n, tf) }));
+  const chartSeries = names.map(n => ({ name: n, chart: outputChartFor(n, tf) }));
   const chartLabels = chartSeries[0] ? chartSeries[0].chart.labels : [];
-  const grain = chartSeries[0] ? chartSeries[0].chart.explain : 'Units';
+  const grain = chartSeries[0] ? chartSeries[0].chart.explain : metricLabel();
   const cardHtml = cards.map(s => `
     <div class="kpi-card">
       <div class="label">${s.name}</div>
-      <div class="value">${fmtUnits(s.units)}</div>
-      <div class="kpi-explain">Units</div>
-      <div class="kpi-explain">Units / day ${fmt(s.unitsDay, 2)}</div>
+      <div class="value">${isUnitsView() ? fmtUnits(metricTotal(s)) : fmt(metricTotal(s), 1)}</div>
+      <div class="kpi-explain">${metricLabel()}</div>
+      <div class="kpi-explain">${metricDayLabel()} ${fmt(metricDay(s), 2)}</div>
       <div class="kpi-explain">Returns ${fmt(s.returns)}</div>
     </div>`).join('');
 
@@ -83,10 +83,10 @@ window.renderTeamPage = function renderTeamPage(){
     <p class="this-week-range">${copy.kicker} · ${copy.range}</p>
     <div class="kpi-row">${cardHtml}</div>
     <div class="section">
-      <div class="section-title">Units</div>
+      <div class="section-title">${metricLabel()}</div>
       <div class="chart-grid">
         <div class="chart-card full">
-          <h3>Units</h3>
+          <h3>${metricLabel()}</h3>
           <p class="chart-explain">One line per lead · ${grain}.</p>
           <div class="chart-wrap"><canvas id="t-pace"></canvas></div>
         </div>

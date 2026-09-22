@@ -24,6 +24,7 @@ function techDayList(name, tf){
     return {
       label: dayLabel(d),
       units: r ? (r.units || 0) : 0,
+      points: r ? (r.points || 0) : 0,
       returns: r ? (r.returns || 0) : 0,
       blank: !!(future && !booked)
     };
@@ -38,17 +39,21 @@ function techDayList(name, tf){
     const row = (DATA.technicians[name].weeks || []).find(x => x.week === w);
     const future = today && addDaysIso(w, 6) > today && w > today;
     const units = row ? (row.totalUnits || 0) : 0;
+    const points = row ? (row.points || 0) : 0;
     const returns = row ? (row.returns || 0) : 0;
     return {
       label: weekLabelFor(w),
       units: units,
+      points: points,
       returns: returns,
-      blank: !!(future && !units && !returns)
+      blank: !!(future && !units && !returns && !points)
     };
   });
 }
 
 const MIX_TYPES = ['S','W','B','C','UC','TV','OU','SwG','EF','PAU'];
+const TYPE_WEIGHTS = { S:1, W:0.85, B:1.3, C:1.8, UC:1.5, TV:1.4, OU:1.4, SwG:1.3, EF:1, PAU:1 };
+const MIX_COLORS = ['#2563eb','#0d9488','#7c3aed','#d97706','#dc2626','#0891b2','#4f46e5','#65a30d','#db2777','#57534e'];
 function techMixDates(tf){
   const weekLike = tf.id === 'this_week' || tf.id === 'last_week';
   const monthLike = (tf.id === 'this_month' || tf.id === 'last_month') && tf.start && tf.end;
@@ -83,7 +88,7 @@ window.renderTechPage = function renderTechPage(name){
   const tf = resolveTimeframe(TIMEFRAME);
   const copy = periodStripCopy(tf);
   const period = periodTechStats(name, tf);
-  const chart = unitsChartFor(name, tf);
+  const chart = outputChartFor(name, tf);
   const dayList = techDayList(name, tf);
   let winStart = null;
   let winEnd = null;
@@ -97,27 +102,37 @@ window.renderTechPage = function renderTechPage(name){
   const daysWorked = (winStart && winEnd)
     ? techWorkedDayCount(name, winStart, winEnd)
     : (period.days || 0);
-  const unitsDay = daysWorked ? Math.round((period.units / daysWorked) * 100) / 100 : 0;
+  const periodTotal = metricTotal(period);
+  const periodDay = daysWorked ? Math.round((periodTotal / daysWorked) * 100) / 100 : 0;
   const mix = techMix(name, tf);
-  const mixChips = MIX_TYPES.filter(k => mix[k] > 0).map(k =>
-    `<div class="unit-chip"><div class="ut">${k}</div><div class="uv">${fmtUnits(mix[k])}</div></div>`
-  ).join('');
-  const mixHtml = mixChips
-    ? `<div class="unit-chips" style="margin:0 0 20px">${mixChips}</div>`
+  const pieSlices = MIX_TYPES.filter(k => mix[k] > 0).map(k => ({
+    type: k,
+    value: isUnitsView() ? mix[k] : mix[k] * TYPE_WEIGHTS[k]
+  }));
+  const pieHtml = pieSlices.length
+    ? `<div class="section">
+        <div class="section-title">${metricLabel()} mix</div>
+        <div class="chart-grid">
+          <div class="chart-card">
+            <h3>${metricLabel()} by type</h3>
+            <div class="chart-wrap"><canvas id="p-mix"></canvas></div>
+          </div>
+        </div>
+      </div>`
     : '';
   const ownWeeks = ((DATA.technicians[name] && DATA.technicians[name].weeks) || [])
     .filter(r => (r.workday || 0) > 0)
     .slice(-8);
   const ownDays = ownWeeks.reduce((s, r) => s + (r.workday || 0), 0);
-  const ownUnits = ownWeeks.reduce((s, r) => s + (r.totalUnits || 0), 0);
-  const ownPace = ownDays ? Math.round((ownUnits / ownDays) * 100) / 100 : null;
+  const ownAmt = ownWeeks.reduce((s, r) => s + (isUnitsView() ? (r.totalUnits || 0) : (r.points || 0)), 0);
+  const ownPace = ownDays ? Math.round((ownAmt / ownDays) * 100) / 100 : null;
   const paceHtml = ownPace == null
     ? ''
-    : `<p class="kpi-explain" style="margin:0 0 20px">This period: ${fmt(unitsDay, 2)} units/day. Your last 8 weeks: ${fmt(ownPace, 2)} units/day.</p>`;
+    : `<p class="kpi-explain" style="margin:0 0 20px">This period: ${fmt(periodDay, 2)} ${isUnitsView() ? 'units/day' : 'pts/day'}. Your last 8 weeks: ${fmt(ownPace, 2)} ${isUnitsView() ? 'units/day' : 'pts/day'}.</p>`;
   const tableRows = dayList.map(r =>
     `<tr>
       <td>${r.label}</td>
-      <td class="num">${r.blank ? '' : fmtUnits(r.units)}</td>
+      <td class="num">${r.blank ? '' : (isUnitsView() ? fmtUnits(r.units) : fmt(r.points, 1))}</td>
       <td class="num">${r.blank ? '' : fmt(r.returns)}</td>
     </tr>`
   ).join('');
@@ -132,12 +147,12 @@ window.renderTechPage = function renderTechPage(name){
       <p class="this-week-range">${copy.range}</p>
       <div class="this-week-stats">
         <div class="this-week-stat">
-          <div class="label">Units</div>
-          <div class="value">${fmtUnits(period.units)}</div>
+          <div class="label">${metricLabel()}</div>
+          <div class="value">${isUnitsView() ? fmtUnits(periodTotal) : fmt(periodTotal, 1)}</div>
         </div>
         <div class="this-week-stat">
-          <div class="label">Units / day</div>
-          <div class="value">${fmt(unitsDay, 2)}</div>
+          <div class="label">${metricDayLabel()}</div>
+          <div class="value">${fmt(periodDay, 2)}</div>
         </div>
         <div class="this-week-stat">
           <div class="label">Returns</div>
@@ -149,13 +164,13 @@ window.renderTechPage = function renderTechPage(name){
         </div>
       </div>
     </section>
-    ${mixHtml}
+    ${pieHtml}
     ${paceHtml}
     <div class="section">
-      <div class="section-title">Units</div>
+      <div class="section-title">${metricLabel()}</div>
       <div class="chart-grid">
         <div class="chart-card full">
-          <h3>Units</h3>
+          <h3>${metricLabel()}</h3>
           <p class="chart-explain">${name} only · ${chart.explain}.</p>
           <div class="chart-wrap"><canvas id="p-pace"></canvas></div>
         </div>
@@ -164,11 +179,27 @@ window.renderTechPage = function renderTechPage(name){
     <div class="section">
       <div class="section-title">Days</div>
       <div class="table-wrap"><table>
-        <thead><tr><th>Date</th><th class="num">Units</th><th class="num">Returns</th></tr></thead>
+        <thead><tr><th>Date</th><th class="num">${metricLabel()}</th><th class="num">Returns</th></tr></thead>
         <tbody>${tableRows}</tbody>
       </table></div>
     </div>`;
 
+  if(pieSlices.length){
+    charts.push(new Chart(document.getElementById('p-mix'), {
+      type: 'pie',
+      data: {
+        labels: pieSlices.map(s => s.type),
+        datasets: [{
+          data: pieSlices.map(s => s.value),
+          backgroundColor: pieSlices.map((_, i) => MIX_COLORS[i % MIX_COLORS.length])
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 12 } } }
+      }
+    }));
+  }
   if(!chart.labels.length) return;
   charts.push(new Chart(document.getElementById('p-pace'), {
     type: 'line',

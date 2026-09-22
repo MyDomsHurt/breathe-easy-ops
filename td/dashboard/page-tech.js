@@ -13,7 +13,7 @@ function techWorkedDayCount(name, start, end){
   ).length;
 }
 function techDayList(name, tf){
-  const today = earnedCutoff();
+  const today = chartTodayHkt();
   const map = techDailyMap(name);
   const weekLike = tf.id === 'this_week' || tf.id === 'last_week';
   const monthLike = (tf.id === 'this_month' || tf.id === 'last_month') && tf.start && tf.end;
@@ -111,7 +111,7 @@ window.renderTechPage = function renderTechPage(name){
     : (period.days || 0);
   const periodTotal = metricTotal(period);
   const periodDay = daysWorked ? Math.round((periodTotal / daysWorked) * 100) / 100 : 0;
-  const today = earnedCutoff();
+  const today = chartTodayHkt();
   let doneLeftHtml = '';
   if(tf.id === 'this_week' && tf.weeks && tf.weeks.length && today){
     const mon = tf.weeks[0];

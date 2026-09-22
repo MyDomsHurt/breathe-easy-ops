@@ -187,10 +187,24 @@ function allWeekKeys(){
   (DATA.weeks || []).forEach(w => set.add(w));
   return [...set].sort();
 }
+function chartTodayHkt(){
+  if(typeof window.BEScoreHktToday === 'function') return window.BEScoreHktToday();
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Hong_Kong', year: 'numeric', month: '2-digit', day: '2-digit'
+  }).format(new Date());
+}
 function earnedCutoff(){
-  if(DATA && DATA.generated) return DATA.generated;
-  const d = new Date();
+  return chartTodayHkt();
+}
+function mondayOfIso(iso){
+  const d = new Date((iso || chartTodayHkt()) + 'T12:00:00');
+  const day = d.getDay();
+  const offset = day === 0 ? 6 : day - 1;
+  d.setDate(d.getDate() - offset);
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function thisWeekMonday(){
+  return mondayOfIso(chartTodayHkt());
 }
 function earnedWeekKeys(){
   const cutoff = earnedCutoff();
@@ -202,8 +216,8 @@ function addDaysIso(iso, n){
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 function thisWeekDayKeys(){
-  const mon = latestMondayWeek();
-  const cutoff = earnedCutoff();
+  const mon = thisWeekMonday();
+  const cutoff = chartTodayHkt();
   if(!mon) return [];
   const out = [];
   for(let d = mon; d <= cutoff; d = addDaysIso(d, 1)) out.push(d);
@@ -324,16 +338,8 @@ function monthlyChartFor(name, field, tf, title){
     explain: 'Monthly ' + title.toLowerCase()
   };
 }
-function chartTodayHkt(){
-  if(typeof window.BEScoreHktToday === 'function') return window.BEScoreHktToday();
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Hong_Kong', year: 'numeric', month: '2-digit', day: '2-digit'
-  }).format(new Date());
-}
-function dailyChartPoint(map, d, today){
-  const n = Number(map[d] || 0);
-  if(today && d > today) return n ? n : null;
-  return n;
+function dailyChartPoint(map, d){
+  return Number(map[d] || 0);
 }
 function pointsChartFor(name, tf){
   if(tf.id === 'this_quarter' || tf.id === 'last_quarter' || tf.id === 'ytd' || tf.id === 'full'){
@@ -341,7 +347,6 @@ function pointsChartFor(name, tf){
   }
   const daily = tf.id === 'this_week' || tf.id === 'last_week';
   const month = tf.id === 'this_month' || tf.id === 'last_month';
-  const today = chartTodayHkt();
   const map = {};
   ((DATA.daily && DATA.daily[name]) || []).forEach(r => { map[r.date] = r.points || 0; });
   if(daily){
@@ -349,7 +354,7 @@ function pointsChartFor(name, tf){
     return {
       grain: 'day',
       labels: dates.map(dayLabel),
-      data: dates.map(d => dailyChartPoint(map, d, today)),
+      data: dates.map(d => dailyChartPoint(map, d)),
       title: 'Points',
       explain: 'Daily points'
     };
@@ -359,7 +364,7 @@ function pointsChartFor(name, tf){
     return {
       grain: 'day',
       labels: dates.map(dayLabel),
-      data: dates.map(d => dailyChartPoint(map, d, today)),
+      data: dates.map(d => dailyChartPoint(map, d)),
       title: 'Points',
       explain: 'Daily points'
     };
@@ -370,7 +375,7 @@ function pointsChartFor(name, tf){
     labels: keys.map(weekLabelFor),
     data: keys.map(w => {
       const r = (DATA.technicians[name].weeks || []).find(x => x.week === w);
-      return r ? (r.points || 0) : null;
+      return r ? (r.points || 0) : 0;
     }),
     title: 'Points',
     explain: 'Weekly points'
@@ -382,7 +387,6 @@ function unitsChartFor(name, tf){
   }
   const daily = tf.id === 'this_week' || tf.id === 'last_week';
   const month = tf.id === 'this_month' || tf.id === 'last_month';
-  const today = chartTodayHkt();
   const map = {};
   ((DATA.daily && DATA.daily[name]) || []).forEach(r => { map[r.date] = r.units || 0; });
   if(daily){
@@ -390,7 +394,7 @@ function unitsChartFor(name, tf){
     return {
       grain: 'day',
       labels: dates.map(dayLabel),
-      data: dates.map(d => dailyChartPoint(map, d, today)),
+      data: dates.map(d => dailyChartPoint(map, d)),
       title: 'Units',
       explain: 'Daily units'
     };
@@ -400,7 +404,7 @@ function unitsChartFor(name, tf){
     return {
       grain: 'day',
       labels: dates.map(dayLabel),
-      data: dates.map(d => dailyChartPoint(map, d, today)),
+      data: dates.map(d => dailyChartPoint(map, d)),
       title: 'Units',
       explain: 'Daily units'
     };
@@ -411,7 +415,7 @@ function unitsChartFor(name, tf){
     labels: keys.map(weekLabelFor),
     data: keys.map(w => {
       const r = (DATA.technicians[name].weeks || []).find(x => x.week === w);
-      return r ? (r.totalUnits || 0) : null;
+      return r ? (r.totalUnits || 0) : 0;
     }),
     title: 'Units',
     explain: 'Weekly units'
@@ -510,11 +514,11 @@ function periodTechStats(name, tf){
 }
 
 function resolveTimeframe(id){
+  const thisMon = thisWeekMonday();
+  const lastMon = addDaysIso(thisMon, -7);
   const keys = earnedWeekKeys();
-  if(!keys.length) return { id, label: 'No data', weeks: [] };
-  const latest = keys[keys.length - 1];
-  const prev = keys.length > 1 ? keys[keys.length - 2] : null;
-  const thisMonth = (earnedCutoff() || latest || '').slice(0, 7);
+  const latest = keys.length ? keys[keys.length - 1] : thisMon;
+  const thisMonth = (chartTodayHkt() || latest || '').slice(0, 7);
   const lastMonth = shiftMonth(thisMonth, -1);
   const thisQ = weekQuarter(latest);
   const lastQ = shiftQuarter(thisQ, -1);
@@ -523,9 +527,9 @@ function resolveTimeframe(id){
 
   switch(id){
     case 'this_week':
-      return { id, label: 'This week · ' + weekLabelFor(latest), weeks: [latest] };
+      return { id, label: 'This week · ' + weekLabelFor(thisMon), weeks: [thisMon] };
     case 'last_week':
-      return { id, label: prev ? 'Last week · ' + weekLabelFor(prev) : 'Last week', weeks: prev ? [prev] : [] };
+      return { id, label: 'Last week · ' + weekLabelFor(lastMon), weeks: [lastMon] };
     case 'last_4':
       return { id, label: 'Last 4 weeks', weeks: keys.slice(-4) };
     case 'this_month': {
@@ -544,7 +548,7 @@ function resolveTimeframe(id){
     case 'full':
       return { id, label: 'Year to date', weeks: keys };
     default:
-      return { id: 'this_week', label: 'This week · ' + weekLabelFor(latest), weeks: [latest] };
+      return { id: 'this_week', label: 'This week · ' + weekLabelFor(thisMon), weeks: [thisMon] };
   }
 }
 

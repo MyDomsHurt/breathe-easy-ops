@@ -277,7 +277,57 @@ function periodMixDates(tf){
   });
   return dates;
 }
+function monthShortLabel(ym){
+  const names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const m = parseInt((ym || '').slice(5, 7), 10);
+  return names[m - 1] || ym;
+}
+function monthsInTimeframe(tf){
+  const cap = (earnedCutoff() || '').slice(0, 7);
+  const out = [];
+  function add(ym){
+    if(!ym || (cap && ym > cap)) return;
+    if(out.indexOf(ym) === -1) out.push(ym);
+  }
+  if(tf.id === 'ytd' || tf.id === 'full'){
+    const y = (cap || '2026-01').slice(0, 4);
+    for(let m = 1; m <= 12; m++) add(y + '-' + String(m).padStart(2, '0'));
+    return out.sort();
+  }
+  if(tf.id === 'this_quarter' || tf.id === 'last_quarter'){
+    const keys = tf.weeks || [];
+    if(!keys.length) return [];
+    const q = weekQuarter(keys[0]);
+    if(!q) return [];
+    const parts = q.split('-Q');
+    const y = parts[0];
+    const startM = (parseInt(parts[1], 10) - 1) * 3 + 1;
+    for(let i = 0; i < 3; i++) add(y + '-' + String(startM + i).padStart(2, '0'));
+    return out.sort();
+  }
+  return [];
+}
+function monthlyChartFor(name, field, tf, title){
+  const months = monthsInTimeframe(tf);
+  const totals = {};
+  months.forEach(ym => { totals[ym] = 0; });
+  ((DATA.daily && DATA.daily[name]) || []).forEach(r => {
+    const ym = (r.date || '').slice(0, 7);
+    if(totals[ym] == null) return;
+    totals[ym] += Number(r[field] || 0);
+  });
+  return {
+    grain: 'month',
+    labels: months.map(monthShortLabel),
+    data: months.map(ym => totals[ym] || 0),
+    title: title,
+    explain: 'Monthly ' + title.toLowerCase()
+  };
+}
 function pointsChartFor(name, tf){
+  if(tf.id === 'this_quarter' || tf.id === 'last_quarter' || tf.id === 'ytd' || tf.id === 'full'){
+    return monthlyChartFor(name, 'points', tf, 'Points');
+  }
   const daily = tf.id === 'this_week' || tf.id === 'last_week';
   const month = tf.id === 'this_month' || tf.id === 'last_month';
   const today = earnedCutoff();
@@ -322,6 +372,9 @@ function pointsChartFor(name, tf){
   };
 }
 function unitsChartFor(name, tf){
+  if(tf.id === 'this_quarter' || tf.id === 'last_quarter' || tf.id === 'ytd' || tf.id === 'full'){
+    return monthlyChartFor(name, 'units', tf, 'Units');
+  }
   const daily = tf.id === 'this_week' || tf.id === 'last_week';
   const month = tf.id === 'this_month' || tf.id === 'last_month';
   const today = earnedCutoff();

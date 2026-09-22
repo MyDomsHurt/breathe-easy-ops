@@ -410,6 +410,10 @@ main {
   color: #fff;
   border: 1px solid #0f172a;
 }
+.day-section.day-today {
+  border: 2px solid #86efac;
+  box-shadow: 0 0 0 1px #bbf7d0;
+}
 .day-section.day-today .day-header-sticky {
   border-bottom-width: 2px;
 }

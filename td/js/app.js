@@ -7,7 +7,7 @@ let currentFilters = {
   team: 'Matthew',
   type: 'all',
   date: 'all',
-  range: 'today',
+  range: 'this_week',
   day: '',
   search: ''
 };
@@ -538,28 +538,70 @@ function syncHeaderHeight() {
 }
 
 function syncWeekStrip(container, dayCount) {
-  const on = (currentFilters.range === 'this_week' || currentFilters.range === 'next_week') && dayCount > 1;
+  const on = (currentFilters.range === 'this_week' || currentFilters.range === 'next_week') && dayCount > 0;
   if (container) container.classList.toggle('jobs-week-strip', on);
   document.body.classList.toggle('jobs-week-view', on);
   if (on) requestAnimationFrame(syncHeaderHeight);
 }
 
+function scrollDayIntoView(iso) {
+  const container = document.getElementById('jobsContainer');
+  if (!container || !container.classList.contains('jobs-week-strip')) return;
+  const target = container.querySelector('.day-section[data-date="' + iso + '"]');
+  if (!target) return;
+  target.scrollIntoView({ inline: 'start', block: 'nearest' });
+}
+
+function focusedDayISO() {
+  const container = document.getElementById('jobsContainer');
+  if (container && container.classList.contains('jobs-week-strip')) {
+    const cols = container.querySelectorAll('.day-section[data-date]');
+    const left = container.getBoundingClientRect().left;
+    let best = '';
+    let bestDist = Infinity;
+    cols.forEach(function (el) {
+      const dist = Math.abs(el.getBoundingClientRect().left - left);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = el.getAttribute('data-date') || '';
+      }
+    });
+    if (best) return best;
+  }
+  return currentFilters.day || todayISO();
+}
+
+function weekForISO(iso) {
+  const thisB = getRangeBounds('this_week');
+  const nextB = getRangeBounds('next_week');
+  if (iso >= thisB.start && iso <= thisB.end) return 'this_week';
+  if (iso >= nextB.start && iso <= nextB.end) return 'next_week';
+  return '';
+}
+
+function datesInBounds(bounds) {
+  const out = [];
+  if (!bounds || !bounds.start || !bounds.end) return out;
+  for (let d = bounds.start; d <= bounds.end; d = addDaysISO(d, 1)) out.push(d);
+  return out;
+}
+
 function paintRangeButtons(range) {
   const sel = document.getElementById('rangeSelect');
   if (!sel) return;
-  const dayView = range === 'today' || range === 'day';
-  sel.value = dayView ? 'today' : range;
-  const todayOpt = sel.querySelector('option[value="today"]');
-  if (todayOpt) {
-    const iso = selectedDayISO();
-    todayOpt.textContent = (range === 'day' && iso !== todayISO()) ? formatDate(iso) : 'Today';
-  }
+  const week = range === 'next_week' ? 'next_week' : 'this_week';
+  sel.value = week;
 }
 
 function selectRange(range) {
+  if (range !== 'this_week' && range !== 'next_week') range = 'this_week';
   currentFilters.range = range;
   currentFilters.date = 'all';
-  if (range === 'today') currentFilters.day = todayISO();
+  const bounds = getRangeBounds(range);
+  const day = currentFilters.day || todayISO();
+  if (!bounds || day < bounds.start || day > bounds.end) {
+    currentFilters.day = range === 'this_week' ? todayISO() : bounds.start;
+  }
   const dateSelect = document.getElementById('dateSelect');
   if (dateSelect) dateSelect.value = 'all';
   paintRangeButtons(range);
@@ -567,15 +609,20 @@ function selectRange(range) {
 }
 
 function shiftDay(delta) {
-  const fromWeek = currentFilters.range === 'this_week' || currentFilters.range === 'next_week';
-  const base = fromWeek ? todayISO() : selectedDayISO();
-  currentFilters.day = addDaysISO(base, delta);
-  currentFilters.range = currentFilters.day === todayISO() ? 'today' : 'day';
-  currentFilters.date = 'all';
-  const dateSelect = document.getElementById('dateSelect');
-  if (dateSelect) dateSelect.value = 'all';
-  paintRangeButtons(currentFilters.range);
-  applyFilters();
+  const next = addDaysISO(focusedDayISO(), delta);
+  const range = weekForISO(next);
+  if (!range) return;
+  currentFilters.day = next;
+  if (range !== currentFilters.range) {
+    currentFilters.range = range;
+    currentFilters.date = 'all';
+    const dateSelect = document.getElementById('dateSelect');
+    if (dateSelect) dateSelect.value = 'all';
+    paintRangeButtons(range);
+    applyFilters();
+  } else {
+    scrollDayIntoView(next);
+  }
 }
 
 function applyRoleUI() {
@@ -588,7 +635,7 @@ function applyRoleUI() {
   currentFilters.date = 'all';
   currentFilters.search = '';
   currentFilters.type = 'all';
-  currentFilters.range = 'today';
+  currentFilters.range = 'this_week';
   currentFilters.day = todayISO();
   if (!currentFilters.team || currentFilters.team === 'all') currentFilters.team = 'Matthew';
   buildTeamButtons();
@@ -812,7 +859,8 @@ function render() {
   const container = document.getElementById('jobsContainer');
   const empty = document.getElementById('emptyState');
   const crewOnly = visibleCrewNotes();
-  if (filtered.length === 0 && crewOnly.length === 0) {
+  const weekView = currentFilters.range === 'this_week' || currentFilters.range === 'next_week';
+  if (!weekView && filtered.length === 0 && crewOnly.length === 0) {
     container.innerHTML = '';
     empty.classList.remove('hidden');
     const title = document.getElementById('viewTitle');
@@ -821,20 +869,12 @@ function render() {
     const actions = document.getElementById('emptyActions');
     const team = currentFilters.team && currentFilters.team !== 'all' ? currentFilters.team : 'this team';
     let jumps = [];
-    if (currentFilters.range === 'today' || currentFilters.range === 'day') {
-      const iso = selectedDayISO();
-      if (msg) {
-        msg.textContent = iso === todayISO()
-          ? 'No jobs today for ' + team + '.'
-          : 'No jobs on ' + formatDate(iso) + ' for ' + team + '.';
-      }
-      jumps = [['this_week', 'See this week'], ['next_week', 'See next week']];
-    } else if (currentFilters.range === 'next_week') {
+    if (currentFilters.range === 'next_week') {
       if (msg) msg.textContent = 'No jobs next week for ' + team + '.';
-      jumps = [['this_week', 'See this week'], ['today', 'See today']];
+      jumps = [['this_week', 'See this week']];
     } else {
       if (msg) msg.textContent = 'No jobs this week for ' + team + '.';
-      jumps = [['next_week', 'See next week'], ['today', 'See today']];
+      jumps = [['next_week', 'See next week']];
     }
     if (actions) {
       actions.innerHTML = jumps.map(function (pair) {
@@ -905,10 +945,8 @@ function dayWhosOnHtml(jobs, date) {
 
 function renderByDate(container) {
   const groups = groupBy(filtered, j => j.date);
-  const dateSet = {};
-  Object.keys(groups).forEach(function (d) { dateSet[d] = true; });
-  visibleCrewNotes().forEach(function (j) { if (j.date) dateSet[j.date] = true; });
-  const dates = Object.keys(dateSet).sort();
+  const bounds = getRangeBounds(currentFilters.range);
+  const dates = datesInBounds(bounds);
   const gridCls = jobsGridClass();
   const today = todayISO();
   container.innerHTML = dates.map(function (date, i) {
@@ -917,7 +955,7 @@ function renderByDate(container) {
     const kind = date === today ? 'today' : (date === tomorrowISO() ? 'tomorrow' : (date < today ? 'past' : 'upcoming'));
     const stripe = i % 2 === 0 ? 'day-a' : 'day-b';
     const when = dayWhenBadge(date);
-    return '<section class="day-section day-' + kind + ' ' + stripe + '">' +
+    return '<section class="day-section day-' + kind + ' ' + stripe + '" data-date="' + date + '">' +
       '<div class="day-header-sticky' + (when ? ' has-when' : '') + '">' +
         (when ? '<div class="day-when">' + when + '</div>' : '') +
         '<div class="flex items-center justify-between">' +
@@ -932,6 +970,10 @@ function renderByDate(container) {
   }).join('');
   syncWeekStrip(container, dates.length);
   bindCardClicks();
+  requestAnimationFrame(function () {
+    syncHeaderHeight();
+    scrollDayIntoView(currentFilters.day || todayISO());
+  });
 }
 
 function renderByTeam(container) {
@@ -1192,7 +1234,7 @@ function esc(str) {
 window.onAuthReady = function(user) {
   viewMode = 'date';
   currentFilters.team = teamFromEmail(user && user.email);
-  currentFilters.range = 'today';
+  currentFilters.range = 'this_week';
   currentFilters.day = todayISO();
   init();
 };

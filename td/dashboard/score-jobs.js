@@ -449,12 +449,15 @@
       }
       return perTechWeek[lead][week];
     }
-    function addDay(lead, d, points, units, returns){
-      if (!perTechDay[lead][d]) perTechDay[lead][d] = { points: 0, units: 0, returns: 0 };
+    function addDay(lead, d, points, units, returns, types){
+      if (!perTechDay[lead][d]) perTechDay[lead][d] = { points: 0, units: 0, returns: 0, types: emptyUnits() };
       const day = perTechDay[lead][d];
       day.points += points || 0;
       day.units += units || 0;
       day.returns += returns || 0;
+      if (types) {
+        UNIT_TYPES.forEach(k => { day.types[k] += types[k] || 0; });
+      }
     }
 
     (jobs || []).forEach(job => {
@@ -515,7 +518,7 @@
         b.jobs += 1;
         UNIT_TYPES.forEach(k => { b.types[k] += counts[k] || 0; });
       }
-      addDay(lead, d, pts, units, 0);
+      addDay(lead, d, pts, units, 0, counts);
     });
 
     const start = '2026-01-05';
@@ -547,12 +550,17 @@
     const teamReturns = TECH_ORDER.reduce((s, n) => s + technicians[n].totalReturns, 0);
     const daily = {};
     TECH_ORDER.forEach(n => {
-      daily[n] = Object.keys(perTechDay[n]).sort().map(d => ({
-        date: d,
-        points: r2(perTechDay[n][d].points),
-        units: r1(perTechDay[n][d].units),
-        returns: perTechDay[n][d].returns
-      }));
+      daily[n] = Object.keys(perTechDay[n]).sort().map(d => {
+        const row = perTechDay[n][d];
+        const out = {
+          date: d,
+          points: r2(row.points),
+          units: r1(row.units),
+          returns: row.returns
+        };
+        UNIT_TYPES.forEach(k => { out[k] = r1((row.types && row.types[k]) || 0); });
+        return out;
+      });
     });
     return {
       generated: todayIso,

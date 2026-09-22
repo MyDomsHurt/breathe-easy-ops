@@ -48,6 +48,30 @@ function techDayList(name, tf){
   });
 }
 
+const MIX_TYPES = ['S','W','B','C','UC','TV','OU','SwG','EF','PAU'];
+function techMixDates(tf){
+  const weekLike = tf.id === 'this_week' || tf.id === 'last_week';
+  const monthLike = (tf.id === 'this_month' || tf.id === 'last_month') && tf.start && tf.end;
+  if(weekLike && tf.weeks && tf.weeks.length) return periodDayKeys(tf);
+  if(monthLike) return daysInclusive(tf.start, tf.end);
+  const dates = [];
+  (tf.weeks || []).forEach(w => {
+    for(let d = w; d <= addDaysIso(w, 6); d = addDaysIso(d, 1)) dates.push(d);
+  });
+  return dates;
+}
+function techMix(name, tf){
+  const dates = {};
+  techMixDates(tf).forEach(d => { dates[d] = true; });
+  const mix = {};
+  MIX_TYPES.forEach(k => { mix[k] = 0; });
+  ((DATA.daily && DATA.daily[name]) || []).forEach(r => {
+    if(!dates[r.date]) return;
+    MIX_TYPES.forEach(k => { mix[k] += Number(r[k] || 0); });
+  });
+  return mix;
+}
+
 window.renderTechPage = function renderTechPage(name){
   destroyCharts();
   if(!DATA.technicians[name] || techNames().indexOf(name) === -1){
@@ -74,6 +98,13 @@ window.renderTechPage = function renderTechPage(name){
     ? techWorkedDayCount(name, winStart, winEnd)
     : (period.days || 0);
   const unitsDay = daysWorked ? Math.round((period.units / daysWorked) * 100) / 100 : 0;
+  const mix = techMix(name, tf);
+  const mixChips = MIX_TYPES.filter(k => mix[k] > 0).map(k =>
+    `<div class="unit-chip"><div class="ut">${k}</div><div class="uv">${fmtUnits(mix[k])}</div></div>`
+  ).join('');
+  const mixHtml = mixChips
+    ? `<div class="unit-chips" style="margin:0 0 20px">${mixChips}</div>`
+    : '';
   const tableRows = dayList.map(r =>
     `<tr>
       <td>${r.label}</td>
@@ -109,6 +140,7 @@ window.renderTechPage = function renderTechPage(name){
         </div>
       </div>
     </section>
+    ${mixHtml}
     <div class="section">
       <div class="section-title">Units</div>
       <div class="chart-grid">

@@ -595,8 +595,9 @@
   global.BEScoreJobIsCrew = isCrew;
   global.BEScoreJobDate = jobDate;
   global.BEScoreJobUnits = function (job) {
-    if (isReturn(job)) return { isReturn: true, counts: emptyUnits(), total: 0 };
+    if (isReturn(job)) return { isReturn: true, counts: emptyUnits(), total: 0, points: 0 };
     const u = unitsFromJob(job);
-    return { isReturn: false, counts: u[0], total: totalUnits(u[0]), sure: u[1] };
+    const counts = u[0];
+    return { isReturn: false, counts: counts, total: totalUnits(counts), points: pointsFor(counts), sure: u[1] };
   };
 })(typeof window !== 'undefined' ? window : this);

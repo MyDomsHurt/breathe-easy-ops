@@ -104,6 +104,13 @@ function techHEsc(s){
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 }
+function fmtPanelMetric(n){
+  return isUnitsView() ? fmtUnits(n || 0) : fmt(n || 0, 1);
+}
+function jobPanelMetric(scored){
+  if(isUnitsView()) return Number(scored && scored.total || 0);
+  return Number(scored && scored.points || 0);
+}
 function techUnitCodesLine(counts, total){
   const bits = [];
   MIX_TYPES.forEach(k => {
@@ -111,7 +118,7 @@ function techUnitCodesLine(counts, total){
     if(!n) return;
     bits.push((Math.round(n * 10) / 10) + k);
   });
-  const tot = fmtUnits(total || 0);
+  const tot = fmtPanelMetric(total);
   if(!bits.length) return tot;
   return bits.join(' ') + ' and ' + tot;
 }
@@ -147,8 +154,9 @@ function listLeadDayJobs(name, iso){
 function scoredJobUnits(job){
   return typeof window.BEScoreJobUnits === 'function'
     ? window.BEScoreJobUnits(job)
-    : { isReturn: false, counts: {}, total: 0 };
+    : { isReturn: false, counts: {}, total: 0, points: 0 };
 }
+let techPanelSel = null;
 function techChartIndex(chart, evt, n){
   let idx = null;
   const els = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: false, axis: 'x' }, true);
@@ -175,6 +183,7 @@ function paintTechDayPoints(chart, selectedIdx, color){
   chart.update('none');
 }
 function clearTechDaySelect(chart, color){
+  techPanelSel = null;
   if(chart) chart.$techDayIdx = null;
   paintTechDayPoints(chart, -1, color);
   const el = document.getElementById('p-day-jobs');
@@ -197,14 +206,15 @@ function showTechDayJobs(name, iso, onClose){
     return;
   }
   const head = techDayHeadDate(iso);
-  let unitSum = 0;
+  let metricSum = 0;
   const body = jobs.map(j => {
     const scored = scoredJobUnits(j);
-    unitSum += Number(scored.total || 0);
+    const metric = jobPanelMetric(scored);
+    metricSum += metric;
     const ret = scored.isReturn ? 'Return' : '';
     return `<tr>
       <td>${techHEsc(techJobTimeLabel(j))}</td>
-      <td>${techHEsc(techUnitCodesLine(scored.counts, scored.total))}</td>
+      <td>${techHEsc(techUnitCodesLine(scored.counts, metric))}</td>
       <td class="ret">${ret}</td>
     </tr>`;
   }).join('');
@@ -212,7 +222,7 @@ function showTechDayJobs(name, iso, onClose){
   el.hidden = false;
   el.innerHTML = `
     <div class="tech-day-jobs-head">
-      <div class="tech-day-jobs-title">${techHEsc(head)} \u00b7 ${jobs.length} ${jobWord} \u00b7 ${fmtUnits(unitSum)}</div>
+      <div class="tech-day-jobs-title">${techHEsc(head)} \u00b7 ${jobs.length} ${jobWord} \u00b7 ${fmtPanelMetric(metricSum)}</div>
       <button type="button" class="tech-day-jobs-close" id="p-day-jobs-close">Close</button>
     </div>
     ${jobs.length
@@ -232,46 +242,49 @@ function showTechSpanDays(name, start, end, headLabel, onClose){
     return;
   }
   const byDay = {};
-  let unitSum = 0;
+  let metricSum = 0;
   jobs.forEach(j => {
     const d = typeof window.BEScoreJobDate === 'function' ? window.BEScoreJobDate(j) : String(j.date || '');
     if(!d) return;
-    if(!byDay[d]) byDay[d] = { n: 0, units: 0 };
+    if(!byDay[d]) byDay[d] = { n: 0, metric: 0 };
     const scored = scoredJobUnits(j);
+    const metric = jobPanelMetric(scored);
     byDay[d].n += 1;
-    byDay[d].units += Number(scored.total || 0);
-    unitSum += Number(scored.total || 0);
+    byDay[d].metric += metric;
+    metricSum += metric;
   });
   const dayRows = [];
   for(let d = start; d <= end; d = addDaysIso(d, 1)){
     const row = byDay[d];
     if(!row) continue;
-    dayRows.push({ date: d, n: row.n, units: row.units });
+    dayRows.push({ date: d, n: row.n, metric: row.metric });
   }
   const jobWord = jobs.length === 1 ? 'job' : 'jobs';
   const body = dayRows.map(r =>
     `<tr data-day="${techHEsc(r.date)}">
       <td>${techHEsc(dayLabel(r.date))}</td>
       <td class="num">${fmt(r.n)}</td>
-      <td class="num">${fmtUnits(r.units)}</td>
+      <td class="num">${fmtPanelMetric(r.metric)}</td>
     </tr>`
   ).join('');
   el.hidden = false;
   el.innerHTML = `
     <div class="tech-day-jobs-head">
-      <div class="tech-day-jobs-title">${techHEsc(headLabel)} \u00b7 ${jobs.length} ${jobWord} \u00b7 ${fmtUnits(unitSum)}</div>
+      <div class="tech-day-jobs-title">${techHEsc(headLabel)} \u00b7 ${jobs.length} ${jobWord} \u00b7 ${fmtPanelMetric(metricSum)}</div>
       <button type="button" class="tech-day-jobs-close" id="p-day-jobs-close">Close</button>
     </div>
     ${dayRows.length
       ? `<div class="table-wrap"><table>
-          <thead><tr><th>Day</th><th class="num">Jobs</th><th class="num">Units</th></tr></thead>
+          <thead><tr><th>Day</th><th class="num">Jobs</th><th class="num">${metricLabel()}</th></tr></thead>
           <tbody>${body}</tbody>
         </table></div>`
       : '<p class="tech-day-jobs-empty">Nothing booked.</p>'}`;
   bindTechPanelClose(onClose);
   el.querySelectorAll('tr[data-day]').forEach(function (tr) {
     tr.addEventListener('click', function () {
-      showTechDayJobs(name, tr.getAttribute('data-day'), onClose);
+      const day = tr.getAttribute('data-day');
+      if(techPanelSel) techPanelSel.drillDay = day;
+      showTechDayJobs(name, day, onClose);
     });
   });
 }
@@ -293,6 +306,7 @@ function onTechDayChartClick(chart, evt, name, dates, color){
   }
   chart.$techDayIdx = idx;
   paintTechDayPoints(chart, idx, color);
+  techPanelSel = { name: name, kind: 'day', key: dates[idx] };
   showTechDayJobs(name, dates[idx], function () { clearTechDaySelect(chart, color); });
 }
 function onTechWeekChartClick(chart, evt, name, weeks, color){
@@ -305,6 +319,7 @@ function onTechWeekChartClick(chart, evt, name, weeks, color){
   }
   chart.$techDayIdx = idx;
   paintTechDayPoints(chart, idx, color);
+  techPanelSel = { name: name, kind: 'week', key: weeks[idx] };
   showTechWeekDays(name, weeks[idx], function () { clearTechDaySelect(chart, color); });
 }
 function onTechMonthChartClick(chart, evt, name, months, color){
@@ -317,7 +332,38 @@ function onTechMonthChartClick(chart, evt, name, months, color){
   }
   chart.$techDayIdx = idx;
   paintTechDayPoints(chart, idx, color);
+  techPanelSel = { name: name, kind: 'month', key: months[idx] };
   showTechMonthDays(name, months[idx], function () { clearTechDaySelect(chart, color); });
+}
+function reopenTechPanel(name, chart, color, dayDates, weekKeys, monthKeys){
+  const sel = techPanelSel;
+  if(!sel || sel.name !== name || !chart) return;
+  const onClose = function () { clearTechDaySelect(chart, color); };
+  if(sel.kind === 'day'){
+    const idx = dayDates.indexOf(sel.key);
+    if(idx < 0){ techPanelSel = null; return; }
+    chart.$techDayIdx = idx;
+    paintTechDayPoints(chart, idx, color);
+    showTechDayJobs(name, sel.key, onClose);
+    return;
+  }
+  if(sel.kind === 'week'){
+    const idx = weekKeys.indexOf(sel.key);
+    if(idx < 0){ techPanelSel = null; return; }
+    chart.$techDayIdx = idx;
+    paintTechDayPoints(chart, idx, color);
+    if(sel.drillDay) showTechDayJobs(name, sel.drillDay, onClose);
+    else showTechWeekDays(name, sel.key, onClose);
+    return;
+  }
+  if(sel.kind === 'month'){
+    const idx = monthKeys.indexOf(sel.key);
+    if(idx < 0){ techPanelSel = null; return; }
+    chart.$techDayIdx = idx;
+    paintTechDayPoints(chart, idx, color);
+    if(sel.drillDay) showTechDayJobs(name, sel.drillDay, onClose);
+    else showTechMonthDays(name, sel.key, onClose);
+  }
 }
 function techMixDates(tf){
   const weekLike = tf.id === 'this_week' || tf.id === 'last_week';
@@ -519,7 +565,7 @@ window.renderTechPage = function renderTechPage(name){
           ? function (evt, _els, ch) { onTechMonthChartClick(ch || this, evt, name, monthKeys, color); }
           : undefined))
   });
-  charts.push(new Chart(document.getElementById('p-pace'), {
+  const paceChart = new Chart(document.getElementById('p-pace'), {
     type: 'line',
     data: {
       labels: chart.labels,
@@ -535,5 +581,7 @@ window.renderTechPage = function renderTechPage(name){
       }]
     },
     options: lineOpts
-  }));
+  });
+  charts.push(paceChart);
+  reopenTechPanel(name, paceChart, color, dayDates, weekKeys, monthKeys);
 };

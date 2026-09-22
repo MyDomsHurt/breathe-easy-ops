@@ -324,13 +324,24 @@ function monthlyChartFor(name, field, tf, title){
     explain: 'Monthly ' + title.toLowerCase()
   };
 }
+function chartTodayHkt(){
+  if(typeof window.BEScoreHktToday === 'function') return window.BEScoreHktToday();
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Hong_Kong', year: 'numeric', month: '2-digit', day: '2-digit'
+  }).format(new Date());
+}
+function dailyChartPoint(map, d, today){
+  const n = Number(map[d] || 0);
+  if(today && d > today) return n ? n : null;
+  return n;
+}
 function pointsChartFor(name, tf){
   if(tf.id === 'this_quarter' || tf.id === 'last_quarter' || tf.id === 'ytd' || tf.id === 'full'){
     return monthlyChartFor(name, 'points', tf, 'Points');
   }
   const daily = tf.id === 'this_week' || tf.id === 'last_week';
   const month = tf.id === 'this_month' || tf.id === 'last_month';
-  const today = earnedCutoff();
+  const today = chartTodayHkt();
   const map = {};
   ((DATA.daily && DATA.daily[name]) || []).forEach(r => { map[r.date] = r.points || 0; });
   if(daily){
@@ -338,10 +349,7 @@ function pointsChartFor(name, tf){
     return {
       grain: 'day',
       labels: dates.map(dayLabel),
-      data: dates.map(d => {
-        if(tf.id === 'this_week' && today && d > today) return map[d] ? map[d] : null;
-        return map[d] || 0;
-      }),
+      data: dates.map(d => dailyChartPoint(map, d, today)),
       title: 'Points',
       explain: 'Daily points'
     };
@@ -351,10 +359,7 @@ function pointsChartFor(name, tf){
     return {
       grain: 'day',
       labels: dates.map(dayLabel),
-      data: dates.map(d => {
-        if(today && d > today) return map[d] ? map[d] : null;
-        return map[d] || 0;
-      }),
+      data: dates.map(d => dailyChartPoint(map, d, today)),
       title: 'Points',
       explain: 'Daily points'
     };
@@ -377,7 +382,7 @@ function unitsChartFor(name, tf){
   }
   const daily = tf.id === 'this_week' || tf.id === 'last_week';
   const month = tf.id === 'this_month' || tf.id === 'last_month';
-  const today = earnedCutoff();
+  const today = chartTodayHkt();
   const map = {};
   ((DATA.daily && DATA.daily[name]) || []).forEach(r => { map[r.date] = r.units || 0; });
   if(daily){
@@ -385,10 +390,7 @@ function unitsChartFor(name, tf){
     return {
       grain: 'day',
       labels: dates.map(dayLabel),
-      data: dates.map(d => {
-        if(tf.id === 'this_week' && today && d > today) return map[d] ? map[d] : null;
-        return map[d] || 0;
-      }),
+      data: dates.map(d => dailyChartPoint(map, d, today)),
       title: 'Units',
       explain: 'Daily units'
     };
@@ -398,10 +400,7 @@ function unitsChartFor(name, tf){
     return {
       grain: 'day',
       labels: dates.map(dayLabel),
-      data: dates.map(d => {
-        if(today && d > today) return map[d] ? map[d] : null;
-        return map[d] || 0;
-      }),
+      data: dates.map(d => dailyChartPoint(map, d, today)),
       title: 'Units',
       explain: 'Daily units'
     };

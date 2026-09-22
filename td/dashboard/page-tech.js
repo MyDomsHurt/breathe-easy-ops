@@ -222,11 +222,10 @@ function showTechDayJobs(name, iso, onClose){
       : '<p class="tech-day-jobs-empty">Nothing booked.</p>'}`;
   bindTechPanelClose(onClose);
 }
-function showTechWeekDays(name, monday, onClose){
+function showTechSpanDays(name, start, end, headLabel, onClose){
   const el = document.getElementById('p-day-jobs');
   if(!el) return;
-  const sunday = addDaysIso(monday, 6);
-  const jobs = listLeadJobsInRange(name, monday, sunday);
+  const jobs = listLeadJobsInRange(name, start, end);
   if(jobs == null){
     el.hidden = true;
     el.innerHTML = '';
@@ -244,13 +243,12 @@ function showTechWeekDays(name, monday, onClose){
     unitSum += Number(scored.total || 0);
   });
   const dayRows = [];
-  for(let d = monday; d <= sunday; d = addDaysIso(d, 1)){
+  for(let d = start; d <= end; d = addDaysIso(d, 1)){
     const row = byDay[d];
     if(!row) continue;
     dayRows.push({ date: d, n: row.n, units: row.units });
   }
   const jobWord = jobs.length === 1 ? 'job' : 'jobs';
-  const weekLab = weekLabelFor(monday);
   const body = dayRows.map(r =>
     `<tr data-day="${techHEsc(r.date)}">
       <td>${techHEsc(dayLabel(r.date))}</td>
@@ -261,7 +259,7 @@ function showTechWeekDays(name, monday, onClose){
   el.hidden = false;
   el.innerHTML = `
     <div class="tech-day-jobs-head">
-      <div class="tech-day-jobs-title">${techHEsc(weekLab)} \u00b7 ${jobs.length} ${jobWord} \u00b7 ${fmtUnits(unitSum)}</div>
+      <div class="tech-day-jobs-title">${techHEsc(headLabel)} \u00b7 ${jobs.length} ${jobWord} \u00b7 ${fmtUnits(unitSum)}</div>
       <button type="button" class="tech-day-jobs-close" id="p-day-jobs-close">Close</button>
     </div>
     ${dayRows.length
@@ -276,6 +274,14 @@ function showTechWeekDays(name, monday, onClose){
       showTechDayJobs(name, tr.getAttribute('data-day'), onClose);
     });
   });
+}
+function showTechWeekDays(name, monday, onClose){
+  showTechSpanDays(name, monday, addDaysIso(monday, 6), weekLabelFor(monday), onClose);
+}
+function showTechMonthDays(name, ym, onClose){
+  const b = monthBounds(ym);
+  if(!b) return;
+  showTechSpanDays(name, b.start, b.end, monthLabel(ym), onClose);
 }
 function onTechDayChartClick(chart, evt, name, dates, color){
   if(!window.BEJobStore || typeof window.BEJobStore.listJobs !== 'function') return;
@@ -300,6 +306,18 @@ function onTechWeekChartClick(chart, evt, name, weeks, color){
   chart.$techDayIdx = idx;
   paintTechDayPoints(chart, idx, color);
   showTechWeekDays(name, weeks[idx], function () { clearTechDaySelect(chart, color); });
+}
+function onTechMonthChartClick(chart, evt, name, months, color){
+  if(!window.BEJobStore || typeof window.BEJobStore.listJobs !== 'function') return;
+  const idx = techChartIndex(chart, evt, months.length);
+  if(idx == null) return;
+  if(chart.$techDayIdx === idx){
+    clearTechDaySelect(chart, color);
+    return;
+  }
+  chart.$techDayIdx = idx;
+  paintTechDayPoints(chart, idx, color);
+  showTechMonthDays(name, months[idx], function () { clearTechDaySelect(chart, color); });
 }
 function techMixDates(tf){
   const weekLike = tf.id === 'this_week' || tf.id === 'last_week';
@@ -484,7 +502,10 @@ window.renderTechPage = function renderTechPage(name){
   const dayTap = dayDates.length === chart.labels.length && dayDates.length > 0;
   const weekKeys = (tf.id === 'last_4' && chart.grain === 'week') ? (tf.weeks || []) : [];
   const weekTap = weekKeys.length === chart.labels.length && weekKeys.length > 0;
-  const canTap = dayTap || weekTap;
+  const monthTf = tf.id === 'this_quarter' || tf.id === 'last_quarter' || tf.id === 'ytd';
+  const monthKeys = (monthTf && chart.grain === 'month') ? monthsInTimeframe(tf) : [];
+  const monthTap = monthKeys.length === chart.labels.length && monthKeys.length > 0;
+  const canTap = dayTap || weekTap || monthTap;
   const baseOpts = lineChartOptions();
   const lineOpts = Object.assign({}, baseOpts, {
     interaction: canTap
@@ -494,7 +515,9 @@ window.renderTechPage = function renderTechPage(name){
       ? function (evt, _els, ch) { onTechDayChartClick(ch || this, evt, name, dayDates, color); }
       : (weekTap
         ? function (evt, _els, ch) { onTechWeekChartClick(ch || this, evt, name, weekKeys, color); }
-        : undefined)
+        : (monthTap
+          ? function (evt, _els, ch) { onTechMonthChartClick(ch || this, evt, name, monthKeys, color); }
+          : undefined))
   });
   charts.push(new Chart(document.getElementById('p-pace'), {
     type: 'line',

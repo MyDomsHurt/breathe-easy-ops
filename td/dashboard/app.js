@@ -243,8 +243,9 @@ function calendarSpanLabel(start, end){
 function periodRangeLabel(weeks, id, tf){
   if(tf && tf.start && tf.end) return calendarSpanLabel(tf.start, tf.end);
   if(!weeks || !weeks.length) return 'No data in this period';
-  if(id === 'this_week'){
-    return 'Monday through today · ' + weekSpanLabel(weeks[0]);
+  if(id === 'this_week' || id === 'last_week'){
+    const mon = weeks[0];
+    return 'Monday through Sunday · ' + calendarSpanLabel(mon, addDaysIso(mon, 6));
   }
   const firstSpan = weekSpanLabel(weeks[0]);
   const lastSpan = weekSpanLabel(weeks[weeks.length - 1]);
@@ -305,7 +306,7 @@ function unitsChartFor(name, tf){
       grain: 'day',
       labels: dates.map(dayLabel),
       data: dates.map(d => {
-        if(tf.id === 'this_week' && today && d > today) return null;
+        if(tf.id === 'this_week' && today && d > today) return map[d] ? map[d] : null;
         return map[d] || 0;
       }),
       title: 'Units',
@@ -412,6 +413,10 @@ function statsFromDaily(name, start, end){
 function periodTechStats(name, tf){
   if((tf.id === 'this_month' || tf.id === 'last_month') && tf.start && tf.end){
     return statsFromDaily(name, tf.start, tf.end);
+  }
+  if((tf.id === 'this_week' || tf.id === 'last_week') && tf.weeks && tf.weeks.length){
+    const mon = tf.weeks[0];
+    return statsFromDaily(name, mon, addDaysIso(mon, 6));
   }
   if(!tf.weeks || !tf.weeks.length) return emptyWindowStats();
   return techWindowStats(name, tf.weeks);

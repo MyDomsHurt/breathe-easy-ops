@@ -88,16 +88,25 @@ window.renderTeamPage = function renderTeamPage(){
     return n;
   }
   const typePies = TYPE_KEYS.map(type => {
-    const counts = names.map(n => ({ name: n, count: leadTypeCount(n, type) }));
-    const crew = counts.reduce((s, c) => s + c.count, 0);
-    return { type, crew, counts };
+    const w = isUnitsView() ? 1 : TYPE_W[type];
+    const slices = names.map(n => {
+      const count = leadTypeCount(n, type);
+      return { name: n, value: count * w };
+    }).filter(s => s.value > 0);
+    const crew = slices.reduce((s, c) => s + c.value, 0);
+    return { type, crew, slices };
   }).filter(p => p.crew > 0);
+  function shareLabel(name, value, crew){
+    const pct = crew ? Math.round((value / crew) * 100) : 0;
+    const val = isUnitsView() ? fmtUnits(value) : fmt(value, 1);
+    return name + ' · ' + val + ' · ' + pct + '%';
+  }
   const pieGrid = typePies.length ? `
     <div class="section">
       <div class="section-title">Type mix</div>
       <div class="chart-grid">${typePies.map(p => `
         <div class="chart-card">
-          <h3>${p.type} · ${fmtUnits(p.crew)}</h3>
+          <h3>${p.type} · ${isUnitsView() ? fmtUnits(p.crew) : fmt(p.crew, 1)}</h3>
           <div class="chart-wrap team-type-pie-wrap"><canvas id="t-mix-${p.type}"></canvas></div>
         </div>`).join('')}
       </div>
@@ -141,19 +150,25 @@ window.renderTeamPage = function renderTeamPage(){
   typePies.forEach(p => {
     const el = document.getElementById('t-mix-' + p.type);
     if(!el) return;
-    const values = p.counts.map(c => isUnitsView() ? c.count : c.count * TYPE_W[p.type]);
     charts.push(new Chart(el, {
       type: 'pie',
       data: {
-        labels: p.counts.map(c => c.name + ' · ' + fmtUnits(c.count)),
+        labels: p.slices.map(s => shareLabel(s.name, s.value, p.crew)),
         datasets: [{
-          data: values,
-          backgroundColor: p.counts.map(c => TECH_COLORS[c.name] || '#8aa0b8')
+          data: p.slices.map(s => s.value),
+          backgroundColor: p.slices.map(s => TECH_COLORS[s.name] || '#8aa0b8')
         }]
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 10 } } }
+        plugins: {
+          legend: { position: 'bottom', labels: { boxWidth: 10, padding: 10 } },
+          tooltip: {
+            callbacks: {
+              label: function(ctx){ return ctx.label || ''; }
+            }
+          }
+        }
       }
     }));
   });

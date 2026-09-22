@@ -1,7 +1,53 @@
 /* Personal page (#/tech/{Name})
- * This-week strip first, then units/day and points/day for that person.
- * Last 8 earned weeks, weekly pace. Josh is not on the board.
+ * Units, units/day on worked days, returns, days worked.
+ * Chart + day/week list for the selected period. Josh is not on the board.
  */
+function techDailyMap(name){
+  const map = {};
+  ((DATA.daily && DATA.daily[name]) || []).forEach(r => { map[r.date] = r; });
+  return map;
+}
+function techWorkedDayCount(name, start, end){
+  return ((DATA.daily && DATA.daily[name]) || []).filter(r =>
+    r.date >= start && r.date <= end && ((r.units || 0) || (r.returns || 0))
+  ).length;
+}
+function techDayList(name, tf){
+  const today = earnedCutoff();
+  const map = techDailyMap(name);
+  const weekLike = tf.id === 'this_week' || tf.id === 'last_week';
+  const monthLike = (tf.id === 'this_month' || tf.id === 'last_month') && tf.start && tf.end;
+  function dayRow(d){
+    const r = map[d];
+    const future = today && d > today;
+    const booked = r && ((r.units || 0) || (r.returns || 0) || (r.points || 0));
+    return {
+      label: dayLabel(d),
+      units: r ? (r.units || 0) : 0,
+      returns: r ? (r.returns || 0) : 0,
+      blank: !!(future && !booked)
+    };
+  }
+  if(weekLike && tf.weeks && tf.weeks.length){
+    return periodDayKeys(tf).map(dayRow);
+  }
+  if(monthLike){
+    return daysInclusive(tf.start, tf.end).map(dayRow);
+  }
+  return (tf.weeks || []).map(w => {
+    const row = (DATA.technicians[name].weeks || []).find(x => x.week === w);
+    const future = today && addDaysIso(w, 6) > today && w > today;
+    const units = row ? (row.totalUnits || 0) : 0;
+    const returns = row ? (row.returns || 0) : 0;
+    return {
+      label: weekLabelFor(w),
+      units: units,
+      returns: returns,
+      blank: !!(future && !units && !returns)
+    };
+  });
+}
+
 window.renderTechPage = function renderTechPage(name){
   destroyCharts();
   if(!DATA.technicians[name] || techNames().indexOf(name) === -1){
@@ -14,6 +60,27 @@ window.renderTechPage = function renderTechPage(name){
   const copy = periodStripCopy(tf);
   const period = periodTechStats(name, tf);
   const chart = unitsChartFor(name, tf);
+  const dayList = techDayList(name, tf);
+  let winStart = null;
+  let winEnd = null;
+  if(tf.start && tf.end){
+    winStart = tf.start;
+    winEnd = tf.end;
+  } else if(tf.weeks && tf.weeks.length){
+    winStart = tf.weeks[0];
+    winEnd = addDaysIso(tf.weeks[tf.weeks.length - 1], 6);
+  }
+  const daysWorked = (winStart && winEnd)
+    ? techWorkedDayCount(name, winStart, winEnd)
+    : (period.days || 0);
+  const unitsDay = daysWorked ? Math.round((period.units / daysWorked) * 100) / 100 : 0;
+  const tableRows = dayList.map(r =>
+    `<tr>
+      <td>${r.label}</td>
+      <td class="num">${r.blank ? '' : fmtUnits(r.units)}</td>
+      <td class="num">${r.blank ? '' : fmt(r.returns)}</td>
+    </tr>`
+  ).join('');
 
   document.getElementById('app').innerHTML = `
     <div class="page-header">
@@ -30,11 +97,15 @@ window.renderTechPage = function renderTechPage(name){
         </div>
         <div class="this-week-stat">
           <div class="label">Units / day</div>
-          <div class="value">${fmt(period.unitsDay, 2)}</div>
+          <div class="value">${fmt(unitsDay, 2)}</div>
         </div>
         <div class="this-week-stat">
           <div class="label">Returns</div>
           <div class="value">${fmt(period.returns)}</div>
+        </div>
+        <div class="this-week-stat">
+          <div class="label">Days worked</div>
+          <div class="value">${fmt(daysWorked)}</div>
         </div>
       </div>
     </section>
@@ -47,6 +118,13 @@ window.renderTechPage = function renderTechPage(name){
           <div class="chart-wrap"><canvas id="p-pace"></canvas></div>
         </div>
       </div>
+    </div>
+    <div class="section">
+      <div class="section-title">Days</div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Date</th><th class="num">Units</th><th class="num">Returns</th></tr></thead>
+        <tbody>${tableRows}</tbody>
+      </table></div>
     </div>`;
 
   if(!chart.labels.length) return;

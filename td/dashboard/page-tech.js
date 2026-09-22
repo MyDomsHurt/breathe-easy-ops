@@ -12,8 +12,8 @@ window.renderTechPage = function renderTechPage(name){
   const color = TECH_COLORS[name] || '#1481c3';
   const tf = resolveTimeframe(TIMEFRAME);
   const copy = periodStripCopy(tf);
-  const period = tf.weeks.length ? techWindowStats(name, tf.weeks) : emptyWindowStats();
-  const chart = pointsChartFor(name, tf);
+  const period = periodTechStats(name, tf);
+  const chart = unitsChartFor(name, tf);
 
   document.getElementById('app').innerHTML = `
     <div class="page-header">
@@ -25,12 +25,12 @@ window.renderTechPage = function renderTechPage(name){
       <p class="this-week-range">${copy.range}</p>
       <div class="this-week-stats">
         <div class="this-week-stat">
-          <div class="label">Pts / day</div>
-          <div class="value">${fmt(period.pointsDay, 2)}</div>
+          <div class="label">Units</div>
+          <div class="value">${fmtUnits(period.units)}</div>
         </div>
         <div class="this-week-stat">
-          <div class="label">Points</div>
-          <div class="value">${fmt(period.points, 1)}</div>
+          <div class="label">Units / day</div>
+          <div class="value">${fmt(period.unitsDay, 2)}</div>
         </div>
         <div class="this-week-stat">
           <div class="label">Returns</div>
@@ -39,10 +39,10 @@ window.renderTechPage = function renderTechPage(name){
       </div>
     </section>
     <div class="section">
-      <div class="section-title">Points</div>
+      <div class="section-title">Units</div>
       <div class="chart-grid">
         <div class="chart-card full">
-          <h3>Points</h3>
+          <h3>Units</h3>
           <p class="chart-explain">${name} only · ${chart.explain}.</p>
           <div class="chart-wrap"><canvas id="p-pace"></canvas></div>
         </div>

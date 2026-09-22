@@ -42,12 +42,16 @@ function emptyWindowStats(){
 }
 
 function periodStripCopy(tf){
-  if(!tf || !tf.weeks || !tf.weeks.length){
-    return { kicker: (tf && tf.label) || 'Period', range: 'No data in this period' };
+  if(!tf) return { kicker: 'Period', range: 'No data in this period' };
+  if(tf.start && tf.end){
+    return { kicker: tf.label, range: calendarSpanLabel(tf.start, tf.end) };
+  }
+  if(!tf.weeks || !tf.weeks.length){
+    return { kicker: tf.label || 'Period', range: 'No data in this period' };
   }
   return {
     kicker: tf.id === 'this_week' ? 'This week' : tf.label,
-    range: periodRangeLabel(tf.weeks, tf.id)
+    range: periodRangeLabel(tf.weeks, tf.id, tf)
   };
 }
 
@@ -58,7 +62,7 @@ window.renderTeamPage = function renderTeamPage(){
   const copy = periodStripCopy(tf);
   const empty = emptyWindowStats();
   const names = TECH_ORDER.filter(n => techNames().indexOf(n) !== -1);
-  const cards = names.map(n => tf.weeks.length ? techWindowStats(n, tf.weeks) : empty);
+  const cards = names.map(n => periodTechStats(n, tf));
   const chartSeries = names.map(n => ({ name: n, chart: unitsChartFor(n, tf) }));
   const chartLabels = chartSeries[0] ? chartSeries[0].chart.labels : [];
   const grain = chartSeries[0] ? chartSeries[0].chart.explain : 'Units';

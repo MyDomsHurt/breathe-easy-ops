@@ -216,7 +216,32 @@ function dayLabel(iso){
 function lastEightWeekKeys(){
   return earnedWeekKeys().slice(-8);
 }
-function periodRangeLabel(weeks, id){
+function monthBounds(ym){
+  const [y, m] = (ym || '').split('-').map(Number);
+  if(!y || !m) return null;
+  const last = new Date(y, m, 0).getDate();
+  return {
+    start: ym + '-01',
+    end: ym + '-' + String(last).padStart(2, '0')
+  };
+}
+function daysInclusive(start, end){
+  if(!start || !end || start > end) return [];
+  const out = [];
+  for(let d = start; d <= end; d = addDaysIso(d, 1)) out.push(d);
+  return out;
+}
+function calendarSpanLabel(start, end){
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function bit(iso){
+    const p = (iso || '').split('-').map(Number);
+    if(p.length < 3) return iso || '';
+    return p[2] + ' ' + months[p[1] - 1];
+  }
+  return bit(start) + ' – ' + bit(end);
+}
+function periodRangeLabel(weeks, id, tf){
+  if(tf && tf.start && tf.end) return calendarSpanLabel(tf.start, tf.end);
   if(!weeks || !weeks.length) return 'No data in this period';
   if(id === 'this_week'){
     return 'Monday through today · ' + weekSpanLabel(weeks[0]);
@@ -270,16 +295,30 @@ function pointsChartFor(name, tf){
 }
 function unitsChartFor(name, tf){
   const daily = tf.id === 'this_week' || tf.id === 'last_week';
+  const month = tf.id === 'this_month' || tf.id === 'last_month';
+  const today = earnedCutoff();
+  const map = {};
+  ((DATA.daily && DATA.daily[name]) || []).forEach(r => { map[r.date] = r.units || 0; });
   if(daily){
     const dates = periodDayKeys(tf);
-    const today = earnedCutoff();
-    const map = {};
-    ((DATA.daily && DATA.daily[name]) || []).forEach(r => { map[r.date] = r.units || 0; });
     return {
       grain: 'day',
       labels: dates.map(dayLabel),
       data: dates.map(d => {
         if(tf.id === 'this_week' && today && d > today) return null;
+        return map[d] || 0;
+      }),
+      title: 'Units',
+      explain: 'Daily units'
+    };
+  }
+  if(month && tf.start && tf.end){
+    const dates = daysInclusive(tf.start, tf.end);
+    return {
+      grain: 'day',
+      labels: dates.map(dayLabel),
+      data: dates.map(d => {
+        if(today && d > today) return map[d] ? map[d] : null;
         return map[d] || 0;
       }),
       title: 'Units',
@@ -350,12 +389,40 @@ function shiftQuarter(quarterKey, delta){
   return y + '-Q' + q;
 }
 
+function statsFromDaily(name, start, end){
+  const rows = ((DATA.daily && DATA.daily[name]) || []).filter(r => r.date >= start && r.date <= end);
+  let units = 0, points = 0, returns = 0, days = 0;
+  rows.forEach(r => {
+    units += r.units || 0;
+    points += r.points || 0;
+    returns += r.returns || 0;
+    if((r.units || 0) || (r.points || 0) || (r.returns || 0)) days += 1;
+  });
+  return {
+    name: name,
+    units: units,
+    points: Math.round(points * 10) / 10,
+    returns: returns,
+    days: days,
+    unitsDay: days ? Math.round((units / days) * 100) / 100 : 0,
+    pointsDay: days ? Math.round((points / days) * 100) / 100 : 0,
+    weeks: []
+  };
+}
+function periodTechStats(name, tf){
+  if((tf.id === 'this_month' || tf.id === 'last_month') && tf.start && tf.end){
+    return statsFromDaily(name, tf.start, tf.end);
+  }
+  if(!tf.weeks || !tf.weeks.length) return emptyWindowStats();
+  return techWindowStats(name, tf.weeks);
+}
+
 function resolveTimeframe(id){
   const keys = earnedWeekKeys();
   if(!keys.length) return { id, label: 'No data', weeks: [] };
   const latest = keys[keys.length - 1];
   const prev = keys.length > 1 ? keys[keys.length - 2] : null;
-  const thisMonth = weekMonth(latest);
+  const thisMonth = (earnedCutoff() || latest || '').slice(0, 7);
   const lastMonth = shiftMonth(thisMonth, -1);
   const thisQ = weekQuarter(latest);
   const lastQ = shiftQuarter(thisQ, -1);
@@ -369,10 +436,14 @@ function resolveTimeframe(id){
       return { id, label: prev ? 'Last week · ' + weekLabelFor(prev) : 'Last week', weeks: prev ? [prev] : [] };
     case 'last_4':
       return { id, label: 'Last 4 weeks', weeks: keys.slice(-4) };
-    case 'this_month':
-      return { id, label: monthLabel(thisMonth), weeks: filterMonth(thisMonth) };
-    case 'last_month':
-      return { id, label: monthLabel(lastMonth), weeks: filterMonth(lastMonth) };
+    case 'this_month': {
+      const b = monthBounds(thisMonth);
+      return { id, label: monthLabel(thisMonth), weeks: filterMonth(thisMonth), start: b && b.start, end: b && b.end };
+    }
+    case 'last_month': {
+      const b = monthBounds(lastMonth);
+      return { id, label: monthLabel(lastMonth), weeks: filterMonth(lastMonth), start: b && b.start, end: b && b.end };
+    }
     case 'this_quarter':
       return { id, label: quarterLabel(thisQ), weeks: filterQuarter(thisQ) };
     case 'last_quarter':

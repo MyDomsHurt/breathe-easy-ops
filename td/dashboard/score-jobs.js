@@ -463,7 +463,7 @@
       if (isCrew(job)) return;
       const d = jobDate(job);
       if (d.indexOf('2026') !== 0) return;
-      if (d > todayIso) return;
+      const future = d > todayIso;
       const leadRaw = String(job.team_lead || '').trim();
       const lead = LEAD_MAP[leadRaw.toLowerCase()];
       if (!lead) return;
@@ -471,10 +471,12 @@
       if (TECH_ORDER.indexOf(lead) === -1) return;
 
       if (isReturn(job)) {
-        const b = bucket(lead, mondayOf(d));
-        b.returns += 1;
-        b.days.add(d);
-        b.jobs += 1;
+        if (!future) {
+          const b = bucket(lead, mondayOf(d));
+          b.returns += 1;
+          b.days.add(d);
+          b.jobs += 1;
+        }
         addDay(lead, d, 0, 0, 1);
         return;
       }
@@ -483,31 +485,37 @@
       const sure = u[1];
       const reason = u[2];
       if (reason === 'empty_return') {
-        const b = bucket(lead, mondayOf(d));
-        b.returns += 1;
-        b.days.add(d);
-        b.jobs += 1;
+        if (!future) {
+          const b = bucket(lead, mondayOf(d));
+          b.returns += 1;
+          b.days.add(d);
+          b.jobs += 1;
+        }
         addDay(lead, d, 0, 0, 1);
         return;
       }
       if (reason === 'zero_skip') return;
       if (reason === 'zero_day') {
-        const b = bucket(lead, mondayOf(d));
-        b.days.add(d);
-        b.jobs += 1;
+        if (!future) {
+          const b = bucket(lead, mondayOf(d));
+          b.days.add(d);
+          b.jobs += 1;
+        }
         addDay(lead, d, 0, 0, 0);
         return;
       }
       if (!sure) return;
       const pts = pointsFor(counts);
       const units = totalUnits(counts);
-      const b = bucket(lead, mondayOf(d));
-      b.points += pts;
-      b.units += units;
-      b.days.add(d);
-      b.jobs += 1;
+      if (!future) {
+        const b = bucket(lead, mondayOf(d));
+        b.points += pts;
+        b.units += units;
+        b.days.add(d);
+        b.jobs += 1;
+        UNIT_TYPES.forEach(k => { b.types[k] += counts[k] || 0; });
+      }
       addDay(lead, d, pts, units, 0);
-      UNIT_TYPES.forEach(k => { b.types[k] += counts[k] || 0; });
     });
 
     const start = '2026-01-05';

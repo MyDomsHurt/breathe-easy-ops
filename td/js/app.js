@@ -230,7 +230,8 @@ function flashVanBtn(btn, label, restore) {
   }, 1600);
 }
 
-function getGpsPin() {
+function getGpsPin(opts) {
+  const o = opts || {};
   return new Promise(function (resolve, reject) {
     if (!navigator.geolocation) {
       reject(new Error('no geolocation'));
@@ -241,7 +242,11 @@ function getGpsPin() {
         resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude });
       },
       function (err) { reject(err); },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 20000 }
+      {
+        enableHighAccuracy: true,
+        timeout: o.timeout != null ? o.timeout : 10000,
+        maximumAge: o.maximumAge != null ? o.maximumAge : 20000
+      }
     );
   });
 }
@@ -1111,7 +1116,7 @@ function openModal(j) {
     mapBtns.push('<a href="' + esc(placeUrl) + '" target="_blank" rel="noopener noreferrer">Open place</a>');
   }
   if (dirUrl) {
-    mapBtns.push('<a href="' + esc(dirUrl) + '" target="_blank" rel="noopener noreferrer">Directions</a>');
+    mapBtns.push('<a href="' + esc(dirUrl) + '" target="_blank" rel="noopener noreferrer" id="jobDirBtn">Directions</a>');
   }
   if (nextUrl) {
     const nextName = nextJob.client_name ? ' title="To ' + esc(nextJob.client_name) + '"' : '';
@@ -1157,6 +1162,30 @@ function openModal(j) {
       '<button type="button" id="copyVanPinBtn" class="van-copy-btn">Copy van request + pin</button>' +
     '</div>';
   const vanText = vanRequestText(j);
+  const dirBtn = document.getElementById('jobDirBtn');
+  if (dirBtn && dirUrl) {
+    dirBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (dirBtn.dataset.busy) return;
+      dirBtn.dataset.busy = '1';
+      dirBtn.textContent = 'Locating\u2026';
+      const dest = mapsDirQuery(j.address);
+      const tab = window.open('about:blank', '_blank');
+      if (tab) tab.opener = null;
+      getGpsPin({ maximumAge: 0, timeout: 10000 }).then(function (loc) {
+        const origin = loc.lat.toFixed(6) + ',' + loc.lng.toFixed(6);
+        return 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(dest) + '&origin=' + encodeURIComponent(origin);
+      }).catch(function () {
+        return dirUrl;
+      }).then(function (url) {
+        if (tab && !tab.closed) tab.location = url;
+        else window.open(url, '_blank', 'noopener,noreferrer');
+        dirBtn.textContent = 'Directions';
+        delete dirBtn.dataset.busy;
+      });
+    });
+  }
   const vanBtn = document.getElementById('copyVanBtn');
   const pinBtn = document.getElementById('copyVanPinBtn');
   if (vanBtn) {

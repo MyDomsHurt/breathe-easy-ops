@@ -36,6 +36,7 @@
   align-items: center;
   gap: 12px;
   flex-wrap: nowrap;
+  overflow-x: hidden;
 }
 
 .be-brand {
@@ -44,7 +45,8 @@
   color: var(--be-navy-deep);
   text-decoration: none;
   letter-spacing: -0.03em;
-  flex-shrink: 0;
+  flex: 0 1 auto;
+  min-width: 0;
   white-space: nowrap;
 }
 .be-brand:hover { color: var(--be-navy); }
@@ -262,6 +264,17 @@
   font-weight: 700;
 }
 
+@media (max-width: 900px) {
+  .be-brand { font-size: 0.9rem; }
+}
+@media (max-width: 720px) {
+  .be-brand { font-size: 0.8rem; }
+  .be-switch a,
+  .be-switch span {
+    padding: 6px 10px;
+    font-size: 0.72rem;
+  }
+}
 @media (max-width: 640px) {
   .be-shell-inner {
     padding: 6px 10px;
@@ -270,10 +283,13 @@
     flex-wrap: nowrap;
   }
   .be-brand {
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  .be-switch {
+    flex-shrink: 0;
   }
   .be-switch a,
   .be-switch span {

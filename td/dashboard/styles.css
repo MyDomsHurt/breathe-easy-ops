@@ -375,7 +375,7 @@ body{
 .tech-pie{order:3}
 .tech-line-wrap{height:260px}
 .tech-pie-card{display:flex;flex-direction:column;height:100%}
-.tech-pie-wrap{flex:1;min-height:260px;height:auto}
+.tech-pie-wrap{height:280px;min-height:280px;flex:none;overflow:hidden}
 @media (min-width:900px){
   .tech-desk.has-pie{
     display:grid;
@@ -387,7 +387,7 @@ body{
   .tech-desk.has-pie .tech-pie{grid-column:2;grid-row:1;order:unset;margin-bottom:0}
   .tech-desk.has-pie .tech-days{grid-column:1/-1;grid-row:2;order:unset}
   .tech-line-wrap{height:280px}
-  .tech-pie-wrap{min-height:280px}
+  .tech-pie-wrap{height:280px;min-height:280px;flex:none;overflow:hidden}
 }
 .wave-card{border:1px solid rgba(40,150,209,.15)}
 .wave-card h3{color:var(--navy)}

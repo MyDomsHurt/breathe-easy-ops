@@ -115,7 +115,7 @@ function techUnitCodesLine(counts, total){
   if(!bits.length) return tot;
   return bits.join(' ') + ' and ' + tot;
 }
-function listLeadDayJobs(name, iso){
+function listLeadJobsInRange(name, start, end){
   if(!window.BEJobStore || typeof window.BEJobStore.listJobs !== 'function') return null;
   const rows = window.BEJobStore.listJobs() || [];
   const out = [];
@@ -124,7 +124,7 @@ function listLeadDayJobs(name, iso){
     if(job.deleted === true || job.deleted === 'true') return;
     if(typeof window.BEScoreJobIsCrew === 'function' && window.BEScoreJobIsCrew(job)) return;
     const date = typeof window.BEScoreJobDate === 'function' ? window.BEScoreJobDate(job) : String(job.date || '');
-    if(date !== iso) return;
+    if(!date || date < start || date > end) return;
     const lead = typeof window.BEScoreJobLead === 'function'
       ? window.BEScoreJobLead(job)
       : String(job.team_lead || '').trim();
@@ -132,11 +132,36 @@ function listLeadDayJobs(name, iso){
     out.push(job);
   });
   out.sort(function (a, b) {
+    const da = typeof window.BEScoreJobDate === 'function' ? window.BEScoreJobDate(a) : String(a.date || '');
+    const db = typeof window.BEScoreJobDate === 'function' ? window.BEScoreJobDate(b) : String(b.date || '');
+    if(da !== db) return da.localeCompare(db);
     const d = techJobTimeMinutes(a) - techJobTimeMinutes(b);
     if(d) return d;
     return String(a.job_id || '').localeCompare(String(b.job_id || ''));
   });
   return out;
+}
+function listLeadDayJobs(name, iso){
+  return listLeadJobsInRange(name, iso, iso);
+}
+function scoredJobUnits(job){
+  return typeof window.BEScoreJobUnits === 'function'
+    ? window.BEScoreJobUnits(job)
+    : { isReturn: false, counts: {}, total: 0 };
+}
+function techChartIndex(chart, evt, n){
+  let idx = null;
+  const els = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: false, axis: 'x' }, true);
+  if(els && els.length) idx = els[0].index;
+  else {
+    const scale = chart.scales.x;
+    if(scale){
+      const v = scale.getValueForPixel(evt.x);
+      if(typeof v === 'number' && v >= 0 && v < n) idx = Math.round(v);
+    }
+  }
+  if(idx == null || idx < 0 || idx >= n) return null;
+  return idx;
 }
 function paintTechDayPoints(chart, selectedIdx, color){
   if(!chart || !chart.data || !chart.data.datasets || !chart.data.datasets[0]) return;
@@ -158,6 +183,10 @@ function clearTechDaySelect(chart, color){
     el.innerHTML = '';
   }
 }
+function bindTechPanelClose(onClose){
+  const btn = document.getElementById('p-day-jobs-close');
+  if(btn && onClose) btn.addEventListener('click', onClose);
+}
 function showTechDayJobs(name, iso, onClose){
   const el = document.getElementById('p-day-jobs');
   if(!el) return;
@@ -170,9 +199,7 @@ function showTechDayJobs(name, iso, onClose){
   const head = techDayHeadDate(iso);
   let unitSum = 0;
   const body = jobs.map(j => {
-    const scored = typeof window.BEScoreJobUnits === 'function'
-      ? window.BEScoreJobUnits(j)
-      : { isReturn: false, counts: {}, total: 0 };
+    const scored = scoredJobUnits(j);
     unitSum += Number(scored.total || 0);
     const ret = scored.isReturn ? 'Return' : '';
     return `<tr>
@@ -193,22 +220,67 @@ function showTechDayJobs(name, iso, onClose){
           <tbody>${body}</tbody>
         </table></div>`
       : '<p class="tech-day-jobs-empty">Nothing booked.</p>'}`;
-  const btn = document.getElementById('p-day-jobs-close');
-  if(btn && onClose) btn.addEventListener('click', onClose);
+  bindTechPanelClose(onClose);
+}
+function showTechWeekDays(name, monday, onClose){
+  const el = document.getElementById('p-day-jobs');
+  if(!el) return;
+  const sunday = addDaysIso(monday, 6);
+  const jobs = listLeadJobsInRange(name, monday, sunday);
+  if(jobs == null){
+    el.hidden = true;
+    el.innerHTML = '';
+    return;
+  }
+  const byDay = {};
+  let unitSum = 0;
+  jobs.forEach(j => {
+    const d = typeof window.BEScoreJobDate === 'function' ? window.BEScoreJobDate(j) : String(j.date || '');
+    if(!d) return;
+    if(!byDay[d]) byDay[d] = { n: 0, units: 0 };
+    const scored = scoredJobUnits(j);
+    byDay[d].n += 1;
+    byDay[d].units += Number(scored.total || 0);
+    unitSum += Number(scored.total || 0);
+  });
+  const dayRows = [];
+  for(let d = monday; d <= sunday; d = addDaysIso(d, 1)){
+    const row = byDay[d];
+    if(!row) continue;
+    dayRows.push({ date: d, n: row.n, units: row.units });
+  }
+  const jobWord = jobs.length === 1 ? 'job' : 'jobs';
+  const weekLab = weekLabelFor(monday);
+  const body = dayRows.map(r =>
+    `<tr data-day="${techHEsc(r.date)}">
+      <td>${techHEsc(dayLabel(r.date))}</td>
+      <td class="num">${fmt(r.n)}</td>
+      <td class="num">${fmtUnits(r.units)}</td>
+    </tr>`
+  ).join('');
+  el.hidden = false;
+  el.innerHTML = `
+    <div class="tech-day-jobs-head">
+      <div class="tech-day-jobs-title">${techHEsc(weekLab)} \u00b7 ${jobs.length} ${jobWord} \u00b7 ${fmtUnits(unitSum)}</div>
+      <button type="button" class="tech-day-jobs-close" id="p-day-jobs-close">Close</button>
+    </div>
+    ${dayRows.length
+      ? `<div class="table-wrap"><table>
+          <thead><tr><th>Day</th><th class="num">Jobs</th><th class="num">Units</th></tr></thead>
+          <tbody>${body}</tbody>
+        </table></div>`
+      : '<p class="tech-day-jobs-empty">Nothing booked.</p>'}`;
+  bindTechPanelClose(onClose);
+  el.querySelectorAll('tr[data-day]').forEach(function (tr) {
+    tr.addEventListener('click', function () {
+      showTechDayJobs(name, tr.getAttribute('data-day'), onClose);
+    });
+  });
 }
 function onTechDayChartClick(chart, evt, name, dates, color){
   if(!window.BEJobStore || typeof window.BEJobStore.listJobs !== 'function') return;
-  let idx = null;
-  const els = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: false, axis: 'x' }, true);
-  if(els && els.length) idx = els[0].index;
-  else {
-    const scale = chart.scales.x;
-    if(scale){
-      const v = scale.getValueForPixel(evt.x);
-      if(typeof v === 'number' && v >= 0 && v < dates.length) idx = Math.round(v);
-    }
-  }
-  if(idx == null || idx < 0 || idx >= dates.length) return;
+  const idx = techChartIndex(chart, evt, dates.length);
+  if(idx == null) return;
   if(chart.$techDayIdx === idx){
     clearTechDaySelect(chart, color);
     return;
@@ -216,6 +288,18 @@ function onTechDayChartClick(chart, evt, name, dates, color){
   chart.$techDayIdx = idx;
   paintTechDayPoints(chart, idx, color);
   showTechDayJobs(name, dates[idx], function () { clearTechDaySelect(chart, color); });
+}
+function onTechWeekChartClick(chart, evt, name, weeks, color){
+  if(!window.BEJobStore || typeof window.BEJobStore.listJobs !== 'function') return;
+  const idx = techChartIndex(chart, evt, weeks.length);
+  if(idx == null) return;
+  if(chart.$techDayIdx === idx){
+    clearTechDaySelect(chart, color);
+    return;
+  }
+  chart.$techDayIdx = idx;
+  paintTechDayPoints(chart, idx, color);
+  showTechWeekDays(name, weeks[idx], function () { clearTechDaySelect(chart, color); });
 }
 function techMixDates(tf){
   const weekLike = tf.id === 'this_week' || tf.id === 'last_week';
@@ -398,14 +482,19 @@ window.renderTechPage = function renderTechPage(name){
   if(!chart.labels.length) return;
   const dayDates = (chart.grain === 'day') ? techDayChartDates(tf) : [];
   const dayTap = dayDates.length === chart.labels.length && dayDates.length > 0;
+  const weekKeys = (tf.id === 'last_4' && chart.grain === 'week') ? (tf.weeks || []) : [];
+  const weekTap = weekKeys.length === chart.labels.length && weekKeys.length > 0;
+  const canTap = dayTap || weekTap;
   const baseOpts = lineChartOptions();
   const lineOpts = Object.assign({}, baseOpts, {
-    interaction: dayTap
+    interaction: canTap
       ? { mode: 'nearest', intersect: false, axis: 'x' }
       : (baseOpts.interaction || { mode: 'nearest', intersect: true }),
     onClick: dayTap
       ? function (evt, _els, ch) { onTechDayChartClick(ch || this, evt, name, dayDates, color); }
-      : undefined
+      : (weekTap
+        ? function (evt, _els, ch) { onTechWeekChartClick(ch || this, evt, name, weekKeys, color); }
+        : undefined)
   });
   charts.push(new Chart(document.getElementById('p-pace'), {
     type: 'line',
@@ -416,7 +505,7 @@ window.renderTechPage = function renderTechPage(name){
         data: chart.data,
         borderColor: color, backgroundColor: color + '22',
         fill: true, tension: 0.3, pointRadius: 4,
-        pointHitRadius: dayTap ? 22 : 4,
+        pointHitRadius: canTap ? 22 : 4,
         pointHoverRadius: 6,
         pointBorderWidth: 1,
         borderWidth: 2.5, spanGaps: true

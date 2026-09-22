@@ -374,6 +374,50 @@ body{
 .tech-days{order:2}
 .tech-pie{order:3}
 .tech-line-wrap{height:260px}
+.tech-day-jobs{
+  margin-top:12px;
+  background:var(--white);
+  border:1px solid var(--line);
+  border-radius:var(--r);
+  padding:12px 14px 10px;
+  box-shadow:var(--shadow-sm);
+}
+.tech-day-jobs-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:8px;
+}
+.tech-day-jobs-title{
+  font-size:13px;
+  font-weight:800;
+  color:var(--ink);
+  line-height:1.35;
+}
+.tech-day-jobs-close{
+  flex:0 0 auto;
+  margin:0;
+  padding:6px 10px;
+  border:1px solid var(--line-strong);
+  border-radius:10px;
+  background:#fff;
+  color:var(--mute);
+  font-family:inherit;
+  font-size:12px;
+  font-weight:700;
+  cursor:pointer;
+}
+.tech-day-jobs-close:hover{color:var(--navy);background:var(--soft)}
+.tech-day-jobs-empty{
+  margin:4px 0 2px;
+  font-size:13px;
+  font-weight:600;
+  color:var(--mute);
+}
+.tech-day-jobs .table-wrap{box-shadow:none;border:0}
+.tech-day-jobs table{font-size:13px}
+.tech-day-jobs td.ret{color:#b45309;font-weight:800}
 .tech-pie-card{display:flex;flex-direction:column;height:100%}
 .tech-pie-wrap{height:280px;min-height:280px;flex:none;overflow:hidden}
 .team-type-pie-wrap{height:220px;min-height:220px;overflow:hidden}

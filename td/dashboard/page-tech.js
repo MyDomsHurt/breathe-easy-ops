@@ -61,6 +61,162 @@ function techDayList(name, tf){
 const MIX_TYPES = ['S','W','B','C','UC','TV','OU','SwG','EF','PAU'];
 const TYPE_WEIGHTS = { S:1, W:0.85, B:1.3, C:1.8, UC:1.5, TV:1.4, OU:1.4, SwG:1.3, EF:1, PAU:1 };
 const MIX_COLORS = ['#2563eb','#0d9488','#7c3aed','#d97706','#dc2626','#0891b2','#4f46e5','#65a30d','#db2777','#57534e'];
+const DAY_CHART_TF = { this_week: true, last_week: true, this_month: true, last_month: true };
+
+function techDayChartDates(tf){
+  if(!tf || !DAY_CHART_TF[tf.id]) return [];
+  if(tf.id === 'this_week' || tf.id === 'last_week') return periodDayKeys(tf);
+  if((tf.id === 'this_month' || tf.id === 'last_month') && tf.start && tf.end) return daysInclusive(tf.start, tf.end);
+  return [];
+}
+function techDayHeadDate(iso){
+  const d = new Date(iso + 'T12:00:00');
+  if(isNaN(d)) return iso;
+  const wd = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return wd + ' ' + d.getDate() + ' ' + months[d.getMonth()];
+}
+function techJobTimeMinutes(j){
+  const s = String(j && j.time || '').toLowerCase().replace(/\s+/g, '');
+  const m = s.match(/(\d{1,2})(?:[.:](\d{2}))?(am|pm)?/);
+  if(!m) return 9999;
+  let h = parseInt(m[1], 10);
+  const min = m[2] != null ? parseInt(m[2], 10) : 0;
+  const ap = m[3] || '';
+  if(ap === 'pm' && h < 12) h += 12;
+  if(ap === 'am' && h === 12) h = 0;
+  if(!ap && h >= 1 && h <= 6) h += 12;
+  return h * 60 + min;
+}
+function techJobTimeLabel(j){
+  const mins = techJobTimeMinutes(j);
+  if(mins === 9999){
+    const raw = String(j && j.time || '').trim();
+    return raw || '\u2014';
+  }
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+}
+function techHEsc(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+function techUnitCodesLine(counts, total){
+  const bits = [];
+  MIX_TYPES.forEach(k => {
+    const n = Number(counts && counts[k] || 0);
+    if(!n) return;
+    bits.push((Math.round(n * 10) / 10) + k);
+  });
+  const tot = fmtUnits(total || 0);
+  if(!bits.length) return tot;
+  return bits.join(' ') + ' and ' + tot;
+}
+function listLeadDayJobs(name, iso){
+  if(!window.BEJobStore || typeof window.BEJobStore.listJobs !== 'function') return null;
+  const rows = window.BEJobStore.listJobs() || [];
+  const out = [];
+  rows.forEach(job => {
+    if(!job) return;
+    if(job.deleted === true || job.deleted === 'true') return;
+    if(typeof window.BEScoreJobIsCrew === 'function' && window.BEScoreJobIsCrew(job)) return;
+    const date = typeof window.BEScoreJobDate === 'function' ? window.BEScoreJobDate(job) : String(job.date || '');
+    if(date !== iso) return;
+    const lead = typeof window.BEScoreJobLead === 'function'
+      ? window.BEScoreJobLead(job)
+      : String(job.team_lead || '').trim();
+    if(lead !== name) return;
+    out.push(job);
+  });
+  out.sort(function (a, b) {
+    const d = techJobTimeMinutes(a) - techJobTimeMinutes(b);
+    if(d) return d;
+    return String(a.job_id || '').localeCompare(String(b.job_id || ''));
+  });
+  return out;
+}
+function paintTechDayPoints(chart, selectedIdx, color){
+  if(!chart || !chart.data || !chart.data.datasets || !chart.data.datasets[0]) return;
+  const n = (chart.data.labels || []).length;
+  const ds = chart.data.datasets[0];
+  ds.pointRadius = Array.from({ length: n }, (_, i) => i === selectedIdx ? 7 : 4);
+  ds.pointHoverRadius = Array.from({ length: n }, (_, i) => i === selectedIdx ? 8 : 6);
+  ds.pointBackgroundColor = Array.from({ length: n }, (_, i) => i === selectedIdx ? '#fff' : color);
+  ds.pointBorderColor = color;
+  ds.pointBorderWidth = Array.from({ length: n }, (_, i) => i === selectedIdx ? 3 : 1);
+  chart.update('none');
+}
+function clearTechDaySelect(chart, color){
+  if(chart) chart.$techDayIdx = null;
+  paintTechDayPoints(chart, -1, color);
+  const el = document.getElementById('p-day-jobs');
+  if(el){
+    el.hidden = true;
+    el.innerHTML = '';
+  }
+}
+function showTechDayJobs(name, iso, onClose){
+  const el = document.getElementById('p-day-jobs');
+  if(!el) return;
+  const jobs = listLeadDayJobs(name, iso);
+  if(jobs == null){
+    el.hidden = true;
+    el.innerHTML = '';
+    return;
+  }
+  const head = techDayHeadDate(iso);
+  let unitSum = 0;
+  const body = jobs.map(j => {
+    const scored = typeof window.BEScoreJobUnits === 'function'
+      ? window.BEScoreJobUnits(j)
+      : { isReturn: false, counts: {}, total: 0 };
+    unitSum += Number(scored.total || 0);
+    const ret = scored.isReturn ? 'Return' : '';
+    return `<tr>
+      <td>${techHEsc(techJobTimeLabel(j))}</td>
+      <td>${techHEsc(techUnitCodesLine(scored.counts, scored.total))}</td>
+      <td class="ret">${ret}</td>
+    </tr>`;
+  }).join('');
+  const jobWord = jobs.length === 1 ? 'job' : 'jobs';
+  el.hidden = false;
+  el.innerHTML = `
+    <div class="tech-day-jobs-head">
+      <div class="tech-day-jobs-title">${techHEsc(head)} \u00b7 ${jobs.length} ${jobWord} \u00b7 ${fmtUnits(unitSum)}</div>
+      <button type="button" class="tech-day-jobs-close" id="p-day-jobs-close">Close</button>
+    </div>
+    ${jobs.length
+      ? `<div class="table-wrap"><table>
+          <tbody>${body}</tbody>
+        </table></div>`
+      : '<p class="tech-day-jobs-empty">Nothing booked.</p>'}`;
+  const btn = document.getElementById('p-day-jobs-close');
+  if(btn && onClose) btn.addEventListener('click', onClose);
+}
+function onTechDayChartClick(chart, evt, name, dates, color){
+  if(!window.BEJobStore || typeof window.BEJobStore.listJobs !== 'function') return;
+  let idx = null;
+  const els = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: false, axis: 'x' }, true);
+  if(els && els.length) idx = els[0].index;
+  else {
+    const scale = chart.scales.x;
+    if(scale){
+      const v = scale.getValueForPixel(evt.x);
+      if(typeof v === 'number' && v >= 0 && v < dates.length) idx = Math.round(v);
+    }
+  }
+  if(idx == null || idx < 0 || idx >= dates.length) return;
+  if(chart.$techDayIdx === idx){
+    clearTechDaySelect(chart, color);
+    return;
+  }
+  chart.$techDayIdx = idx;
+  paintTechDayPoints(chart, idx, color);
+  showTechDayJobs(name, dates[idx], function () { clearTechDaySelect(chart, color); });
+}
 function techMixDates(tf){
   const weekLike = tf.id === 'this_week' || tf.id === 'last_week';
   const monthLike = (tf.id === 'this_month' || tf.id === 'last_month') && tf.start && tf.end;
@@ -198,6 +354,7 @@ window.renderTechPage = function renderTechPage(name){
           <h3>${metricLabel()}</h3>
           <p class="chart-explain">${name} only · ${chart.explain}.</p>
           <div class="chart-wrap tech-line-wrap"><canvas id="p-pace"></canvas></div>
+          <div id="p-day-jobs" class="tech-day-jobs" hidden></div>
         </div>
       </div>
       ${pieSlices.length ? `
@@ -239,6 +396,17 @@ window.renderTechPage = function renderTechPage(name){
     }));
   }
   if(!chart.labels.length) return;
+  const dayDates = (chart.grain === 'day') ? techDayChartDates(tf) : [];
+  const dayTap = dayDates.length === chart.labels.length && dayDates.length > 0;
+  const baseOpts = lineChartOptions();
+  const lineOpts = Object.assign({}, baseOpts, {
+    interaction: dayTap
+      ? { mode: 'nearest', intersect: false, axis: 'x' }
+      : (baseOpts.interaction || { mode: 'nearest', intersect: true }),
+    onClick: dayTap
+      ? function (evt, _els, ch) { onTechDayChartClick(ch || this, evt, name, dayDates, color); }
+      : undefined
+  });
   charts.push(new Chart(document.getElementById('p-pace'), {
     type: 'line',
     data: {
@@ -247,9 +415,13 @@ window.renderTechPage = function renderTechPage(name){
         label: name,
         data: chart.data,
         borderColor: color, backgroundColor: color + '22',
-        fill: true, tension: 0.3, pointRadius: 4, borderWidth: 2.5, spanGaps: true
+        fill: true, tension: 0.3, pointRadius: 4,
+        pointHitRadius: dayTap ? 22 : 4,
+        pointHoverRadius: 6,
+        pointBorderWidth: 1,
+        borderWidth: 2.5, spanGaps: true
       }]
     },
-    options: lineChartOptions()
+    options: lineOpts
   }));
 };

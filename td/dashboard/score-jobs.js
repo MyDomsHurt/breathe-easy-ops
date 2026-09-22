@@ -588,4 +588,15 @@
 
   global.BEScoreJobs = scoreJobs;
   global.BEScoreHktToday = hktToday;
+  global.BEScoreJobLead = function (job) {
+    const raw = String(job && job.team_lead || '').trim();
+    return LEAD_MAP[raw.toLowerCase()] || '';
+  };
+  global.BEScoreJobIsCrew = isCrew;
+  global.BEScoreJobDate = jobDate;
+  global.BEScoreJobUnits = function (job) {
+    if (isReturn(job)) return { isReturn: true, counts: emptyUnits(), total: 0 };
+    const u = unitsFromJob(job);
+    return { isReturn: false, counts: u[0], total: totalUnits(u[0]), sure: u[1] };
+  };
 })(typeof window !== 'undefined' ? window : this);

@@ -105,6 +105,15 @@ window.renderTechPage = function renderTechPage(name){
   const mixHtml = mixChips
     ? `<div class="unit-chips" style="margin:0 0 20px">${mixChips}</div>`
     : '';
+  const ownWeeks = ((DATA.technicians[name] && DATA.technicians[name].weeks) || [])
+    .filter(r => (r.workday || 0) > 0)
+    .slice(-8);
+  const ownDays = ownWeeks.reduce((s, r) => s + (r.workday || 0), 0);
+  const ownUnits = ownWeeks.reduce((s, r) => s + (r.totalUnits || 0), 0);
+  const ownPace = ownDays ? Math.round((ownUnits / ownDays) * 100) / 100 : null;
+  const paceHtml = ownPace == null
+    ? ''
+    : `<p class="kpi-explain" style="margin:0 0 20px">This period: ${fmt(unitsDay, 2)} units/day. Your last 8 weeks: ${fmt(ownPace, 2)} units/day.</p>`;
   const tableRows = dayList.map(r =>
     `<tr>
       <td>${r.label}</td>
@@ -141,6 +150,7 @@ window.renderTechPage = function renderTechPage(name){
       </div>
     </section>
     ${mixHtml}
+    ${paceHtml}
     <div class="section">
       <div class="section-title">Units</div>
       <div class="chart-grid">

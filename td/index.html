@@ -36,8 +36,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/app.css?v=41" />
-  <link rel="stylesheet" href="css/be-shell.css?v=3" />
+  <link rel="stylesheet" href="css/app.css?v=42" />
+  <link rel="stylesheet" href="css/be-shell.css?v=4" />
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen" style="font-family:'Libre Franklin',system-ui,sans-serif">
 
@@ -45,8 +45,8 @@
     <div class="w-full max-w-sm">
       <div class="text-center mb-8">
         <div class="inline-flex w-14 h-14 rounded-2xl bg-brand-800 text-white items-center justify-center font-bold text-xl mb-3">BE</div>
-        <h1 class="text-xl font-semibold text-slate-800">TD</h1>
-        <p class="text-sm text-slate-500 mt-1">Breathe-Easy · sign in to view today's jobs</p>
+        <h1 class="text-xl font-semibold text-slate-800">Live Schedule</h1>
+        <p class="text-sm text-slate-500 mt-1">Sign in to view today's jobs / Live Schedule</p>
       </div>
 
       <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
@@ -61,7 +61,7 @@
           </svg>
           Sign in with Google
         </button>
-        <p class="text-xs text-center text-slate-400">Only authorised Breathe-Easy accounts can access TD.</p>
+        <p class="text-xs text-center text-slate-400">Only authorised Breathe-Easy accounts can access Live Schedule.</p>
       </div>
     </div>
   </div>
@@ -69,9 +69,9 @@
   <div id="appRoot" class="hidden">
   <header class="be-shell" id="be-shell">
     <div class="be-shell-inner">
-      <a class="be-brand" href="./">Breathe-Easy <span class="be-brand-ctx">· TD</span></a>
+      <a class="be-brand" href="./">Breathe-Easy <span class="be-brand-ctx">· Live Schedule</span></a>
       <nav class="be-switch" id="be-app-switch" aria-label="Switch app">
-        <span class="active">TD</span>
+        <span class="active">Live Schedule</span>
         <a href="dashboard/">Performance</a>
       </nav>
       <div class="be-user">
@@ -137,10 +137,10 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
-  <script src="js/auth.js"></script>
+  <script src="js/auth.js?v=2"></script>
   <script type="module" src="js/live-jobs.js"></script>
-  <script src="js/app.js?v=36"></script>
-  <script src="js/shell-ui.js?v=3"></script>
+  <script src="js/app.js?v=37"></script>
+  <script src="js/shell-ui.js?v=4"></script>
   <script src="js/unit-stats.js"></script>
   <script src="js/app-nav.js"></script>
   <script>

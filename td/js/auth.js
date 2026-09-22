@@ -154,7 +154,7 @@
         auth.signOut().then(function () {
           showLogin();
           dropLoginWorker();
-          setError("This Google account is not authorised for TD.");
+          setError("This Google account is not authorised for Live Schedule.");
         });
         return;
       }

@@ -109,17 +109,6 @@ window.renderTechPage = function renderTechPage(name){
     type: k,
     value: isUnitsView() ? mix[k] : mix[k] * TYPE_WEIGHTS[k]
   }));
-  const pieHtml = pieSlices.length
-    ? `<div class="section">
-        <div class="section-title">${metricLabel()} mix</div>
-        <div class="chart-grid">
-          <div class="chart-card">
-            <h3>${metricLabel()} by type</h3>
-            <div class="chart-wrap"><canvas id="p-mix"></canvas></div>
-          </div>
-        </div>
-      </div>`
-    : '';
   const ownWeeks = ((DATA.technicians[name] && DATA.technicians[name].weeks) || [])
     .filter(r => (r.workday || 0) > 0)
     .slice(-8);
@@ -140,7 +129,6 @@ window.renderTechPage = function renderTechPage(name){
   document.getElementById('app').innerHTML = `
     <div class="page-header">
       <h1><span class="tech-dot" style="background:${color};width:12px;height:12px;display:inline-block;border-radius:50%;margin-right:8px;vertical-align:middle"></span>${name}</h1>
-      <p>${tf.label} · Updated ${DATA.generated}</p>
     </div>
     <section class="this-week" aria-label="${copy.kicker}">
       <div class="this-week-kicker">${copy.kicker}</div>
@@ -164,24 +152,31 @@ window.renderTechPage = function renderTechPage(name){
         </div>
       </div>
     </section>
-    ${pieHtml}
     ${paceHtml}
-    <div class="section">
-      <div class="section-title">${metricLabel()}</div>
-      <div class="chart-grid">
-        <div class="chart-card full">
+    <div class="tech-desk${pieSlices.length ? ' has-pie' : ''}">
+      <div class="tech-line section">
+        <div class="section-title">${metricLabel()}</div>
+        <div class="chart-card">
           <h3>${metricLabel()}</h3>
           <p class="chart-explain">${name} only · ${chart.explain}.</p>
-          <div class="chart-wrap"><canvas id="p-pace"></canvas></div>
+          <div class="chart-wrap tech-line-wrap"><canvas id="p-pace"></canvas></div>
         </div>
       </div>
-    </div>
-    <div class="section">
-      <div class="section-title">Days</div>
-      <div class="table-wrap"><table>
-        <thead><tr><th>Date</th><th class="num">${metricLabel()}</th><th class="num">Returns</th></tr></thead>
-        <tbody>${tableRows}</tbody>
-      </table></div>
+      ${pieSlices.length ? `
+      <div class="tech-pie section">
+        <div class="section-title">${metricLabel()} mix</div>
+        <div class="chart-card tech-pie-card">
+          <h3>${metricLabel()} by type</h3>
+          <div class="chart-wrap tech-pie-wrap"><canvas id="p-mix"></canvas></div>
+        </div>
+      </div>` : ''}
+      <div class="tech-days section">
+        <div class="section-title">Days</div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Date</th><th class="num">${metricLabel()}</th><th class="num">Returns</th></tr></thead>
+          <tbody>${tableRows}</tbody>
+        </table></div>
+      </div>
     </div>`;
 
   if(pieSlices.length){
@@ -196,7 +191,12 @@ window.renderTechPage = function renderTechPage(name){
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 12 } } }
+        plugins: {
+          legend: {
+            position: (window.matchMedia && window.matchMedia('(min-width: 900px)').matches) ? 'right' : 'bottom',
+            labels: { boxWidth: 10, padding: 12 }
+          }
+        }
       }
     }));
   }

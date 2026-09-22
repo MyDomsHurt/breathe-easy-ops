@@ -368,6 +368,27 @@ body{
 }
 .chart-wrap{height:200px;position:relative}
 .chart-wrap.hero{height:260px}
+
+.tech-desk{display:flex;flex-direction:column}
+.tech-line{order:1}
+.tech-days{order:2}
+.tech-pie{order:3}
+.tech-line-wrap{height:260px}
+.tech-pie-card{display:flex;flex-direction:column;height:100%}
+.tech-pie-wrap{flex:1;min-height:260px;height:auto}
+@media (min-width:900px){
+  .tech-desk.has-pie{
+    display:grid;
+    grid-template-columns:2fr 1fr;
+    gap:14px;
+    align-items:stretch;
+  }
+  .tech-desk.has-pie .tech-line{grid-column:1;grid-row:1;order:unset;margin-bottom:0}
+  .tech-desk.has-pie .tech-pie{grid-column:2;grid-row:1;order:unset;margin-bottom:0}
+  .tech-desk.has-pie .tech-days{grid-column:1/-1;grid-row:2;order:unset}
+  .tech-line-wrap{height:280px}
+  .tech-pie-wrap{min-height:280px}
+}
 .wave-card{border:1px solid rgba(40,150,209,.15)}
 .wave-card h3{color:var(--navy)}
 

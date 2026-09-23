@@ -1,4 +1,4 @@
-import { DISTRICTS, TEAM_META } from './config.js';
+import { DISTRICTS, TEAM_META } from './config.js?v=2';
 import { conflictingJobIds, daySlotsOf, districtsForTeamOnDay, firstEmptySlotIndex, jobsForTeamDay, layoutSlots, slotFloor } from './capacity.js';
 import { cellTeamMembers, findCrewNote } from './team-day.js';
 import { districtChipsHtml, esc, formatDay, isToday, isWeekend, jobStatus, jobTypeOf, normalizeLunch, shortTime, startMinutes } from './utils.js';

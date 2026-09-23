@@ -1,13 +1,13 @@
-import { DISTRICTS, JOB_TYPES, TEAMS } from './config.js';
+import { DISTRICTS, JOB_TYPES, TEAMS } from './config.js?v=2';
 import { isCrewNote } from './team-day.js';
 import { addDays, formatDay, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, normalizeLunch, pad, parseISO, shortTime, weekDays, workWeekDays } from './utils.js';
 import { allJobs, getJob, importExistingJobs, placeJobInSlot, redo, removeJob, resetDemo, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js';
 import { startScheduleAuth } from './auth.js';
 import { firstEmptySlotIndex, hasTimeConflict, slotIndex } from './capacity.js';
-import { pulseRemaining, renderDayBoard, renderWeekBoard } from './board.js?v=2';
-import { closeBooking, openBooking } from './booking.js?v=5';
-import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js';
-import { exportMasterRoster } from './export-roster.js?v=16';
+import { pulseRemaining, renderDayBoard, renderWeekBoard } from './board.js?v=3';
+import { closeBooking, openBooking } from './booking.js?v=6';
+import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js?v=2';
+import { exportMasterRoster } from './export-roster.js?v=17';
 
 function calendarToday() {
   const d = new Date();

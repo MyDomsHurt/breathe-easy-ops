@@ -59,7 +59,7 @@ export const DISTRICTS = {
   TKO: { label: 'Tseung Kwan O', short: 'TKO', bg: '#B6D7A8', border: '#93C47D', text: '#1e3d14' },
   'S-K': { label: 'Sai Kung', short: 'S-K', bg: '#D9EAD3', border: '#B6D7A8', text: '#1e3d14' },
   'L-T': { label: 'Lantau', short: 'L-T', bg: '#D9D2E9', border: '#B4A7D6', text: '#2e1a4a' },
-  'L-M': { label: 'Lai Chi Kok / Mei Foo', short: 'L-M', bg: '#A2C4C9', border: '#76A5AF', text: '#1a3338' },
+  'L-M': { label: 'Lamma Island', short: 'L-M', bg: '#A2C4C9', border: '#76A5AF', text: '#1a3338' },
 };
 
 export const UNIT_TYPES = [

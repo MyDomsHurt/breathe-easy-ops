@@ -1,4 +1,4 @@
-import { DISTRICTS, TEAM_META, jobTypeLabel } from './config.js';
+import { DISTRICTS, TEAM_META, jobTypeLabel } from './config.js?v=2';
 import { esc, formatDay, formatMoney, jobTypeOf, shortAddress, shortNotes, shortTime } from './utils.js';
 
 function displayMobile(mobile) {

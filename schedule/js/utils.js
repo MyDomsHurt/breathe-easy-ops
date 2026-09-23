@@ -1,4 +1,4 @@
-import { DISTRICTS, TODAY, UNIT_TYPES } from './config.js';
+import { DISTRICTS, TODAY, UNIT_TYPES } from './config.js?v=2';
 
 export function pad(n) {
   return String(n).padStart(2, '0');

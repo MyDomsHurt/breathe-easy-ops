@@ -70,6 +70,7 @@ export function displayNameForEmail(email) {
 }
 
 export const JOBS_COLLECTION = 'jobs';
+export const CONTACTS_COLLECTION = 'contacts';
 
 const ALLOWED = ALLOWLIST.map((e) => e.toLowerCase());
 const OFFICE = OFFICE_EMAILS.map((e) => e.toLowerCase());

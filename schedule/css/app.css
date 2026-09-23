@@ -1345,6 +1345,115 @@ button.day-col-head:hover { background: #e0f2fe; }
 .jobs-table tr { cursor: pointer; }
 .jobs-table tr:hover td { background: #f8fafc; }
 
+#appRoot[data-view="contacts"] .header-filters,
+#appRoot[data-view="contacts"] .week-nav,
+#appRoot[data-view="contacts"] #newBooking,
+#appRoot[data-view="contacts"] .header-search,
+#appRoot[data-view="contacts"] .board-legend,
+#appRoot[data-view="contacts"] > .page > p { display: none; }
+
+.contacts-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+.contacts-toolbar input[type="search"] {
+  flex: 1 1 220px;
+  min-width: 160px;
+  max-width: 360px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 13px;
+  background: white;
+}
+.contacts-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 320px) minmax(0, 1fr);
+  gap: 16px;
+  min-height: 62vh;
+}
+.contacts-list {
+  overflow-y: auto;
+  max-height: 70vh;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+}
+.contacts-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid #eef2f6;
+  background: white;
+  padding: 10px 12px;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.contacts-row strong {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.contacts-row span {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.contacts-row:hover { background: #f8fafc; }
+.contacts-row.on { background: #e0f2fe; }
+.contact-pane {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 20px 22px;
+  min-height: 240px;
+}
+.contact-pane h2 {
+  margin: 0 0 14px;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+.contact-kv {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 8px 12px;
+  padding: 6px 0;
+  border-top: 1px solid #eef2f6;
+  font-size: 13px;
+}
+.contact-kv dt {
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.contact-kv dd {
+  margin: 0;
+  color: var(--ink);
+  overflow-wrap: break-word;
+}
+.contact-pane-empty,
+.contacts-empty {
+  padding: 48px 24px;
+  text-align: center;
+  color: #64748b;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+.contacts-empty p { margin: 0 0 8px; font-size: 15px; font-weight: 600; color: var(--ink); }
+.contacts-empty-sub { font-size: 13px; color: #64748b; font-weight: 500; }
+
 /* Drawer */
 .drawer-root, .modal-root {
   position: fixed;
@@ -2112,5 +2221,6 @@ button.day-col-head:hover { background: #e0f2fe; }
   .header-search { max-width: none; order: 5; flex-basis: 100%; }
   .header-filters { order: 6; }
   .jobs-table { display: block; overflow: auto; }
+  .contacts-layout { grid-template-columns: 1fr; }
   .drawer { width: 100%; }
 }

@@ -8,6 +8,8 @@ import { pulseRemaining, renderDayBoard, renderWeekBoard } from './board.js?v=6'
 import { closeBooking, openBooking } from './booking.js?v=8';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js?v=2';
 import { exportMasterRoster } from './export-roster.js?v=19';
+import { initContactsStore, subscribeContacts } from './contacts-store.js?v=1';
+import { importHubspotFile, renderContacts } from './contacts.js?v=1';
 
 function calendarToday() {
   const d = new Date();
@@ -33,6 +35,8 @@ const state = {
   query: '',
   focusJobId: '',
   showSunday: false,
+  contactQuery: '',
+  contactId: '',
 };
 
 function $(id) {
@@ -116,6 +120,9 @@ function paint() {
   if (monthSel) monthSel.value = monthKey(state.mode === 'day' ? state.day : state.monday);
   $('viewBoard').hidden = state.view !== 'board';
   $('viewJobs').hidden = state.view !== 'jobs';
+  if ($('viewContacts')) $('viewContacts').hidden = state.view !== 'contacts';
+  const root = $('appRoot');
+  if (root) root.dataset.view = state.view;
   document.querySelectorAll('[data-nav]').forEach((el) => {
     el.classList.toggle('on', el.dataset.nav === state.view);
   });
@@ -130,8 +137,14 @@ function paint() {
     } else {
       renderDayBoard($('boardMount'), { jobs: rosterJobs, chipJobs: jobs, date: state.day, teams: state.teams, lookupJobs: allJobs() });
     }
-  } else {
+  } else if (state.view === 'jobs') {
     renderJobsList($('jobsMount'), jobs, state.query);
+  } else if (state.view === 'contacts') {
+    const picked = renderContacts($('contactsMount'), {
+      query: state.contactQuery,
+      selectedId: state.contactId,
+    });
+    if (picked && picked.hubspot_id) state.contactId = picked.hubspot_id;
   }
   syncFilterUi();
   syncSundayUi();
@@ -633,6 +646,7 @@ function bindChrome() {
       e.preventDefault();
       state.view = el.dataset.nav;
       if (state.view === 'jobs') $('globalSearch')?.focus();
+      if (state.view === 'contacts') $('contactsSearch')?.focus();
       paint();
     });
   });
@@ -725,6 +739,22 @@ function bindChrome() {
       if (job) openBooking(job);
     }
   });
+  const contactsMount = $('contactsMount');
+  if (contactsMount) {
+    contactsMount.addEventListener('click', (e) => {
+      const row = e.target.closest('[data-contact]');
+      if (!row) return;
+      state.contactId = row.dataset.contact;
+      paint();
+    });
+  }
+  const contactsSearch = $('contactsSearch');
+  if (contactsSearch) {
+    contactsSearch.addEventListener('input', (e) => {
+      state.contactQuery = e.target.value;
+      paint();
+    });
+  }
   document.addEventListener('keydown', (e) => {
     if ((e.metaKey || e.ctrlKey) && String(e.key).toLowerCase() === 'z') {
       if (isTypingTarget(e.target)) return;
@@ -869,6 +899,7 @@ function bindOwnerTools() {
       }
     });
   }
+  bindContactsImport();
   if (resetBtn) {
     resetBtn.addEventListener('click', () => {
       if (!isOwnerUser(signedInEmail)) {
@@ -888,18 +919,56 @@ function bindOwnerTools() {
   }
 }
 
+function bindContactsImport() {
+  const btn = $('importHubspotCsv');
+  const file = $('importHubspotFile');
+  if (!btn || !file) return;
+  const jeff = isOwnerUser(signedInEmail);
+  btn.hidden = !jeff;
+  if (!jeff) return;
+  btn.addEventListener('click', () => {
+    if (!isOwnerUser(signedInEmail)) {
+      toast('Only Jeff can import HubSpot contacts');
+      return;
+    }
+    file.value = '';
+    file.click();
+  });
+  file.addEventListener('change', async () => {
+    const picked = file.files && file.files[0];
+    file.value = '';
+    if (!picked) return;
+    if (!isOwnerUser(signedInEmail)) {
+      toast('Only Jeff can import HubSpot contacts');
+      return;
+    }
+    btn.disabled = true;
+    try {
+      const result = await importHubspotFile(picked);
+      toast('Imported ' + result.count + ' contacts');
+      paint();
+    } catch (err) {
+      console.error(err);
+      toast((err && err.message) || 'Import failed');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
 fillMonthSelect();
 bindFilters();
 bindChrome();
 bindBoardClicks();
 bindBoardDrag();
 subscribe(paint);
+subscribeContacts(paint);
 
 startScheduleAuth()
   .then((user) => {
     signedInEmail = (user && user.email) || '';
     bindOwnerTools();
-    return initStore(user);
+    return Promise.all([initStore(user), initContactsStore()]);
   })
   .then(() => paint())
   .catch((err) => {

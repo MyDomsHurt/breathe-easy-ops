@@ -2,7 +2,7 @@ rules_version = '2';
 // Jeff publishes these in Firebase console → Firestore → Rules after merge.
 // The app does not deploy rules.
 //
-// Office + Josh (read + write all jobs):
+// Office + Josh (read + write all jobs; read + write contacts):
 //   jefflamb1992@gmail.com
 //   info@breathe-easyhk.com
 //   ruby@breathe-easyhk.com
@@ -47,6 +47,10 @@ service cloud.firestore {
         || isJosh()
         || (isLead() && resource.data.team_lead == leadName());
       allow write: if isOffice() || isJosh();
+    }
+
+    match /contacts/{id} {
+      allow read, write: if isOffice() || isJosh();
     }
   }
 }

@@ -1,0 +1,19 @@
+# Booking site: https://breathe-easy-booking.netlify.app/
+# Static schedule/ as publish root. Functions live under netlify/functions.
+# Env (set in Netlify UI, never git): HUBSPOT_CLIENT_SECRET, HUBSPOT_ACCESS_TOKEN,
+# FIREBASE_SERVICE_ACCOUNT.
+
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+  included_files = ["shared/contact.js"]
+
+# Function source lives in /netlify/functions; do not serve it as a static file.
+[[redirects]]
+  from = "/netlify/*"
+  to = "/index.html"
+  status = 404
+  force = true

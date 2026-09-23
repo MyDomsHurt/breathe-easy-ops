@@ -44,10 +44,53 @@ export function normalizePhone(raw) {
   return '+852' + local;
 }
 
-function asNumber(value) {
+export function asNumber(value) {
   if (value == null || value === '') return null;
   const n = Number(String(value).replace(/[$,\s]/g, ''));
   return Number.isFinite(n) ? n : null;
+}
+
+/** HubSpot internal names → Firestore contact fields. Webhook + CSV. */
+export const HUBSPOT_PROPERTY_MAP = {
+  firstname: 'first_name',
+  lastname: 'last_name',
+  profile_phone_number: 'phone',
+  full_address_1: 'address',
+  billing_address_line_1: 'address_line1',
+  billing_street: 'address_street',
+  billing_city: 'address_place',
+  billing_state: 'address_territory',
+  stream: 'stream',
+  hubsoot_tags: 'tag',
+  language: 'language',
+  group: 'groups',
+  instagram: 'instagram',
+  hubspot_owner_id: 'owner',
+  num_associated_deals: 'deals',
+  total_revenue: 'revenue',
+};
+
+export const HUBSPOT_PROPERTY_NAMES = Object.keys(HUBSPOT_PROPERTY_MAP);
+
+export function mapHubSpotValue(internalName, raw) {
+  if (internalName === 'lastname') return cleanLastName(raw);
+  if (internalName === 'profile_phone_number') return normalizePhone(raw);
+  if (internalName === 'num_associated_deals' || internalName === 'total_revenue') {
+    return asNumber(raw);
+  }
+  if (internalName === 'hubspot_owner_id') {
+    return raw == null ? '' : String(raw);
+  }
+  return textOrEmpty(raw);
+}
+
+export function mappedFieldsFromHubSpotProperties(props) {
+  const out = {};
+  HUBSPOT_PROPERTY_NAMES.forEach((hs) => {
+    if (!props || !Object.prototype.hasOwnProperty.call(props, hs)) return;
+    out[HUBSPOT_PROPERTY_MAP[hs]] = mapHubSpotValue(hs, props[hs]);
+  });
+  return out;
 }
 
 export function normalizeContact(raw) {
@@ -100,9 +143,14 @@ export default {
   CONTACT_FIELDS,
   cleanLastName,
   normalizePhone,
+  asNumber,
   normalizeContact,
   contactDisplayName,
   phoneDigits,
   phoneTail8,
   contactHasAddress,
+  HUBSPOT_PROPERTY_MAP,
+  HUBSPOT_PROPERTY_NAMES,
+  mapHubSpotValue,
+  mappedFieldsFromHubSpotProperties,
 };

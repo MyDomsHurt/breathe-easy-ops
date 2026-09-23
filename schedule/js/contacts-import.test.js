@@ -1,5 +1,5 @@
 import { contactsFromCsv, headerIndex, parseCsv } from './contacts-import.js';
-import { cleanLastName, normalizePhone, phoneTail8 } from '../../shared/contact.js';
+import { cleanLastName, mapHubSpotValue, mappedFieldsFromHubSpotProperties, normalizePhone, phoneTail8 } from '../../shared/contact.js';
 import { matchesContactQuery, queryContacts } from './contacts-query.js';
 
 function assert(cond, msg) {
@@ -53,4 +53,20 @@ const zeroDeal = queryContacts(rows, { all: false, query: 'Ben' });
 assert(zeroDeal.length === 1 && zeroDeal[0].first_name === 'Ben', 'search finds zero-deal');
 const tagged = queryContacts(rows, { all: true, tag: 'Black List' });
 assert(tagged.length === 1 && tagged[0].first_name === 'Ben', 'tag filter');
+
+assert(mapHubSpotValue('lastname', '.') === '', 'webhook drop dot last name');
+assert(mapHubSpotValue('profile_phone_number', '61105262') === '+85261105262', 'webhook phone');
+assert(mapHubSpotValue('hubspot_owner_id', 51129811) === '51129811', 'owner as sent');
+assert(mapHubSpotValue('num_associated_deals', '3') === 3, 'deals number');
+assert(mapHubSpotValue('hubsoot_tags', 'Membership') === 'Membership', 'crm tag');
+const mapped = mappedFieldsFromHubSpotProperties({
+  firstname: 'Ada',
+  lastname: '.',
+  profile_phone_number: '61105262',
+  email: 'skip@x.com',
+});
+assert(mapped.first_name === 'Ada', 'map first');
+assert(mapped.last_name === '', 'map last');
+assert(mapped.phone === '+85261105262', 'map phone');
+assert(mapped.email == null, 'no extra hubspot props');
 console.log('ok');

@@ -106,7 +106,12 @@ async function firebaseIdToken() {
     body: JSON.stringify({ email, password, returnSecureToken: true }),
   });
   const json = await res.json();
-  if (!res.ok || !json.idToken) throw new Error('Firebase Auth sign-in failed');
+  if (!res.ok || !json.idToken) {
+    const msg = json && json.error && json.error.message
+      ? String(json.error.message)
+      : 'Firebase Auth sign-in failed';
+    throw new Error(msg);
+  }
   const ttl = Number(json.expiresIn || 3600) * 1000;
   cachedAuth = { idToken: json.idToken, exp: Date.now() + ttl };
   return cachedAuth.idToken;
@@ -232,6 +237,7 @@ export async function handler(event) {
     return { statusCode: 200, body: JSON.stringify({ ok: true, handled }) };
   } catch (err) {
     const message = String((err && err.message) || 'Error');
+    console.error(message);
     return {
       statusCode: 500,
       headers: { 'Content-Type': 'application/json' },

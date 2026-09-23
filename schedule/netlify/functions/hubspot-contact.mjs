@@ -39,29 +39,60 @@ function rawBody(event) {
   return typeof body === 'string' ? body : JSON.stringify(body);
 }
 
-function requestUri(event) {
-  if (event.rawUrl) return event.rawUrl;
-  const proto = header(event, 'x-forwarded-proto') || 'https';
-  const host = header(event, 'host');
-  const path = event.path || '/.netlify/functions/hubspot-contact';
-  const qs = event.rawQuery ? `?${event.rawQuery}` : '';
-  return `${proto}://${host}${path}${qs}`;
+function slashVariants(uri) {
+  const s = String(uri || '');
+  if (!s) return [];
+  if (s.endsWith('/')) return [s, s.replace(/\/+$/, '')];
+  return [s, s + '/'];
 }
 
-export function verifyHubSpotSignatureV3(event, secret, now = Date.now()) {
+function uriCandidates(event) {
+  const set = new Set();
+  slashVariants(event.rawUrl).forEach((u) => set.add(u));
+  const host = header(event, 'host');
+  const path = event.path || '/.netlify/functions/hubspot-contact';
+  slashVariants('https://' + host + path).forEach((u) => set.add(u));
+  return [...set];
+}
+
+function equalBuf(a, b) {
+  const left = Buffer.from(String(a || ''));
+  const right = Buffer.from(String(b || ''));
+  if (!left.length || left.length !== right.length) return false;
+  return crypto.timingSafeEqual(left, right);
+}
+
+function sha256Hex(s) {
+  return crypto.createHash('sha256').update(s, 'utf8').digest('hex');
+}
+
+export function verifyHubSpotSignature(event, secret, now = Date.now()) {
   if (!secret) return false;
-  const signature = header(event, 'x-hubspot-signature-v3');
   const timestamp = header(event, 'x-hubspot-request-timestamp');
-  if (!signature || !timestamp) return false;
-  const ts = Number(timestamp);
-  if (!Number.isFinite(ts) || Math.abs(now - ts) > FIVE_MIN) return false;
+  if (timestamp) {
+    const ts = Number(timestamp);
+    if (!Number.isFinite(ts) || Math.abs(now - ts) > FIVE_MIN) return false;
+  }
+  const body = rawBody(event);
   const method = String(event.httpMethod || 'POST').toUpperCase();
-  const signed = method + requestUri(event) + rawBody(event) + timestamp;
-  const expected = crypto.createHmac('sha256', secret).update(signed, 'utf8').digest('base64');
-  const a = Buffer.from(signature);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return false;
-  return crypto.timingSafeEqual(a, b);
+  const v3 = header(event, 'x-hubspot-signature-v3').replace(/ /g, '+');
+  const v12 = header(event, 'x-hubspot-signature');
+  if (v3) {
+    for (const uri of uriCandidates(event)) {
+      const signed = method + uri + body + (timestamp || '');
+      const expected = crypto.createHmac('sha256', secret).update(signed, 'utf8').digest('base64');
+      if (equalBuf(v3, expected)) return true;
+    }
+  }
+  if (v12) {
+    const hex = String(v12).toLowerCase();
+    if (equalBuf(hex, sha256Hex(secret + body))) return true;
+    for (const uri of uriCandidates(event)) {
+      if (equalBuf(hex, sha256Hex(secret + method + uri + body + (timestamp || '')))) return true;
+      if (equalBuf(hex, sha256Hex(secret + method + uri + body))) return true;
+    }
+  }
+  return false;
 }
 
 async function firebaseIdToken() {
@@ -187,7 +218,7 @@ export async function handler(event) {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
   const secret = process.env.HUBSPOT_CLIENT_SECRET;
-  if (!verifyHubSpotSignatureV3(event, secret)) {
+  if (!verifyHubSpotSignature(event, secret)) {
     return { statusCode: 401, body: 'Unauthorized' };
   }
   let payload;

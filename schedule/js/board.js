@@ -132,12 +132,9 @@ function lunchCardHtml(time) {
   </div>`;
 }
 
-function emptySlotHtml(date, team, index) {
-  return `<button type="button" class="empty-slot" data-book-date="${esc(date)}" data-book-team="${esc(team)}" data-empty-slot="1" data-slot="${index}" aria-label="Add booking"></button>`;
-}
-
-function leftoverAddHtml(date, team, index) {
-  return `<button type="button" class="empty-add" data-book-date="${esc(date)}" data-book-team="${esc(team)}" data-empty-slot="1" data-slot="${index}" aria-label="Add booking">+</button>`;
+function emptySlotHtml(date, team, index, slim) {
+  const cls = slim ? 'empty-slot empty-slot-slim' : 'empty-slot';
+  return `<button type="button" class="${cls}" data-book-date="${esc(date)}" data-book-team="${esc(team)}" data-empty-slot="1" data-slot="${index}" aria-label="Add booking"></button>`;
 }
 
 function renderSlotStack(slots, lunchTime, conflicts, mode, full, date, team) {
@@ -147,12 +144,9 @@ function renderSlotStack(slots, lunchTime, conflicts, mode, full, date, team) {
   const renderJob = (j) => boardCardHtml(j, conflicts.has(j.job_id), week);
   const out = [];
   let placedLunch = !time;
-  let leftoverEmpty = null;
-  let hasJob = false;
   for (let i = 0; i < slots.length; i += 1) {
     const j = slots[i];
     if (j) {
-      hasJob = true;
       if (!placedLunch) {
         const t = startMinutes(j);
         if (t == null || t >= lunchMins) {
@@ -162,17 +156,10 @@ function renderSlotStack(slots, lunchTime, conflicts, mode, full, date, team) {
       }
       out.push(renderJob(j));
     } else if (!full) {
-      if (week) {
-        if (leftoverEmpty == null) leftoverEmpty = i;
-      } else {
-        out.push(emptySlotHtml(date, team, i));
-      }
+      out.push(emptySlotHtml(date, team, i, week));
     }
   }
   if (!placedLunch) out.push(lunchCardHtml(time));
-  if (week && !full && hasJob && leftoverEmpty != null) {
-    out.push(leftoverAddHtml(date, team, leftoverEmpty));
-  }
   return out.join('');
 }
 

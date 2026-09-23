@@ -4,7 +4,7 @@ import { addDays, formatDay, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth
 import { allJobs, getJob, importExistingJobs, placeJobInSlot, redo, removeJob, resetDemo, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js';
 import { startScheduleAuth } from './auth.js';
 import { firstEmptySlotIndex, hasTimeConflict, slotIndex } from './capacity.js';
-import { pulseRemaining, renderDayBoard, renderWeekBoard } from './board.js?v=6';
+import { pulseRemaining, renderDayBoard, renderWeekBoard } from './board.js?v=7';
 import { closeBooking, openBooking } from './booking.js?v=8';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js?v=2';
 import { exportMasterRoster } from './export-roster.js?v=19';

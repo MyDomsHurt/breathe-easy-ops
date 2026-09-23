@@ -781,30 +781,25 @@ button.day-col-head:hover { background: #e0f2fe; }
   background: #e2e8f0;
 }
 .day-cell .empty-slot { min-height: 40px; }
-.empty-add {
-  display: block;
-  width: 100%;
-  min-height: 22px;
+.week-cell .empty-slot-slim,
+.empty-slot.empty-slot-slim {
+  min-height: 20px;
+  height: 20px;
   margin: 0;
-  padding: 2px 0;
-  border: 0;
-  border-top: 1px dashed #e2e8f0;
+  padding: 0;
+  border: 1px dashed #e2e8f0;
+  border-radius: 4px;
   background: transparent;
-  color: #94a3b8;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.2;
-  cursor: pointer;
 }
-.empty-add:hover {
-  color: #0284c7;
+.week-cell .empty-slot-slim:hover,
+.empty-slot.empty-slot-slim:hover {
+  border-color: #38bdf8;
   background: #f0f9ff;
 }
-.empty-add.drop-ok {
+.week-cell .empty-slot-slim.drop-ok,
+.empty-slot.empty-slot-slim.drop-ok {
   border-color: #0284c7;
   background: #e0f2fe;
-  color: #0284c7;
 }
 
 .cell-van-input {

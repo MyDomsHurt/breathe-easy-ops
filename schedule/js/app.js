@@ -7,7 +7,7 @@ import { firstEmptySlotIndex, hasTimeConflict, slotIndex } from './capacity.js';
 import { pulseRemaining, renderDayBoard, renderWeekBoard } from './board.js';
 import { closeBooking, openBooking } from './booking.js';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js';
-import { exportMasterRoster } from './export-roster.js?v=3';
+import { exportMasterRoster } from './export-roster.js?v=4';
 
 function calendarToday() {
   const d = new Date();

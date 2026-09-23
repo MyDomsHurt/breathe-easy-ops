@@ -452,15 +452,55 @@ function toSheet(headers, rows) {
   return ws;
 }
 
+const JSON_KEYS = [
+  'jobId', 'date', 'time', 'team', 'whosOn', 'client', 'mobile', 'address', 'acs',
+  'S', 'W', 'B', 'C', 'UC', 'TV', 'OU', 'SwG', 'EF', 'PAU', 'BEP',
+  'units', 'return', 'amount', 'invoice', 'receipt', 'payment', 'notes',
+];
+
+function dateYmd(v) {
+  if (v instanceof Date && !isNaN(v.getTime())) {
+    return v.getFullYear() + '-' + pad(v.getMonth() + 1) + '-' + pad(v.getDate());
+  }
+  return v == null ? '' : String(v);
+}
+
+function rowToJson(row) {
+  const o = {};
+  JSON_KEYS.forEach((key, i) => {
+    let v = row[i];
+    if (key === 'date') v = dateYmd(v);
+    else if (key === 'return') v = v ? 'Y' : '';
+    else if (v == null) v = '';
+    o[key] = v;
+  });
+  return o;
+}
+
+function downloadJson(filename, data) {
+  const blob = new Blob([JSON.stringify(data, null, 2) + '\n'], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
 function exportJobs(jobs) {
   const rows = buildRows(jobs, jobs);
   if (!rows.length) throw new Error('No jobs to export');
+  const day = todayIso();
   const wb = window.XLSX.utils.book_new();
   const ws = toSheet(HEADERS, rows);
   window.XLSX.utils.book_append_sheet(wb, ws, 'Jobs');
-  const name = `breathe-easy-jobs-${todayIso()}.xlsx`;
-  window.XLSX.writeFile(wb, name);
-  return { jobs: rows.length, name };
+  const xlsxName = `breathe-easy-jobs-${day}.xlsx`;
+  window.XLSX.writeFile(wb, xlsxName);
+  const jsonName = `breathe-easy-jobs-${day}.json`;
+  downloadJson(jsonName, rows.map(rowToJson));
+  return { jobs: rows.length, name: xlsxName, json: jsonName };
 }
 
 export async function exportMasterRoster() {

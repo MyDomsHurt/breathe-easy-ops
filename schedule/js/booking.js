@@ -5,7 +5,7 @@ import { uniqueClientsFrom } from './seed.js';
 import { displayNameForEmail } from '../../shared/firebase-config.js';
 import { highlightOf } from '../../shared/job.js';
 import { acsLabel, emptyUnits, formatDay, formatTime24, jobStatus, jobTypeOf, NOTES1_MAX, parseAcs, shortTime } from './utils.js';
-import { AREA_CODES, composeFullAddress, parseAddress } from './address-parse.js';
+import { TERRITORIES, codeFromTerritory, composeFullAddress, parseAddress, territoryLabel } from './address-parse.js?v=2';
 
 let form = {
   job_id: '',
@@ -36,8 +36,8 @@ let cleaner = {
   raw: '',
   line1: '',
   street: '',
-  city: '',
-  country: 'Hong Kong',
+  district: '',
+  code: '',
   extra: '',
   composed: '',
 };
@@ -47,8 +47,8 @@ function resetCleaner(address) {
     raw: address || '',
     line1: '',
     street: '',
-    city: '',
-    country: 'Hong Kong',
+    district: '',
+    code: '',
     extra: '',
     composed: '',
   };
@@ -58,7 +58,8 @@ function refreshComposed() {
   cleaner.composed = composeFullAddress({
     line1: cleaner.line1,
     street: cleaner.street,
-    city: cleaner.city,
+    district: cleaner.district,
+    code: cleaner.code,
   });
 }
 
@@ -335,15 +336,19 @@ function renderForm() {
                 <input id="addrStreet" value="${escapeAttr(cleaner.street)}" />
               </div>
               <div class="field">
-                <label>City</label>
-                <select id="addrCity">
-                  <option value="">Select</option>
-                  ${AREA_CODES.map((c) => `<option value="${c}" ${cleaner.city === c ? 'selected' : ''}>${c}</option>`).join('')}
-                </select>
+                <label>District</label>
+                <input id="addrDistrict" value="${escapeAttr(cleaner.district)}" placeholder="Mid-Levels" />
               </div>
               <div class="field">
-                <label>Country</label>
-                <input id="addrCountry" value="${escapeAttr(cleaner.country)}" />
+                <label>Territory</label>
+                <select id="addrTerritory">
+                  <option value="">Select</option>
+                  ${TERRITORIES.map((t) => {
+                    const val = `${t.label} (${t.code})`;
+                    const selected = cleaner.code === t.code ? 'selected' : '';
+                    return `<option value="${escapeAttr(val)}" ${selected}>${escapeAttr(val)}</option>`;
+                  }).join('')}
+                </select>
               </div>
             </div>
             <div class="field">
@@ -614,24 +619,27 @@ function bindAddressCleaner() {
   };
   $('#addrLine1')?.addEventListener('input', (e) => { cleaner.line1 = e.target.value; syncComposed(); });
   $('#addrStreet')?.addEventListener('input', (e) => { cleaner.street = e.target.value; syncComposed(); });
-  $('#addrCity')?.addEventListener('change', (e) => { cleaner.city = e.target.value; syncComposed(); });
-  $('#addrCountry')?.addEventListener('input', (e) => { cleaner.country = e.target.value; });
+  $('#addrDistrict')?.addEventListener('input', (e) => { cleaner.district = e.target.value; syncComposed(); });
+  $('#addrTerritory')?.addEventListener('change', (e) => {
+    cleaner.code = codeFromTerritory(e.target.value);
+    syncComposed();
+  });
   $('#addrComposed')?.addEventListener('input', (e) => { cleaner.composed = e.target.value; });
   $('#addrExtra')?.addEventListener('input', (e) => { cleaner.extra = e.target.value; });
   $('#addrCleanBtn')?.addEventListener('click', () => {
     const parsed = parseAddress(cleaner.raw || form.address);
     cleaner.line1 = parsed.line1;
     cleaner.street = parsed.street;
-    cleaner.city = parsed.city;
-    cleaner.country = parsed.country || 'Hong Kong';
+    cleaner.district = parsed.district;
+    cleaner.code = parsed.code;
     cleaner.extra = parsed.extra;
     cleaner.composed = parsed.composed;
     const set = (id, val) => { const el = $(id); if (el) el.value = val || ''; };
     set('#addrLine1', cleaner.line1);
     set('#addrStreet', cleaner.street);
-    const city = $('#addrCity');
-    if (city) city.value = cleaner.city || '';
-    set('#addrCountry', cleaner.country);
+    set('#addrDistrict', cleaner.district);
+    const terr = $('#addrTerritory');
+    if (terr) terr.value = territoryLabel(cleaner.code);
     set('#addrComposed', cleaner.composed);
     set('#addrExtra', cleaner.extra);
   });
@@ -652,17 +660,17 @@ function bindAddressCleaner() {
   });
   $('#addrApplyBtn')?.addEventListener('click', () => {
     const line = collapseAddr(cleaner.composed || $('#addrComposed')?.value || '');
-    const city = cleaner.city || $('#addrCity')?.value || '';
+    const code = cleaner.code || codeFromTerritory($('#addrTerritory')?.value || '');
     if (!line) {
       toast('Clean an address first');
       return;
     }
     form.address = line;
-    if (city) form.district = city;
+    if (code) form.district = code;
     const addr = $('#addressInput');
     if (addr) addr.value = form.address;
     const dist = $('#districtInput');
-    if (dist && city) dist.value = city;
+    if (dist && code) dist.value = code;
     toast('Address applied');
   });
 }

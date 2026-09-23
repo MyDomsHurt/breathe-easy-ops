@@ -1,9 +1,35 @@
 /**
  * Local HK address cleaner for Booking.
- * Parses messy paste into HubSpot billing fields + Extra.
+ * Line 1, Street, District (neighbourhood), Territory (label + code).
  */
 
 export const AREA_CODES = ['N-TW', 'N-T', 'S-K', 'L-T', 'L-M', 'HKN', 'HKS', 'KLN'];
+
+export const TERRITORIES = [
+  { code: 'HKN', label: 'Hong Kong Island' },
+  { code: 'HKS', label: 'Hong Kong South' },
+  { code: 'KLN', label: 'Kowloon' },
+  { code: 'N-T', label: 'New Territories' },
+  { code: 'S-K', label: 'Sai Kung' },
+  { code: 'L-T', label: 'Lantau' },
+];
+
+const CODE_ALIASES = { 'N-TW': 'N-T', 'L-M': 'KLN' };
+
+const NEIGHBOURHOODS = [
+  'Mid-Levels', 'The Peak', 'Happy Valley', 'Causeway Bay', 'Wan Chai', 'Sheung Wan',
+  'Sai Ying Pun', 'Kennedy Town', 'Pok Fu Lam', 'Repulse Bay', 'Deep Water Bay',
+  'Stanley', 'Aberdeen', 'Ap Lei Chau', 'Tai Hang', 'North Point', 'Quarry Bay',
+  'Tai Koo', 'Sai Wan Ho', 'Shau Kei Wan', 'Chai Wan', 'Shek O', 'Tai Tam',
+  'Tsim Sha Tsui', 'Jordan', 'Yau Ma Tei', 'Mong Kok', 'Sham Shui Po', 'Cheung Sha Wan',
+  'Lai Chi Kok', 'Mei Foo', 'Kowloon Tong', 'Ho Man Tin', 'Hung Hom', 'To Kwa Wan',
+  'Kowloon City', 'San Po Kong', 'Kwun Tong', 'Ngau Tau Kok', 'Lam Tin', 'Yau Tong',
+  'Sha Tin', 'Tai Wai', 'Ma On Shan', 'Tai Po', 'Fanling', 'Sheung Shui',
+  'Tuen Mun', 'Yuen Long', 'Tin Shui Wai', 'Tsuen Wan', 'Kwai Chung', 'Tsing Yi',
+  'Tung Chung', 'Discovery Bay', 'Mui Wo', 'Tai O', 'Sai Kung', 'Clear Water Bay',
+  'Hang Hau', 'Tseung Kwan O', 'Tiu Keng Leng', 'Fortress Hill', 'Tin Hau',
+  'Central', 'Admiralty',
+].slice().sort((a, b) => b.length - a.length);
 
 const STREET_SUFFIX = 'Road|Street|Avenue|Ave|Drive|Path|Lane|Rd|St';
 const EXTRA_WORD = 'walk[\\s-]?ups?|helpers?|ceilings?|fees?';
@@ -25,10 +51,40 @@ function takeOne(s, re, pick) {
   return { s: next, value, match: m };
 }
 
+function titleCaseName(s) {
+  return collapse(s).split(/(\s+)/).map((tok) => {
+    if (/^\s+$/.test(tok)) return tok;
+    return tok.split('-').map((p) => {
+      if (!p) return p;
+      if (/^\d+[A-Za-z]?$/.test(p)) return p.toUpperCase();
+      return p.charAt(0).toUpperCase() + p.slice(1).toLowerCase();
+    }).join('-');
+  }).join('');
+}
+
+function expandStreetSuffix(raw) {
+  if (/^rd$/i.test(raw)) return 'Road';
+  if (/^st$/i.test(raw)) return 'Street';
+  if (/^ave$/i.test(raw)) return 'Avenue';
+  if (/^avenue$/i.test(raw)) return 'Avenue';
+  return titleCaseName(raw);
+}
+
 function normCode(raw) {
   const up = String(raw || '').toUpperCase();
-  const hit = AREA_CODES.find((c) => c.toUpperCase() === up);
-  return hit || '';
+  const aliased = CODE_ALIASES[up] || up;
+  const hit = TERRITORIES.find((t) => t.code === aliased);
+  return hit ? hit.code : '';
+}
+
+export function territoryLabel(code) {
+  const hit = TERRITORIES.find((t) => t.code === code);
+  return hit ? `${hit.label} (${hit.code})` : '';
+}
+
+export function codeFromTerritory(label) {
+  const m = /\(([A-Z0-9-]+)\)\s*$/.exec(String(label || ''));
+  return m ? m[1] : '';
 }
 
 function normFloor(raw) {
@@ -50,19 +106,24 @@ function nearFloor(unitMatch, floorMatch, s) {
 }
 
 export function composeLine1(parts) {
-  const bits = [parts.flat || parts.unitKeep, parts.floor, parts.block, parts.building]
+  const bits = [parts.flat, parts.floor, parts.block, parts.building]
     .map((x) => collapse(x))
     .filter(Boolean);
   return bits.join(', ');
 }
 
 export function composeFullAddress(parts) {
-  const bits = [parts.line1, parts.street, parts.city].map((x) => collapse(x)).filter(Boolean);
-  return bits.join(', ');
+  const head = [parts.line1, parts.street].map(collapse).filter(Boolean).join(', ');
+  const dist = collapse(parts.district);
+  const code = collapse(parts.code);
+  if (dist && code) return `${head}, ${dist} (${code})`;
+  if (dist) return head ? `${head}, ${dist}` : dist;
+  if (code) return head ? `${head} (${code})` : '';
+  return head;
 }
 
 export function parseAddress(raw) {
-  let s = collapse(raw);
+  let s = collapse(raw).replace(/\(\s*\)/g, ' ');
   const extra = [];
 
   const moneyFee = /\$?\s*\d+(?:\.\d+)?\s*(?:hkd\s*)?fees?|fees?\s*\$?\s*\d+(?:\.\d+)?/gi;
@@ -73,19 +134,20 @@ export function parseAddress(raw) {
   s = collapse(s);
   const extraWord = new RegExp('\\b(?:' + EXTRA_WORD + ')\\b', 'gi');
   s = s.replace(extraWord, (m) => {
-    extra.push(collapse(m).toLowerCase().replace(/\s+/g, '-').replace(/walkup/i, 'walk-up'));
+    extra.push(collapse(m).toLowerCase().replace(/\s+/g, '-').replace(/walkup/, 'walk-up'));
     return ' ';
   });
   s = collapse(s);
 
-  let city = '';
-  const areaRe = new RegExp('\\b(' + AREA_CODES.map(escapeRe).join('|') + ')\\b', 'i');
+  let code = '';
+  const areaRe = new RegExp('\\(?\\b(' + AREA_CODES.map(escapeRe).join('|') + ')\\b\\)?', 'i');
   for (;;) {
     const got = takeOne(s, areaRe, (m) => normCode(m[1]));
     if (!got.match) break;
-    if (!city) city = got.value;
+    if (!code) code = got.value;
     s = got.s;
   }
+  s = collapse(s.replace(/\(\s*\)/g, ' '));
 
   const streetRe = new RegExp(
     '\\b(\\d+[A-Za-z]?)\\s+([A-Za-z][A-Za-z\'’.\\-]*(?:\\s+[A-Za-z][A-Za-z\'’.\\-]*){0,4})\\s+(' + STREET_SUFFIX + ')\\b',
@@ -93,13 +155,15 @@ export function parseAddress(raw) {
   );
   let street = '';
   {
-    const got = takeOne(s, streetRe, (m) => collapse(m[1] + ' ' + m[2] + ' ' + m[3].replace(/^Rd$/i, 'Road').replace(/^St$/i, 'Street').replace(/^Ave$/i, 'Avenue')));
+    const got = takeOne(s, streetRe, (m) => collapse(
+      m[1] + ' ' + titleCaseName(m[2]) + ' ' + expandStreetSuffix(m[3])
+    ));
     street = got.value;
     s = got.s;
   }
 
   const floorRe = /\b(?:G\s*\/?\s*F|Floor\s+(?:G|\d{1,2})|(?:\d{1,2})(?:st|nd|rd|th)?\s*\/?\s*F(?:loor)?|(?:\d{1,2})(?:st|nd|rd|th)\s+floors?)\b/i;
-  const unitReEarly = /\bUnit\s*[A-Za-z0-9][A-Za-z0-9\-]*/i;
+  const unitReEarly = /\b(?:Unit|Apt|Apartment)\s*[A-Za-z0-9][A-Za-z0-9\-]*/i;
   const unitByFloor = nearFloor(unitReEarly.exec(s), floorRe.exec(s), s);
   let floor = '';
   {
@@ -112,8 +176,9 @@ export function parseAddress(raw) {
   const blocks = [];
   for (;;) {
     const got = takeOne(s, blockRe, (m) => {
-      const kind = m[1].replace(/^Blk$/i, 'Blk').replace(/^Block$/i, 'Block').replace(/^Tower$/i, 'Tower').replace(/^Phase$/i, 'Phase');
-      return kind + ' ' + m[2].toUpperCase().replace(/^(\d+)$/, '$1');
+      const kind = /^Blk$/i.test(m[1]) ? 'Block' : (/^Block$/i.test(m[1]) ? 'Block' : (/^Tower$/i.test(m[1]) ? 'Tower' : 'Phase'));
+      const id = /^\d+$/.test(m[2]) ? m[2] : m[2].toUpperCase();
+      return kind + ' ' + id;
     });
     if (!got.match) break;
     blocks.push(got.value);
@@ -122,39 +187,80 @@ export function parseAddress(raw) {
   const block = blocks.join(', ');
   const hasBlock = blocks.length > 0;
 
-  const flatRe = /\b(Flat|Apt|Rm|Room|Shop)\s*([A-Za-z0-9][A-Za-z0-9\-]*)\b/i;
   let flat = '';
+  const dwellingRe = /\b(Flat|Apt|Apts|Apartment|Apartments|Unit)\s*([A-Za-z0-9][A-Za-z0-9\-]*)\b/i;
   {
-    const got = takeOne(s, flatRe, (m) => {
-      const kind = /^(Rm|Room)$/i.test(m[1]) ? 'Rm' : (/^Apt$/i.test(m[1]) ? 'Apt' : (/^Shop$/i.test(m[1]) ? 'Shop' : 'Flat'));
-      return kind + ' ' + m[2].toUpperCase();
-    });
-    flat = got.value;
-    s = got.s;
-  }
-
-  const unitRe = /\bUnit\s*([A-Za-z0-9][A-Za-z0-9\-]*)\b/i;
-  let unitKeep = '';
-  {
-    const got = takeOne(s, unitRe, (m) => m[1].toUpperCase());
+    const got = takeOne(s, dwellingRe, (m) => 'Flat ' + m[2].toUpperCase());
     if (got.value) {
-      const asFlat = hasBlock || unitByFloor;
-      if (asFlat && !flat) flat = 'Flat ' + got.value;
-      else if (!asFlat) unitKeep = 'Unit ' + got.value;
+      flat = got.value;
+      s = got.s;
     }
-    s = got.s;
   }
 
-  const building = collapse(s).replace(/^[,/.\-]+|[,/.\-]+$/g, '').replace(/\s+,/g, ',').replace(/,\s*,/g, ',');
+  const shopRe = /\bShop\s*([A-Za-z0-9][A-Za-z0-9\-]*)\b/i;
+  if (!flat) {
+    const got = takeOne(s, shopRe, (m) => 'Shop ' + m[1].toUpperCase());
+    if (got.value) {
+      flat = got.value;
+      s = got.s;
+    }
+  } else {
+    const drop = takeOne(s, shopRe);
+    s = drop.s;
+  }
+
+  const roomRe = /\b(?:Rm|Room)\s*([A-Za-z0-9][A-Za-z0-9\-]*)\b/i;
+  if (!flat) {
+    const got = takeOne(s, roomRe, (m) => 'Room ' + m[1].toUpperCase());
+    if (got.value) {
+      flat = got.value;
+      s = got.s;
+    }
+  } else {
+    const drop = takeOne(s, roomRe);
+    s = drop.s;
+  }
+
+  if (!flat) {
+    const got = takeOne(s, /^\s*(?:,\s*)?(\d{1,4}[A-Za-z])\b/, (m) => 'Flat ' + m[1].toUpperCase());
+    if (got.value) {
+      flat = got.value;
+      s = got.s;
+    }
+  }
+
+  if (!flat && (hasBlock || unitByFloor)) {
+    const unitRe = /\bUnit\s*([A-Za-z0-9][A-Za-z0-9\-]*)\b/i;
+    const got = takeOne(s, unitRe, (m) => 'Flat ' + m[1].toUpperCase());
+    if (got.value) {
+      flat = got.value;
+      s = got.s;
+    }
+  }
+
+  let district = '';
+  for (const name of NEIGHBOURHOODS) {
+    const re = new RegExp('\\b' + escapeRe(name).replace(/\\-/g, '[-\\s]?') + '\\b', 'i');
+    const got = takeOne(s, re, () => name);
+    if (got.match) {
+      district = name;
+      s = got.s;
+      break;
+    }
+  }
+
+  const building = titleCaseName(
+    collapse(s).replace(/,/g, ' ').replace(/^[\s/.\-]+|[\s/.\-]+$/g, '')
+  );
 
   const parts = {
-    city,
-    country: 'Hong Kong',
+    code,
+    territory: territoryLabel(code),
+    district,
     flat,
     floor,
     block,
     building,
-    unitKeep,
     street,
     extra: extra.filter(Boolean).join(', '),
     line1: '',
@@ -170,8 +276,9 @@ export const FIXTURES = [
     id: 'area-code-first',
     raw: 'HKN Flat A 12/F Tower 1 Harbour House 18 Ice House Street',
     expect: {
-      city: 'HKN',
-      country: 'Hong Kong',
+      code: 'HKN',
+      territory: 'Hong Kong Island (HKN)',
+      district: '',
       flat: 'Flat A',
       floor: '12/F',
       block: 'Tower 1',
@@ -179,31 +286,35 @@ export const FIXTURES = [
       street: '18 Ice House Street',
       line1: 'Flat A, 12/F, Tower 1, Harbour House',
       extra: '',
-      composed: 'Flat A, 12/F, Tower 1, Harbour House, 18 Ice House Street, HKN',
+      composed: 'Flat A, 12/F, Tower 1, Harbour House, 18 Ice House Street (HKN)',
     },
   },
   {
     id: 'floors',
     raw: 'KLN 20th floor Foo Court 10 Nathan Road',
     expect: {
-      city: 'KLN',
+      code: 'KLN',
+      territory: 'Kowloon (KLN)',
+      district: '',
       floor: '20/F',
       building: 'Foo Court',
       street: '10 Nathan Road',
       line1: '20/F, Foo Court',
       extra: '',
-      composed: '20/F, Foo Court, 10 Nathan Road, KLN',
+      composed: '20/F, Foo Court, 10 Nathan Road (KLN)',
     },
   },
   {
     id: 'block-from-tower-phase',
     raw: 'HKS Blk B Phase 2 Riviera 5 Smith Street',
     expect: {
-      city: 'HKS',
-      block: 'Blk B, Phase 2',
+      code: 'HKS',
+      territory: 'Hong Kong South (HKS)',
+      district: '',
+      block: 'Block B, Phase 2',
       building: 'Riviera',
       street: '5 Smith Street',
-      line1: 'Blk B, Phase 2, Riviera',
+      line1: 'Block B, Phase 2, Riviera',
       extra: '',
     },
   },
@@ -211,7 +322,9 @@ export const FIXTURES = [
     id: 'flat-from-shop',
     raw: 'N-T Shop 3 3/F Lucky Plaza 123 Sha Tin Road',
     expect: {
-      city: 'N-T',
+      code: 'N-T',
+      territory: 'New Territories (N-T)',
+      district: '',
       flat: 'Shop 3',
       floor: '3/F',
       building: 'Lucky Plaza',
@@ -224,29 +337,47 @@ export const FIXTURES = [
     id: 'unit-without-block',
     raw: 'L-T Unit 5 Sunshine Court 9 Ferry Street',
     expect: {
-      city: 'L-T',
-      flat: '',
+      code: 'L-T',
+      territory: 'Lantau (L-T)',
+      district: '',
+      flat: 'Flat 5',
       block: '',
-      unitKeep: 'Unit 5',
       building: 'Sunshine Court',
       street: '9 Ferry Street',
-      line1: 'Unit 5, Sunshine Court',
+      line1: 'Flat 5, Sunshine Court',
       extra: '',
-      composed: 'Unit 5, Sunshine Court, 9 Ferry Street, L-T',
+      composed: 'Flat 5, Sunshine Court, 9 Ferry Street (L-T)',
     },
   },
   {
     id: 'unit-next-to-floor-and-extra',
     raw: 'S-K Unit 8A 12/F Green Villa 22 Sai Kung Road walk-up helper ceiling fee',
     expect: {
-      city: 'S-K',
+      code: 'S-K',
+      territory: 'Sai Kung (S-K)',
+      district: '',
       flat: 'Flat 8A',
       floor: '12/F',
       building: 'Green Villa',
       street: '22 Sai Kung Road',
       line1: 'Flat 8A, 12/F, Green Villa',
       extra: 'walk-up, helper, ceiling, fee',
-      composed: 'Flat 8A, 12/F, Green Villa, 22 Sai Kung Road, S-K',
+      composed: 'Flat 8A, 12/F, Green Villa, 22 Sai Kung Road (S-K)',
+    },
+  },
+  {
+    id: 'morgan-mid-levels',
+    raw: '12A, The Morgan, 31 Conduit Road, Mid-Levels (HKN)',
+    expect: {
+      code: 'HKN',
+      territory: 'Hong Kong Island (HKN)',
+      district: 'Mid-Levels',
+      flat: 'Flat 12A',
+      building: 'The Morgan',
+      street: '31 Conduit Road',
+      line1: 'Flat 12A, The Morgan',
+      extra: '',
+      composed: 'Flat 12A, The Morgan, 31 Conduit Road, Mid-Levels (HKN)',
     },
   },
 ];

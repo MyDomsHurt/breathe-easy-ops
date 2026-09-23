@@ -4,7 +4,7 @@ import { addDays, formatDay, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth
 import { allJobs, getJob, importExistingJobs, placeJobInSlot, redo, removeJob, resetDemo, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js';
 import { startScheduleAuth } from './auth.js';
 import { firstEmptySlotIndex, hasTimeConflict, slotIndex } from './capacity.js';
-import { pulseRemaining, renderDayBoard, renderWeekBoard } from './board.js?v=3';
+import { pulseRemaining, renderDayBoard, renderWeekBoard } from './board.js?v=4';
 import { closeBooking, openBooking } from './booking.js?v=7';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js?v=2';
 import { exportMasterRoster } from './export-roster.js?v=18';
@@ -455,7 +455,7 @@ function bindBoardDrag() {
       if (el !== cell) el.classList.remove('drop-ok');
     });
     const emptyOver = e.target.closest('[data-empty-slot]');
-    document.querySelectorAll('#boardMount .empty-slot.drop-ok').forEach((el) => {
+    document.querySelectorAll('#boardMount [data-empty-slot].drop-ok').forEach((el) => {
       if (el !== emptyOver) el.classList.remove('drop-ok');
     });
     cell.classList.add('drop-ok');

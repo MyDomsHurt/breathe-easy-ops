@@ -1,7 +1,7 @@
-import { DISTRICTS, TEAM_META } from './config.js?v=2';
+import { DISTRICTS, TEAM_META } from './config.js?v=3';
 import { conflictingJobIds, daySlotsOf, districtsForTeamOnDay, firstEmptySlotIndex, jobsForTeamDay, layoutSlots, slotFloor } from './capacity.js';
 import { cellTeamMembers, findCrewNote } from './team-day.js';
-import { districtChipsHtml, esc, formatDay, isToday, isWeekend, jobStatus, jobTypeOf, normalizeLunch, shortTime, startMinutes } from './utils.js';
+import { acsLabel, districtChipsHtml, esc, formatDay, isToday, isWeekend, jobStatus, jobTypeOf, normalizeLunch, parseAcs, parseISO, shortTime, startMinutes } from './utils.js';
 
 function teamColor(name) {
   return TEAM_META[name]?.color || '#64748b';
@@ -42,17 +42,21 @@ function formatMobile(raw) {
   return d;
 }
 
+function badgeKind(token) {
+  if (/WP/i.test(token)) return 'w';
+  if (/^\d+(?:\.\d+)?S$/i.test(token)) return 's';
+  if (/^\d+(?:\.\d+)?W$/i.test(token)) return 'w';
+  if (/B/i.test(token)) return 'b';
+  return 'x';
+}
+
 function liveAcsBadges(acs) {
-  if (!acs) return '';
-  const re = /(?<!\d)(\d{1,2})\s*(BEP|UC|S|W|B|C)\b/gi;
-  const bits = [];
-  let m;
-  while ((m = re.exec(String(acs))) !== null) {
-    const type = m[2].toUpperCase();
-    const kind = type === 'S' ? 's' : type === 'W' ? 'w' : type === 'B' ? 'b' : 'x';
-    bits.push(`<span class="live-u live-u-${kind}">${esc(m[1] + type)}</span>`);
-  }
-  if (!bits.length) return '';
+  const raw = String(acs || '').trim();
+  const label = acsLabel(parseAcs(raw));
+  if (!label) return raw ? `<span class="compact-units">${esc(raw)}</span>` : '';
+  const bits = label.split(/\s+/).filter(Boolean).map((tok) => (
+    `<span class="live-u live-u-${badgeKind(tok)}">${esc(tok)}</span>`
+  ));
   return `<span class="live-units">${bits.join('')}</span>`;
 }
 
@@ -114,6 +118,25 @@ function boardCardHtml(job, conflict) {
   </button>`;
 }
 
+function weekJobHtml(job, conflict) {
+  const hold = jobStatus(job) === 'tentative';
+  const dist = DISTRICTS[job.district] || DISTRICT_FALLBACK;
+  const left = hold ? '#ca8a04' : dist.border;
+  const unitsBit = liveAcsBadges(job.acs);
+  const addr = String(job.address || '').trim();
+  const pulse = pulseRemaining(job) ? ' is-pulse' : '';
+  const timeCls = conflict ? ' time-conflict' : '';
+  const name = String(job.client_name || '').trim();
+  return `<button type="button" class="job-card job-card-week${hold ? ' is-tentative' : ''}${pulse}" draggable="true" data-job="${esc(job.job_id)}" style="border-left:4px solid ${left}" title="${esc(hoverTitle(job))}">
+    <div class="week-row-meta">
+      <span class="week-time${timeCls}">${esc(shortTime(job))}</span>
+      ${unitsBit}
+    </div>
+    ${name ? `<span class="week-name">${esc(name)}</span>` : ''}
+    ${addr ? `<p class="week-addr">${esc(addr)}</p>` : ''}
+  </button>`;
+}
+
 function lunchCardHtml(time) {
   return `<div class="lunch-card" data-lunch-card="1">
     <span class="lunch-label">Lunch</span>
@@ -125,15 +148,23 @@ function emptySlotHtml(date, team, index) {
   return `<button type="button" class="empty-slot" data-book-date="${esc(date)}" data-book-team="${esc(team)}" data-empty-slot="1" data-slot="${index}" aria-label="Add booking"></button>`;
 }
 
+function leftoverAddHtml(date, team, index) {
+  return `<button type="button" class="empty-add" data-book-date="${esc(date)}" data-book-team="${esc(team)}" data-empty-slot="1" data-slot="${index}" aria-label="Add booking">+</button>`;
+}
+
 function renderSlotStack(slots, lunchTime, conflicts, mode, full, date, team) {
   const time = normalizeLunch(lunchTime);
   const lunchMins = time ? startMinutes({ time }) : null;
-  const renderJob = (j) => boardCardHtml(j, conflicts.has(j.job_id));
+  const week = mode === 'week';
+  const renderJob = (j) => (week ? weekJobHtml(j, conflicts.has(j.job_id)) : boardCardHtml(j, conflicts.has(j.job_id)));
   const out = [];
   let placedLunch = !time;
+  let leftoverEmpty = null;
+  let hasJob = false;
   for (let i = 0; i < slots.length; i += 1) {
     const j = slots[i];
     if (j) {
+      hasJob = true;
       if (!placedLunch) {
         const t = startMinutes(j);
         if (t == null || t >= lunchMins) {
@@ -143,11 +174,25 @@ function renderSlotStack(slots, lunchTime, conflicts, mode, full, date, team) {
       }
       out.push(renderJob(j));
     } else if (!full) {
-      out.push(emptySlotHtml(date, team, i));
+      if (week) {
+        if (leftoverEmpty == null) leftoverEmpty = i;
+      } else {
+        out.push(emptySlotHtml(date, team, i));
+      }
     }
   }
   if (!placedLunch) out.push(lunchCardHtml(time));
+  if (week && !full && hasJob && leftoverEmpty != null) {
+    out.push(leftoverAddHtml(date, team, leftoverEmpty));
+  }
   return out.join('');
+}
+
+function weekCellTitle(date, empty, full, count) {
+  const dow = parseISO(date).toLocaleDateString('en-HK', { weekday: 'short' });
+  const day = Number(date.slice(8));
+  const bit = full ? 'Full' : (empty ? 'Open' : String(count));
+  return `${dow} ${day} · ${bit}`;
 }
 
 function cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs) {
@@ -166,9 +211,11 @@ function cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs) {
   const van = cellTeamMembers(lookup, date, team);
   const vanHi = isHi(note && note.highlight_members);
   const vanLabel = van || "Who's on";
-  const status = full ? 'Full' : (empty ? 'Open' : list.length + ' job' + (list.length === 1 ? '' : 's'));
+  const status = mode === 'week'
+    ? weekCellTitle(date, empty, full, list.length)
+    : (full ? 'Full' : (empty ? 'Open' : list.length + ' job' + (list.length === 1 ? '' : 's')));
   const floor = slotFloor(list, date, team);
-  return `<div class="roster-cell ${empty ? 'empty' : 'has-jobs'}${full ? ' is-full' : ''} ${mode === 'day' ? 'day-cell' : ''}" data-date="${date}" data-team="${team}">
+  return `<div class="roster-cell ${empty ? 'empty' : 'has-jobs'}${full ? ' is-full' : ''} ${mode === 'day' ? 'day-cell' : 'week-cell'}" data-date="${date}" data-team="${team}">
     <div class="cell-top">
       <div class="cell-head-left">
         <span class="cell-status">${status}</span>

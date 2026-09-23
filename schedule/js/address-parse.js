@@ -23,13 +23,42 @@ const NEIGHBOURHOODS = [
   'Tai Koo', 'Sai Wan Ho', 'Shau Kei Wan', 'Chai Wan', 'Shek O', 'Tai Tam',
   'Tsim Sha Tsui', 'Jordan', 'Yau Ma Tei', 'Mong Kok', 'Sham Shui Po', 'Cheung Sha Wan',
   'Lai Chi Kok', 'Mei Foo', 'Kowloon Tong', 'Ho Man Tin', 'Hung Hom', 'To Kwa Wan',
-  'Kowloon City', 'San Po Kong', 'Kwun Tong', 'Ngau Tau Kok', 'Lam Tin', 'Yau Tong',
+  'Tai Kok Tsui', 'Kowloon City', 'San Po Kong', 'Kwun Tong', 'Ngau Tau Kok', 'Lam Tin', 'Yau Tong',
   'Sha Tin', 'Tai Wai', 'Ma On Shan', 'Tai Po', 'Fanling', 'Sheung Shui',
   'Tuen Mun', 'Yuen Long', 'Tin Shui Wai', 'Tsuen Wan', 'Kwai Chung', 'Tsing Yi',
   'Tung Chung', 'Discovery Bay', 'Mui Wo', 'Tai O', 'Sai Kung', 'Clear Water Bay',
   'Hang Hau', 'Tseung Kwan O', 'Tiu Keng Leng', 'Fortress Hill', 'Tin Hau',
   'Central', 'Admiralty',
 ].slice().sort((a, b) => b.length - a.length);
+
+const NEIGHBOURHOOD_ALIASES = {
+  pokfulam: 'Pok Fu Lam',
+  'pok fu lam': 'Pok Fu Lam',
+  'pok-fu-lam': 'Pok Fu Lam',
+  shatin: 'Sha Tin',
+  'sha tin': 'Sha Tin',
+  'tai kok tsui': 'Tai Kok Tsui',
+  taikoktsui: 'Tai Kok Tsui',
+  'sai wan ho': 'Sai Wan Ho',
+  saiwanho: 'Sai Wan Ho',
+  'kennedy town': 'Kennedy Town',
+  kennedytown: 'Kennedy Town',
+  'happy valley': 'Happy Valley',
+  happyvalley: 'Happy Valley',
+  'causeway bay': 'Causeway Bay',
+  causewaybay: 'Causeway Bay',
+  'wan chai': 'Wan Chai',
+  wanchai: 'Wan Chai',
+  'sheung wan': 'Sheung Wan',
+  sheungwan: 'Sheung Wan',
+  'hung hom': 'Hung Hom',
+  hunghom: 'Hung Hom',
+  'tsing yi': 'Tsing Yi',
+  tsingyi: 'Tsing Yi',
+  'mid levels': 'Mid-Levels',
+  midlevels: 'Mid-Levels',
+  'mid-levels': 'Mid-Levels',
+};
 
 const STREET_SUFFIX = 'Road|Street|Avenue|Ave|Drive|Path|Lane|Rd|St';
 const EXTRA_WORD = 'walk[\\s-]?ups?|helpers?|ceilings?|fees?';
@@ -95,6 +124,19 @@ function normFloor(raw) {
   return t;
 }
 
+function canonNeighbourhood(raw) {
+  const t = collapse(raw).toLowerCase().replace(/-/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!t) return '';
+  const compact = t.replace(/\s+/g, '');
+  if (NEIGHBOURHOOD_ALIASES[t]) return NEIGHBOURHOOD_ALIASES[t];
+  if (NEIGHBOURHOOD_ALIASES[compact]) return NEIGHBOURHOOD_ALIASES[compact];
+  for (const name of NEIGHBOURHOODS) {
+    const key = name.toLowerCase().replace(/-/g, ' ');
+    if (t === key || compact === key.replace(/\s+/g, '')) return name;
+  }
+  return titleCaseName(raw);
+}
+
 function nearFloor(unitMatch, floorMatch, s) {
   if (!unitMatch || !floorMatch) return false;
   const u0 = unitMatch.index;
@@ -154,12 +196,16 @@ export function parseAddress(raw) {
     'i'
   );
   let street = '';
+  let district = '';
   {
-    const got = takeOne(s, streetRe, (m) => collapse(
-      m[1] + ' ' + titleCaseName(m[2]) + ' ' + expandStreetSuffix(m[3])
-    ));
-    street = got.value;
-    s = got.s;
+    const m = streetRe.exec(s);
+    if (m) {
+      street = collapse(m[1] + ' ' + titleCaseName(m[2]) + ' ' + expandStreetSuffix(m[3]));
+      const after = collapse(s.slice(m.index + m[0].length).replace(/^[,/]+/, ''));
+      const before = collapse(s.slice(0, m.index).replace(/[,/]+$/, ''));
+      if (after) district = canonNeighbourhood(after);
+      s = before;
+    }
   }
 
   const floorRe = /\b(?:G\s*\/?\s*F|Floor\s+(?:G|\d{1,2})|(?:\d{1,2})(?:st|nd|rd|th)?\s*\/?\s*F(?:loor)?|(?:\d{1,2})(?:st|nd|rd|th)\s+floors?)\b/i;
@@ -238,14 +284,15 @@ export function parseAddress(raw) {
     }
   }
 
-  let district = '';
-  for (const name of NEIGHBOURHOODS) {
-    const re = new RegExp('\\b' + escapeRe(name).replace(/\\-/g, '[-\\s]?') + '\\b', 'i');
-    const got = takeOne(s, re, () => name);
-    if (got.match) {
-      district = name;
-      s = got.s;
-      break;
+  if (!district) {
+    for (const name of NEIGHBOURHOODS) {
+      const re = new RegExp('\\b' + escapeRe(name).replace(/-/g, '[-\\s]?') + '\\b', 'i');
+      const got = takeOne(s, re, () => name);
+      if (got.match) {
+        district = name;
+        s = got.s;
+        break;
+      }
     }
   }
 
@@ -378,6 +425,22 @@ export const FIXTURES = [
       line1: 'Flat 12A, The Morgan',
       extra: '',
       composed: 'Flat 12A, The Morgan, 31 Conduit Road, Mid-Levels (HKN)',
+    },
+  },
+  {
+    id: 'scenic-villas-pokfulam',
+    raw: '4/F Block J, Scenic Villas, 20 Scenic Villa Drive, Pokfulam (HKN)',
+    expect: {
+      code: 'HKN',
+      territory: 'Hong Kong Island (HKN)',
+      district: 'Pok Fu Lam',
+      floor: '4/F',
+      block: 'Block J',
+      building: 'Scenic Villas',
+      street: '20 Scenic Villa Drive',
+      line1: '4/F, Block J, Scenic Villas',
+      extra: '',
+      composed: '4/F, Block J, Scenic Villas, 20 Scenic Villa Drive, Pok Fu Lam (HKN)',
     },
   },
 ];

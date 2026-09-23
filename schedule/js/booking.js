@@ -5,7 +5,7 @@ import { uniqueClientsFrom } from './seed.js';
 import { displayNameForEmail } from '../../shared/firebase-config.js';
 import { highlightOf } from '../../shared/job.js';
 import { acsLabel, emptyUnits, formatDay, formatTime24, jobStatus, jobTypeOf, NOTES1_MAX, parseAcs, shortTime } from './utils.js';
-import { TERRITORIES, codeFromTerritory, composeFullAddress, parseAddress, territoryLabel } from './address-parse.js?v=2';
+import { TERRITORIES, codeFromTerritory, composeFullAddress, parseAddress, territoryLabel } from './address-parse.js?v=3';
 
 let form = {
   job_id: '',
@@ -627,19 +627,31 @@ function bindAddressCleaner() {
   $('#addrComposed')?.addEventListener('input', (e) => { cleaner.composed = e.target.value; });
   $('#addrExtra')?.addEventListener('input', (e) => { cleaner.extra = e.target.value; });
   $('#addrCleanBtn')?.addEventListener('click', () => {
-    const parsed = parseAddress(cleaner.raw || form.address);
-    cleaner.line1 = parsed.line1;
-    cleaner.street = parsed.street;
-    cleaner.district = parsed.district;
-    cleaner.code = parsed.code;
-    cleaner.extra = parsed.extra;
-    cleaner.composed = parsed.composed;
     const set = (id, val) => { const el = $(id); if (el) el.value = val || ''; };
+    const terr = $('#addrTerritory');
+    cleaner.line1 = '';
+    cleaner.street = '';
+    cleaner.district = '';
+    cleaner.code = '';
+    cleaner.extra = '';
+    cleaner.composed = '';
+    set('#addrLine1', '');
+    set('#addrStreet', '');
+    set('#addrDistrict', '');
+    if (terr) terr.value = '';
+    set('#addrComposed', '');
+    set('#addrExtra', '');
+    const parsed = parseAddress(cleaner.raw || form.address);
+    cleaner.line1 = parsed.line1 || '';
+    cleaner.street = parsed.street || '';
+    cleaner.district = parsed.district || '';
+    cleaner.code = parsed.code || '';
+    cleaner.extra = parsed.extra || '';
+    cleaner.composed = parsed.composed || '';
     set('#addrLine1', cleaner.line1);
     set('#addrStreet', cleaner.street);
     set('#addrDistrict', cleaner.district);
-    const terr = $('#addrTerritory');
-    if (terr) terr.value = territoryLabel(cleaner.code);
+    if (terr) terr.value = cleaner.code ? territoryLabel(cleaner.code) : '';
     set('#addrComposed', cleaner.composed);
     set('#addrExtra', cleaner.extra);
   });

@@ -438,7 +438,8 @@ button, input, select, textarea { font-family: inherit; }
 .blank-line.short { width: 58%; }
 
 .board-wrap {
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: auto;
   border: 1px solid var(--line);
   border-radius: 16px;
   background: white;
@@ -446,20 +447,23 @@ button, input, select, textarea { font-family: inherit; }
 }
 
 .roster {
-  width: max-content;
-  min-width: 100%;
+  width: calc(132px + var(--days, 6) * 280px);
   display: grid;
-  grid-template-columns: 132px repeat(var(--days, 6), minmax(240px, 1fr));
+  grid-template-columns: 132px repeat(var(--days, 6), 280px);
 }
 
 .roster > .board-head,
 .roster > .team-row-label {
+  width: 132px;
   min-width: 132px;
+  max-width: 132px;
 }
 
 .roster > .day-col-head,
 .roster > .roster-cell {
-  min-width: 240px;
+  width: 280px;
+  min-width: 280px;
+  max-width: 280px;
 }
 
 .board-head, .team-row-label, .day-col-head, .roster-cell {

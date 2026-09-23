@@ -82,17 +82,17 @@ function compactPayMark(j) {
   return jobIsPaid(j) ? 'Paid' : 'Unpaid';
 }
 
-function boardCardHtml(job, conflict) {
+function boardCardHtml(job, conflict, week) {
   const hold = jobStatus(job) === 'tentative';
   const dist = DISTRICTS[job.district] || DISTRICT_FALLBACK;
   const left = hold ? '#ca8a04' : dist.border;
   const unitsBit = liveAcsBadges(job.acs) || (job.acs
     ? `<span class="compact-units">${esc(job.acs)}</span>`
     : '');
-  const mobile = formatMobile(job.mobile);
+  const mobile = week ? '' : formatMobile(job.mobile);
   const addr = String(job.address || '').trim();
   const notes1 = String(job.notes || '').trim();
-  const notes2 = String(job.notes_long || '').trim();
+  const notes2 = week ? '' : String(job.notes_long || '').trim();
   const payWord = compactPayMark(job);
   const pulse = pulseRemaining(job) ? ' is-pulse' : '';
   const timeCls = conflict ? ' time-conflict' : '';
@@ -118,25 +118,6 @@ function boardCardHtml(job, conflict) {
   </button>`;
 }
 
-function weekJobHtml(job, conflict) {
-  const hold = jobStatus(job) === 'tentative';
-  const dist = DISTRICTS[job.district] || DISTRICT_FALLBACK;
-  const left = hold ? '#ca8a04' : dist.border;
-  const unitsBit = liveAcsBadges(job.acs);
-  const addr = String(job.address || '').trim();
-  const pulse = pulseRemaining(job) ? ' is-pulse' : '';
-  const timeCls = conflict ? ' time-conflict' : '';
-  const name = String(job.client_name || '').trim();
-  return `<button type="button" class="job-card job-card-week${hold ? ' is-tentative' : ''}${pulse}" draggable="true" data-job="${esc(job.job_id)}" style="border-left:4px solid ${left}" title="${esc(hoverTitle(job))}">
-    <div class="week-row-meta">
-      <span class="week-time${timeCls}">${esc(shortTime(job))}</span>
-      ${unitsBit}
-    </div>
-    ${name ? `<span class="week-name">${esc(name)}</span>` : ''}
-    ${addr ? `<p class="week-addr">${esc(addr)}</p>` : ''}
-  </button>`;
-}
-
 function lunchCardHtml(time) {
   return `<div class="lunch-card" data-lunch-card="1">
     <span class="lunch-label">Lunch</span>
@@ -156,7 +137,7 @@ function renderSlotStack(slots, lunchTime, conflicts, mode, full, date, team) {
   const time = normalizeLunch(lunchTime);
   const lunchMins = time ? startMinutes({ time }) : null;
   const week = mode === 'week';
-  const renderJob = (j) => (week ? weekJobHtml(j, conflicts.has(j.job_id)) : boardCardHtml(j, conflicts.has(j.job_id)));
+  const renderJob = (j) => boardCardHtml(j, conflicts.has(j.job_id), week);
   const out = [];
   let placedLunch = !time;
   let leftoverEmpty = null;

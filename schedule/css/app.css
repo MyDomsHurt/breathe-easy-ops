@@ -447,9 +447,9 @@ button, input, select, textarea { font-family: inherit; }
 }
 
 .roster {
-  width: calc(132px + var(--days, 6) * 280px);
+  width: calc(132px + var(--days, 6) * 300px);
   display: grid;
-  grid-template-columns: 132px repeat(var(--days, 6), 280px);
+  grid-template-columns: 132px repeat(var(--days, 6), 300px);
 }
 
 .roster > .board-head,
@@ -461,9 +461,9 @@ button, input, select, textarea { font-family: inherit; }
 
 .roster > .day-col-head,
 .roster > .roster-cell {
-  width: 280px;
-  min-width: 280px;
-  max-width: 280px;
+  width: 300px;
+  min-width: 300px;
+  max-width: 300px;
 }
 
 .board-head, .team-row-label, .day-col-head, .roster-cell {
@@ -1216,101 +1216,62 @@ button.day-col-head:hover { background: #e0f2fe; }
   white-space: nowrap;
 }
 .job-card-detailed .compact-pay.is-unpaid { color: #d97706; }
-.job-card.job-card-week {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 1px;
-  width: 100%;
-  min-height: 0;
-  margin-bottom: 0;
-  padding: 6px 8px 7px;
-  text-align: left;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  border-left-width: 4px;
-  box-shadow: none;
-  font: inherit;
-  cursor: grab;
-  overflow: hidden;
+.week-cell .job-card-detailed .compact-row {
+  padding: 8px;
+  grid-template-columns: 5.25ch minmax(0, 1fr) max-content;
+  column-gap: 8px;
 }
-.job-card.job-card-week:hover {
-  background: #f8fafc;
-  box-shadow: 0 2px 8px rgba(15, 39, 68, 0.08);
-  transform: none;
+.week-cell .job-card-detailed .compact-col-time {
+  width: 5.25ch;
+  max-width: 5.25ch;
+  gap: 3px;
 }
-.job-card.job-card-week.is-tentative {
-  background: #fef9c3;
-  border-color: #eab308;
-}
-.job-card-week .week-row-meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  flex-wrap: wrap;
-}
-.job-card-week .week-time {
-  flex: 0 0 auto;
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum" 1;
-  font-size: 12px;
-  font-weight: 800;
-  line-height: 1.2;
-  color: #0f172a;
-}
-.job-card-week .week-time.time-conflict { color: #dc2626; }
-.job-card-week .live-units {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 2px;
-  max-width: none;
-}
-.job-card-week .live-u {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: 800;
-  line-height: 1.2;
-  padding: 1px 4px;
-  border-radius: 3px;
-  white-space: nowrap;
-  color: #fff;
-}
-.job-card-week .live-u-s { background: #0284c7; }
-.job-card-week .live-u-w { background: #d97706; }
-.job-card-week .live-u-b { background: #0d9488; }
-.job-card-week .live-u-x { background: #475569; }
-.job-card-week .compact-units {
-  max-width: none;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 1.2;
-  color: #334155;
-  overflow-wrap: break-word;
-}
-.job-card-week .week-name {
-  display: block;
-  color: #075985;
+.week-cell .job-card-detailed .compact-time {
+  width: 5.25ch;
   font-size: 13px;
-  font-weight: 600;
-  line-height: 1.25;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
-.job-card-week .week-addr {
-  margin: 0;
+.week-cell .job-card-detailed .live-units {
+  max-width: 5.25ch;
+  gap: 2px;
+}
+.week-cell .job-card-detailed .live-u {
+  font-size: 10px;
+  padding: 1px 3px;
+  border-radius: 3px;
+}
+.week-cell .job-card-detailed .compact-units {
+  max-width: 5.25ch;
+  font-size: 10px;
+}
+.week-cell .job-card-detailed .compact-name {
+  font-size: 12px;
+}
+.week-cell .job-card-detailed .compact-addr {
+  margin: 2px 0 0;
   font-size: 11px;
-  font-weight: 500;
   line-height: 1.3;
-  color: #475569;
+  max-height: calc(1.3em * 2);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+.week-cell .job-card-detailed .compact-notes {
+  display: block;
+  margin: 2px 0 0;
+  font-size: 11px;
+  line-height: 1.3;
+  max-height: 1.3em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  -webkit-line-clamp: unset;
+  overflow-wrap: normal;
+}
+.week-cell .job-card-detailed .compact-type,
+.week-cell .job-card-detailed .compact-pay {
+  font-size: 10px;
 }
 .card-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
 .card-notes {

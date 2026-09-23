@@ -357,7 +357,7 @@ function amountOf(job) {
   return Number.isFinite(n) ? n : '';
 }
 
-function buildRows(jobs, all) {
+function listExportJobs(jobs) {
   const real = (jobs || []).filter((j) => {
     if (!j || j.deleted || isCrewNote(j)) return false;
     const date = String(j.date || '').trim();
@@ -373,47 +373,98 @@ function buildRows(jobs, all) {
     if (tm) return tm;
     return String(a.job_id || '').localeCompare(String(b.job_id || ''));
   });
-  return real.map((j) => {
-    const lead = canonicalLead(j);
-    const types = scoreTypes(j);
-    const units = UNIT_TYPES.reduce((s, k) => s + Number(types[k] || 0), 0);
-    const ret = isReturn(j);
-    return [
-      String(j.job_id || ''),
-      String(j.date || '').trim(),
-      j.time == null ? '' : String(j.time),
-      lead,
-      cellTeamMembers(all, j.date, lead) || '',
-      j.client_name == null ? '' : String(j.client_name),
-      j.mobile == null ? '' : String(j.mobile),
-      j.address == null ? '' : String(j.address),
-      j.acs == null ? '' : String(j.acs),
-      types.S, types.W, types.B, types.C, types.UC, types.TV, types.OU, types.SwG, types.EF, types.PAU, types.BEP,
-      units,
-      ret ? 'Y' : '',
-      amountOf(j),
-      j.invoice == null ? '' : String(j.invoice),
-      j.receipt == null ? '' : String(j.receipt),
-      j.payment == null ? '' : String(j.payment),
-      notesOf(j),
-    ];
-  });
+  return real;
 }
 
-function cellFor(c, v) {
+function sheetRow(j, all) {
+  const lead = canonicalLead(j);
+  const types = scoreTypes(j);
+  const units = UNIT_TYPES.reduce((s, k) => s + Number(types[k] || 0), 0);
+  const ret = isReturn(j);
+  return [
+    String(j.job_id || ''),
+    String(j.date || '').trim(),
+    j.time == null ? '' : String(j.time),
+    lead,
+    cellTeamMembers(all, j.date, lead) || '',
+    j.client_name == null ? '' : String(j.client_name),
+    j.mobile == null ? '' : String(j.mobile),
+    j.address == null ? '' : String(j.address),
+    j.acs == null ? '' : String(j.acs),
+    types.S, types.W, types.B, types.C, types.UC, types.TV, types.OU, types.SwG, types.EF, types.PAU, types.BEP,
+    units,
+    ret ? 'Y' : '',
+    amountOf(j),
+    j.invoice == null ? '' : String(j.invoice),
+    j.receipt == null ? '' : String(j.receipt),
+    j.payment == null ? '' : String(j.payment),
+    notesOf(j),
+  ];
+}
+
+function asText(v) {
+  return v == null ? '' : String(v);
+}
+
+function changeLogRows(real) {
+  const out = [];
+  real.forEach((j) => {
+    const lead = canonicalLead(j);
+    const jobId = String(j.job_id || '');
+    const date = String(j.date || '').trim();
+    const client = j.client_name == null ? '' : String(j.client_name);
+    const entries = Array.isArray(j.changes) ? j.changes : [];
+    entries.forEach((ch) => {
+      if (!ch || typeof ch !== 'object') return;
+      const base = [
+        jobId,
+        date,
+        client,
+        lead,
+        asText(ch.at),
+        asText(ch.by),
+        asText(ch.action),
+      ];
+      const diffs = Array.isArray(ch.diffs) ? ch.diffs : [];
+      if (!diffs.length) {
+        out.push(base.concat(['', '', '']));
+        return;
+      }
+      diffs.forEach((d) => {
+        const row = d && typeof d === 'object' ? d : {};
+        out.push(base.concat([asText(row.field), asText(row.from), asText(row.to)]));
+      });
+    });
+  });
+  return out;
+}
+
+function cellFor(c, v, textCols, numCols) {
   if (v == null || v === '') return null;
-  if (NUM_COLS[c] && typeof v === 'number' && isFinite(v)) {
+  const text = textCols || TEXT_COLS;
+  const nums = numCols || NUM_COLS;
+  if (nums[c] && typeof v === 'number' && isFinite(v)) {
     return { t: 'n', v: v };
   }
-  if (TEXT_COLS[c]) {
+  if (text[c]) {
     return { t: 's', v: String(v), z: '@' };
   }
   if (typeof v === 'number' && isFinite(v)) return { t: 'n', v: v };
   return { t: 's', v: String(v) };
 }
 
-function toSheet(headers, rows) {
+function toSheet(headers, rows, spec) {
   const XLSX = window.XLSX;
+  const textCols = spec && spec.textCols ? spec.textCols : TEXT_COLS;
+  const numCols = spec && spec.numCols ? spec.numCols : NUM_COLS;
+  const widthFor = spec && spec.widthFor ? spec.widthFor : function (c) {
+    if (c === 0) return { wch: 18 };
+    if (c === 1) return { wch: 12 };
+    if (c === 5 || c === 7 || c === 8 || c === 26) return { wch: 28 };
+    if (c === 4) return { wch: 18 };
+    if (NUM_COLS[c]) return { wch: 8 };
+    return { wch: 14 };
+  };
   const ws = {};
   const cols = headers.length;
   const lastR = rows.length;
@@ -423,22 +474,15 @@ function toSheet(headers, rows) {
   rows.forEach((row, i) => {
     const r = i + 1;
     row.forEach((v, c) => {
-      const cell = cellFor(c, v);
+      const cell = cellFor(c, v, textCols, numCols);
       if (cell) ws[XLSX.utils.encode_cell({ r: r, c: c })] = cell;
     });
   });
-  ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: lastR, c: cols - 1 } });
+  ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(lastR, 0), c: cols - 1 } });
   ws['!autofilter'] = { ref: ws['!ref'] };
   ws['!views'] = [{ state: 'frozen', ySplit: 1, topLeftCell: 'A2', activePane: 'bottomLeft' }];
   ws['!freeze'] = { xSplit: 0, ySplit: 1, topLeftCell: 'A2', state: 'frozen' };
-  ws['!cols'] = headers.map((h, c) => {
-    if (c === 0) return { wch: 18 };
-    if (c === 1) return { wch: 12 };
-    if (c === 5 || c === 7 || c === 8 || c === 26) return { wch: 28 };
-    if (c === 4) return { wch: 18 };
-    if (NUM_COLS[c]) return { wch: 8 };
-    return { wch: 14 };
-  });
+  ws['!cols'] = headers.map((h, c) => widthFor(c));
   return ws;
 }
 
@@ -448,7 +492,7 @@ const JSON_KEYS = [
   'units', 'return', 'amount', 'invoice', 'receipt', 'payment', 'notes',
 ];
 
-function rowToJson(row) {
+function rowToJson(row, job) {
   const o = {};
   JSON_KEYS.forEach((key, i) => {
     let v = row[i];
@@ -457,6 +501,11 @@ function rowToJson(row) {
     else if (v == null) v = '';
     o[key] = v;
   });
+  o.createdAt = asText(job && job.created_at);
+  o.createdBy = asText(job && job.created_by);
+  o.updatedAt = asText(job && job.updated_at);
+  o.updatedBy = asText(job && job.updated_by);
+  o.changes = Array.isArray(job && job.changes) ? job.changes : [];
   return o;
 }
 
@@ -472,17 +521,35 @@ function downloadJson(filename, data) {
   setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
+const CHANGE_HEADERS = ['Job ID', 'Date', 'Client', 'Team', 'At', 'By', 'Action', 'Field', 'From', 'To'];
+const CHANGE_TEXT_COLS = { 0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1, 9: 1 };
+
+function changeColWidth(c) {
+  if (c === 0) return { wch: 18 };
+  if (c === 1) return { wch: 12 };
+  if (c === 2) return { wch: 22 };
+  if (c === 4 || c === 5) return { wch: 24 };
+  if (c === 8 || c === 9) return { wch: 22 };
+  return { wch: 14 };
+}
+
 function exportJobs(jobs) {
-  const rows = buildRows(jobs, jobs);
+  const real = listExportJobs(jobs);
+  const rows = real.map((j) => sheetRow(j, jobs));
   if (!rows.length) throw new Error('No jobs to export');
   const day = todayIso();
   const wb = window.XLSX.utils.book_new();
-  const ws = toSheet(HEADERS, rows);
-  window.XLSX.utils.book_append_sheet(wb, ws, 'Jobs');
+  window.XLSX.utils.book_append_sheet(wb, toSheet(HEADERS, rows), 'Jobs');
+  const logRows = changeLogRows(real);
+  window.XLSX.utils.book_append_sheet(
+    wb,
+    toSheet(CHANGE_HEADERS, logRows, { textCols: CHANGE_TEXT_COLS, numCols: {}, widthFor: changeColWidth }),
+    'Change log'
+  );
   const xlsxName = `breathe-easy-jobs-${day}.xlsx`;
   window.XLSX.writeFile(wb, xlsxName);
   const jsonName = `breathe-easy-jobs-${day}.json`;
-  downloadJson(jsonName, rows.map(rowToJson));
+  downloadJson(jsonName, real.map((j, i) => rowToJson(rows[i], j)));
   return { jobs: rows.length, name: xlsxName, json: jsonName };
 }
 

@@ -8,6 +8,7 @@ rules_version = '2';
 //   ruby@breathe-easyhk.com
 //   perry@breathe-easyhk.com
 //   n.marie.lamb@gmail.com
+//   webhook@breathe-easyhk.com
 //   joshua@breathe-easyhk.com
 // Five leads: read only jobs where team_lead is their name. No write.
 service cloud.firestore {
@@ -24,7 +25,8 @@ service cloud.firestore {
         'info@breathe-easyhk.com',
         'ruby@breathe-easyhk.com',
         'perry@breathe-easyhk.com',
-        'n.marie.lamb@gmail.com'
+        'n.marie.lamb@gmail.com',
+        'webhook@breathe-easyhk.com'
       ];
     }
     function isJosh() {

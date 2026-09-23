@@ -3,12 +3,14 @@
  * POST /.netlify/functions/hubspot-contact
  *
  * Env (Netlify UI, never git):
- *   HUBSPOT_CLIENT_SECRET     HubSpot app client secret (signature v3)
- *   HUBSPOT_ACCESS_TOKEN      private app token, single-contact GET only
- *   FIREBASE_SERVICE_ACCOUNT  JSON service account (Firebase Admin credentials)
+ *   HUBSPOT_CLIENT_SECRET      HubSpot app client secret (signature v3)
+ *   HUBSPOT_ACCESS_TOKEN       private app token, single-contact GET only
+ *   FIREBASE_WEBHOOK_EMAIL     Firebase Auth email (webhook@breathe-easyhk.com)
+ *   FIREBASE_WEBHOOK_PASSWORD  Firebase Auth password
  */
 
 import crypto from 'node:crypto';
+import { FIREBASE_CONFIG } from '../../shared/firebase-config.js';
 import {
   HUBSPOT_PROPERTY_MAP,
   HUBSPOT_PROPERTY_NAMES,
@@ -18,10 +20,10 @@ import {
 
 const HANDLED = new Set(['contact.creation', 'contact.deletion', 'contact.propertyChange']);
 const FIVE_MIN = 5 * 60 * 1000;
-const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const HS_CONTACT = 'https://api.hubapi.com/crm/v3/objects/contacts';
+const SIGN_IN_URL = 'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=';
 
-let cachedToken = { access: '', exp: 0 };
+let cachedAuth = { idToken: '', exp: 0 };
 
 function header(event, name) {
   const headers = event.headers || {};
@@ -62,59 +64,26 @@ export function verifyHubSpotSignatureV3(event, secret, now = Date.now()) {
   return crypto.timingSafeEqual(a, b);
 }
 
-function parseServiceAccount() {
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
-  if (!raw) throw new Error('FIREBASE_SERVICE_ACCOUNT is not set');
-  const sa = JSON.parse(raw);
-  if (!sa.project_id || !sa.client_email || !sa.private_key) {
-    throw new Error('FIREBASE_SERVICE_ACCOUNT is missing project_id, client_email, or private_key');
-  }
-  return sa;
-}
-
-function signJwt(sa) {
-  const now = Math.floor(Date.now() / 1000);
-  const headerJson = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url');
-  const claim = Buffer.from(JSON.stringify({
-    iss: sa.client_email,
-    sub: sa.client_email,
-    aud: TOKEN_URL,
-    iat: now,
-    exp: now + 3600,
-    scope: 'https://www.googleapis.com/auth/datastore',
-  })).toString('base64url');
-  const unsigned = `${headerJson}.${claim}`;
-  const key = String(sa.private_key).replace(/\\n/g, '\n');
-  const sig = crypto.createSign('RSA-SHA256').update(unsigned).sign(key, 'base64url');
-  return `${unsigned}.${sig}`;
-}
-
-async function accessToken(sa) {
-  if (cachedToken.access && Date.now() < cachedToken.exp - 30000) return cachedToken.access;
-  const assertion = signJwt(sa);
-  const body = new URLSearchParams({
-    grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-    assertion,
-  });
-  const res = await fetch(TOKEN_URL, {
+async function firebaseIdToken() {
+  if (cachedAuth.idToken && Date.now() < cachedAuth.exp - 30000) return cachedAuth.idToken;
+  const email = process.env.FIREBASE_WEBHOOK_EMAIL;
+  const password = process.env.FIREBASE_WEBHOOK_PASSWORD;
+  if (!email || !password) throw new Error('FIREBASE_WEBHOOK_EMAIL or FIREBASE_WEBHOOK_PASSWORD is not set');
+  const res = await fetch(SIGN_IN_URL + encodeURIComponent(FIREBASE_CONFIG.apiKey), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password, returnSecureToken: true }),
   });
   const json = await res.json();
-  if (!res.ok || !json.access_token) {
-    throw new Error('Firebase token exchange failed');
-  }
-  cachedToken = {
-    access: json.access_token,
-    exp: Date.now() + Number(json.expires_in || 3600) * 1000,
-  };
-  return cachedToken.access;
+  if (!res.ok || !json.idToken) throw new Error('Firebase Auth sign-in failed');
+  const ttl = Number(json.expiresIn || 3600) * 1000;
+  cachedAuth = { idToken: json.idToken, exp: Date.now() + ttl };
+  return cachedAuth.idToken;
 }
 
-function firestoreUrl(sa, id) {
+function firestoreUrl(id) {
   const doc = encodeURIComponent(String(id));
-  return `https://firestore.googleapis.com/v1/projects/${sa.project_id}/databases/(default)/documents/contacts/${doc}`;
+  return `https://firestore.googleapis.com/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents/contacts/${doc}`;
 }
 
 function encodeValue(value) {
@@ -133,9 +102,9 @@ function encodeFields(obj) {
   return { fields };
 }
 
-async function fsRequest(sa, method, id, payload, mask) {
-  const token = await accessToken(sa);
-  let url = firestoreUrl(sa, id);
+async function fsRequest(method, id, payload, mask) {
+  const token = await firebaseIdToken();
+  let url = firestoreUrl(id);
   if (mask && mask.length) {
     url += '?' + mask.map((f) => 'updateMask.fieldPaths=' + encodeURIComponent(f)).join('&');
   }
@@ -155,15 +124,15 @@ async function fsRequest(sa, method, id, payload, mask) {
   return res.json();
 }
 
-async function docExists(sa, id) {
-  const got = await fsRequest(sa, 'GET', id);
+async function docExists(id) {
+  const got = await fsRequest('GET', id);
   return !got.missing;
 }
 
-async function mergeContact(sa, id, fields) {
+async function mergeContact(id, fields) {
   const data = { hubspot_id: String(id), ...fields };
   const mask = Object.keys(data);
-  await fsRequest(sa, 'PATCH', id, encodeFields(data), mask);
+  await fsRequest('PATCH', id, encodeFields(data), mask);
 }
 
 async function getHubSpotContact(id) {
@@ -178,7 +147,7 @@ async function getHubSpotContact(id) {
   return json.properties || {};
 }
 
-export async function handleHubSpotEvents(events, sa) {
+export async function handleHubSpotEvents(events) {
   const list = Array.isArray(events) ? events : events ? [events] : [];
   let handled = 0;
   for (const ev of list) {
@@ -187,27 +156,27 @@ export async function handleHubSpotEvents(events, sa) {
     const id = String(ev.objectId || '');
     if (!id) continue;
     if (type === 'contact.creation') {
-      await mergeContact(sa, id, {});
+      await mergeContact(id, {});
       handled += 1;
       continue;
     }
     if (type === 'contact.deletion') {
-      await fsRequest(sa, 'DELETE', id);
+      await fsRequest('DELETE', id);
       handled += 1;
       continue;
     }
     const hsName = ev.propertyName;
     if (!HUBSPOT_PROPERTY_MAP[hsName]) continue;
-    const exists = await docExists(sa, id);
+    const exists = await docExists(id);
     if (!exists) {
       const props = await getHubSpotContact(id);
       if (!props) continue;
-      await mergeContact(sa, id, mappedFieldsFromHubSpotProperties(props));
+      await mergeContact(id, mappedFieldsFromHubSpotProperties(props));
       handled += 1;
       continue;
     }
     const field = HUBSPOT_PROPERTY_MAP[hsName];
-    await mergeContact(sa, id, { [field]: mapHubSpotValue(hsName, ev.propertyValue) });
+    await mergeContact(id, { [field]: mapHubSpotValue(hsName, ev.propertyValue) });
     handled += 1;
   }
   return handled;
@@ -228,8 +197,7 @@ export async function handler(event) {
     return { statusCode: 400, body: 'Invalid JSON' };
   }
   try {
-    const sa = parseServiceAccount();
-    const handled = await handleHubSpotEvents(payload, sa);
+    const handled = await handleHubSpotEvents(payload);
     return { statusCode: 200, body: JSON.stringify({ ok: true, handled }) };
   } catch (err) {
     console.error('hubspot-contact', err && err.message);

@@ -48,8 +48,7 @@ const HEADERS = [
   'S', 'W', 'B', 'C', 'UC', 'TV', 'OU', 'SwG', 'EF', 'PAU', 'BEP',
   'Units', 'Return', 'Amount', 'Invoice', 'Receipt', 'Payment', 'Notes',
 ];
-const TEXT_COLS = { 0: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1, 21: 1, 23: 1, 24: 1, 25: 1, 26: 1 };
-const DATE_COL = 1;
+const TEXT_COLS = { 0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1, 21: 1, 23: 1, 24: 1, 25: 1, 26: 1 };
 const NUM_COLS = { 9: 1, 10: 1, 11: 1, 12: 1, 13: 1, 14: 1, 15: 1, 16: 1, 17: 1, 18: 1, 19: 1, 20: 1, 22: 1 };
 const TEAM_RANK = {};
 TEAMS.forEach((t, i) => { TEAM_RANK[t] = i; });
@@ -352,12 +351,6 @@ function notesOf(job) {
   return a || b;
 }
 
-function isoToDate(iso) {
-  const p = String(iso || '').split('-').map(Number);
-  if (p.length < 3 || !p[0] || !p[1] || !p[2]) return null;
-  return new Date(p[0], p[1] - 1, p[2]);
-}
-
 function amountOf(job) {
   if (job.amount == null || job.amount === '') return '';
   const n = Number(job.amount);
@@ -387,7 +380,7 @@ function buildRows(jobs, all) {
     const ret = isReturn(j);
     return [
       String(j.job_id || ''),
-      isoToDate(j.date),
+      String(j.date || '').trim(),
       j.time == null ? '' : String(j.time),
       lead,
       cellTeamMembers(all, j.date, lead) || '',
@@ -409,9 +402,6 @@ function buildRows(jobs, all) {
 
 function cellFor(c, v) {
   if (v == null || v === '') return null;
-  if (c === DATE_COL && v instanceof Date && !isNaN(v)) {
-    return { t: 'd', v: v, z: 'yyyy-mm-dd' };
-  }
   if (NUM_COLS[c] && typeof v === 'number' && isFinite(v)) {
     return { t: 'n', v: v };
   }
@@ -458,18 +448,11 @@ const JSON_KEYS = [
   'units', 'return', 'amount', 'invoice', 'receipt', 'payment', 'notes',
 ];
 
-function dateYmd(v) {
-  if (v instanceof Date && !isNaN(v.getTime())) {
-    return v.getFullYear() + '-' + pad(v.getMonth() + 1) + '-' + pad(v.getDate());
-  }
-  return v == null ? '' : String(v);
-}
-
 function rowToJson(row) {
   const o = {};
   JSON_KEYS.forEach((key, i) => {
     let v = row[i];
-    if (key === 'date') v = dateYmd(v);
+    if (key === 'date') v = String(v || '').trim();
     else if (key === 'return') v = v ? 'Y' : '';
     else if (v == null) v = '';
     o[key] = v;

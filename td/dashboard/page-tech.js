@@ -58,8 +58,8 @@ function techDayList(name, tf){
   });
 }
 
-const MIX_TYPES = ['S','W','B','C','UC','TV','OU','SwG','EF','PAU'];
-const TYPE_WEIGHTS = { S:1, W:0.85, B:1.3, C:1.8, UC:1.5, TV:1.4, OU:1.4, SwG:1.3, EF:1, PAU:1 };
+const MIX_TYPES = ['S','W','WP','B','C','UC','TV','OU','SwG','EF','PAU'];
+const TYPE_WEIGHTS = { S:1, W:0.85, WP:1.1, B:1.3, C:1.8, UC:1.5, TV:1.4, OU:1.4, SwG:1.3, EF:1, PAU:1 };
 const MIX_COLORS = ['#2563eb','#0d9488','#7c3aed','#d97706','#dc2626','#0891b2','#4f46e5','#65a30d','#db2777','#57534e'];
 function techMixDates(tf){
   const weekLike = tf.id === 'this_week' || tf.id === 'last_week';

@@ -1,4 +1,4 @@
-import { DISTRICTS, TODAY, UNIT_TYPES } from './config.js?v=2';
+import { DISTRICTS, TODAY, UNIT_TYPES } from './config.js?v=3';
 
 export function pad(n) {
   return String(n).padStart(2, '0');
@@ -175,6 +175,7 @@ export function notes1Text(job) {
 const ACS_ALIASES = {
   S: 'S',
   W: 'W',
+  WP: 'WP',
   B: 'B',
   C: 'C',
   UC: 'UC',
@@ -187,29 +188,66 @@ export function emptyUnits() {
   return Object.fromEntries(UNIT_TYPES.map((u) => [u.id, 0]));
 }
 
-export function parseAcs(acs) {
-  const counts = emptyUnits();
-  if (!acs) return counts;
-  const re = /(\d+)\s*([A-Za-z]+)/g;
-  let m;
-  while ((m = re.exec(String(acs))) !== null) {
-    const id = ACS_ALIASES[m[2].toUpperCase()];
-    if (id) counts[id] = (counts[id] || 0) + parseInt(m[1], 10);
-  }
+function splitBuiltIn(counts) {
+  const b = Number(counts.B || 0);
+  const extra = Number(counts.Bh || 0);
+  const full = Math.floor(b + 1e-9);
+  const halves = Math.round((b - full) * 2);
+  counts.B = full;
+  counts.Bh = extra + halves;
   return counts;
 }
 
+export function parseAcs(acs) {
+  const counts = emptyUnits();
+  if (!acs) return counts;
+  const re = /(\d+(?:\.\d+)?)\s*(WP|SwG|[A-Za-z]+)/gi;
+  let m;
+  while ((m = re.exec(String(acs))) !== null) {
+    const id = ACS_ALIASES[m[2].toUpperCase()];
+    if (!id) continue;
+    counts[id] = (counts[id] || 0) + parseFloat(m[1]);
+  }
+  return splitBuiltIn(counts);
+}
+
+export function storedUnits(counts) {
+  const out = emptyUnits();
+  UNIT_TYPES.forEach((u) => {
+    if (u.id === 'Bh') return;
+    if (u.id === 'B') {
+      out.B = Number(counts && counts.B || 0) + 0.5 * Number(counts && counts.Bh || 0);
+      return;
+    }
+    out[u.id] = Number(counts && counts[u.id] || 0);
+  });
+  delete out.Bh;
+  return out;
+}
+
 export function acsLabel(counts) {
-  return UNIT_TYPES.map((u) => (counts[u.id] ? `${counts[u.id]}${u.id}` : null))
-    .filter(Boolean)
-    .join(' ');
+  const bits = [];
+  UNIT_TYPES.forEach((u) => {
+    if (u.id === 'Bh') return;
+    if (u.id === 'B') {
+      const n = Number(counts.B || 0) + 0.5 * Number(counts.Bh || 0);
+      if (n) bits.push((Math.round(n * 10) / 10) + 'B');
+      return;
+    }
+    const n = Number(counts[u.id] || 0);
+    if (n) bits.push(n + u.id);
+  });
+  return bits.join(' ');
 }
 
 export function acsTotal(countsOrString) {
   const counts = typeof countsOrString === 'string' || countsOrString == null
     ? parseAcs(countsOrString)
     : countsOrString;
-  return UNIT_TYPES.reduce((n, u) => n + (counts[u.id] || 0), 0);
+  return UNIT_TYPES.reduce((n, u) => {
+    if (u.id === 'Bh') return n + 0.5 * Number(counts.Bh || 0);
+    return n + Number(counts[u.id] || 0);
+  }, 0);
 }
 
 const JOB_TYPE_IDS = ['cleaning', 'return', 'inspection', 'influencer', 'other'];

@@ -4,18 +4,18 @@
 (function (global) {
   const TECH_ORDER = ['Matthew', 'Tiago', 'Nick', 'Alun', 'Iggi'];
   const SKIP_LEADS = { josh: true };
-  const UNIT_TYPES = ['S', 'W', 'B', 'C', 'UC', 'TV', 'OU', 'SwG', 'EF', 'PAU'];
+  const UNIT_TYPES = ['S', 'W', 'WP', 'B', 'C', 'UC', 'TV', 'OU', 'SwG', 'EF', 'PAU'];
   const WEIGHTS = {
-    S: 1.0, W: 0.85, B: 1.3, C: 1.8, UC: 1.5,
+    S: 1.0, W: 0.85, WP: 1.1, B: 1.3, C: 1.8, UC: 1.5,
     TV: 1.4, OU: 1.4, SwG: 1.3, EF: 1.0, PAU: 1.0
   };
   const ALIASES = {
-    S: 'S', W: 'W', B: 'B', C: 'C', UC: 'UC', TV: 'TV', OU: 'OU',
+    S: 'S', W: 'W', WP: 'WP', B: 'B', C: 'C', UC: 'UC', TV: 'TV', OU: 'OU',
     SWG: 'SwG', SW: 'SwG', EF: 'EF', PAU: 'PAU',
     OUTDOOR: 'OU', OUTDOORS: 'OU'
   };
   const TOKEN_RE = /(\d+(?:\.\d+)?)\s*([A-Za-z]+)/g;
-  const HAS_UNIT_RE = /\d+(?:\.\d+)?\s*(?:SwG|SWG|UC|TV|OU|PAU|EF|BEP|OUTDOORS?|[SWBC])\b/i;
+  const HAS_UNIT_RE = /\d+(?:\.\d+)?\s*(?:SwG|SWG|UC|TV|OU|PAU|EF|BEP|WP|OUTDOORS?|[SWBC])\b/i;
   const PAREN_S_RE = /\(\s*S\s*\)/i;
   const NOISE_WORDS = {
     HALF:1, PRICE:1, CLEAN:1, CLEANED:1, CREDIT:1, REFUND:1, SAVE:1, SAVED:1,
@@ -43,6 +43,7 @@
   const POINTS_TABLE = [
     { type:'S', points:1, note:'Split — baseline' },
     { type:'W', points:0.85, note:'Window — lower density' },
+    { type:'WP', points:1.1, note:'Pull-out / window pull' },
     { type:'B', points:1.3, note:'Built-in' },
     { type:'C', points:1.8, note:'Cassette' },
     { type:'UC', points:1.5, note:'Under-ceiling' },

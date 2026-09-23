@@ -76,8 +76,8 @@ window.renderTeamPage = function renderTeamPage(){
       <div class="kpi-explain">Jobs ${fmt(s.jobs || 0)}</div>
       <div class="kpi-explain">Jobs / day ${fmt(s.jobsDay || 0, 2)}</div>
     </div>`).join('');
-  const TYPE_KEYS = ['S','W','B','C','UC','TV','OU','SwG','EF','PAU'];
-  const TYPE_W = { S:1, W:0.85, B:1.3, C:1.8, UC:1.5, TV:1.4, OU:1.4, SwG:1.3, EF:1, PAU:1 };
+  const TYPE_KEYS = ['S','W','WP','B','C','UC','TV','OU','SwG','EF','PAU'];
+  const TYPE_W = { S:1, W:0.85, WP:1.1, B:1.3, C:1.8, UC:1.5, TV:1.4, OU:1.4, SwG:1.3, EF:1, PAU:1 };
   const mixDates = {};
   periodMixDates(tf).forEach(d => { mixDates[d] = true; });
   function leadTypeCount(lead, type){

@@ -63,13 +63,15 @@ export const DISTRICTS = {
 };
 
 export const UNIT_TYPES = [
-  { id: 'S' },
-  { id: 'W' },
-  { id: 'B' },
-  { id: 'C' },
-  { id: 'UC' },
-  { id: 'OU' },
-  { id: 'SwG' },
+  { id: 'S', label: 'Split' },
+  { id: 'W', label: 'Window' },
+  { id: 'WP', label: 'Pull-out' },
+  { id: 'B', label: 'Built-in' },
+  { id: 'Bh', code: 'B\u00bd', label: 'Built-in half' },
+  { id: 'C', label: 'Cassette' },
+  { id: 'UC', label: 'Under-ceiling' },
+  { id: 'OU', label: 'Outdoor' },
+  { id: 'SwG', label: 'SwG' },
 ];
 
 export const JOB_TYPES = [

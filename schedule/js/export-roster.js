@@ -14,13 +14,13 @@ const LEAD_MAP = {
   matthew: 'Matthew', tiago: 'Tiago', nick: 'Nick', alun: 'Alun',
   iggi: 'Iggi', josh: 'Josh', jut: 'Josh',
 };
-const UNIT_TYPES = ['S', 'W', 'B', 'C', 'UC', 'TV', 'OU', 'SwG', 'EF', 'PAU'];
+const UNIT_TYPES = ['S', 'W', 'WP', 'B', 'C', 'UC', 'TV', 'OU', 'SwG', 'EF', 'PAU'];
 const ALIASES = {
-  S: 'S', W: 'W', B: 'B', C: 'C', UC: 'UC', TV: 'TV', OU: 'OU',
+  S: 'S', W: 'W', WP: 'WP', B: 'B', C: 'C', UC: 'UC', TV: 'TV', OU: 'OU',
   SWG: 'SwG', SW: 'SwG', EF: 'EF', PAU: 'PAU',
   OUTDOOR: 'OU', OUTDOORS: 'OU',
 };
-const HAS_UNIT_RE = /\d+(?:\.\d+)?\s*(?:SwG|SWG|UC|TV|OU|PAU|EF|BEP|OUTDOORS?|[SWBC])\b/i;
+const HAS_UNIT_RE = /\d+(?:\.\d+)?\s*(?:SwG|SWG|UC|TV|OU|PAU|EF|BEP|WP|OUTDOORS?|[SWBC])\b/i;
 const PAREN_S_RE = /\(\s*S\s*\)/i;
 const NOISE_WORDS = {
   HALF: 1, PRICE: 1, CLEAN: 1, CLEANED: 1, CREDIT: 1, REFUND: 1, SAVE: 1, SAVED: 1,
@@ -46,11 +46,11 @@ const EQUIPMENT_UNKNOWN = {
 };
 const HEADERS = [
   'Job ID', 'Date', 'Time', 'Team', 'Who\u2019s on', 'Client', 'Mobile', 'Address', 'ACs',
-  'S', 'W', 'B', 'C', 'UC', 'TV', 'OU', 'SwG', 'EF', 'PAU', 'BEP',
+  'S', 'W', 'WP', 'B', 'C', 'UC', 'TV', 'OU', 'SwG', 'EF', 'PAU', 'BEP',
   'Units', 'Return', 'Amount', 'Invoice', 'Receipt', 'Payment', 'Notes 1', 'Notes 2',
 ];
-const TEXT_COLS = { 0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1, 21: 1, 23: 1, 24: 1, 25: 1, 26: 1, 27: 1 };
-const NUM_COLS = { 9: 1, 10: 1, 11: 1, 12: 1, 13: 1, 14: 1, 15: 1, 16: 1, 17: 1, 18: 1, 19: 1, 20: 1, 22: 1 };
+const TEXT_COLS = { 0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1, 22: 1, 24: 1, 25: 1, 26: 1, 27: 1, 28: 1 };
+const NUM_COLS = { 9: 1, 10: 1, 11: 1, 12: 1, 13: 1, 14: 1, 15: 1, 16: 1, 17: 1, 18: 1, 19: 1, 20: 1, 21: 1, 23: 1 };
 const TEAM_RANK = {};
 TEAMS.forEach((t, i) => { TEAM_RANK[t] = i; });
 
@@ -385,7 +385,7 @@ function sheetRow(j, all) {
     j.mobile == null ? '' : String(j.mobile),
     j.address == null ? '' : String(j.address),
     j.acs == null ? '' : String(j.acs),
-    types.S, types.W, types.B, types.C, types.UC, types.TV, types.OU, types.SwG, types.EF, types.PAU, types.BEP,
+    types.S, types.W, types.WP, types.B, types.C, types.UC, types.TV, types.OU, types.SwG, types.EF, types.PAU, types.BEP,
     units,
     ret ? 'Y' : '',
     amountOf(j),
@@ -455,7 +455,7 @@ function toSheet(headers, rows, spec) {
   const widthFor = spec && spec.widthFor ? spec.widthFor : function (c) {
     if (c === 0) return { wch: 18 };
     if (c === 1) return { wch: 12 };
-    if (c === 5 || c === 7 || c === 8 || c === 26 || c === 27) return { wch: 28 };
+    if (c === 5 || c === 7 || c === 8 || c === 27 || c === 28) return { wch: 28 };
     if (c === 4) return { wch: 18 };
     if (NUM_COLS[c]) return { wch: 8 };
     return { wch: 14 };
@@ -483,7 +483,7 @@ function toSheet(headers, rows, spec) {
 
 const JSON_KEYS = [
   'jobId', 'date', 'time', 'team', 'whosOn', 'client', 'mobile', 'address', 'acs',
-  'S', 'W', 'B', 'C', 'UC', 'TV', 'OU', 'SwG', 'EF', 'PAU', 'BEP',
+  'S', 'W', 'WP', 'B', 'C', 'UC', 'TV', 'OU', 'SwG', 'EF', 'PAU', 'BEP',
   'units', 'return', 'amount', 'invoice', 'receipt', 'payment', 'notes1', 'notes2',
 ];
 

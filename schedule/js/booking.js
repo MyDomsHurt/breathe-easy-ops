@@ -1,10 +1,10 @@
-import { DISTRICTS, JOB_TYPES, PAYMENTS, TEAMS, TEAM_META, UNIT_TYPES } from './config.js?v=2';
+import { DISTRICTS, JOB_TYPES, PAYMENTS, TEAMS, TEAM_META, UNIT_TYPES } from './config.js?v=3';
 import { overlapWarning, stackOrderOnSave, suggestTeams, teamMembersOnDay } from './capacity.js';
 import { addJob, allJobs, removeJob, updateJob } from './store.js';
 import { uniqueClientsFrom } from './seed.js';
 import { displayNameForEmail } from '../../shared/firebase-config.js';
 import { highlightOf } from '../../shared/job.js';
-import { acsLabel, emptyUnits, formatDay, formatTime24, jobStatus, jobTypeOf, NOTES1_MAX, parseAcs, shortTime } from './utils.js';
+import { acsLabel, emptyUnits, formatDay, formatTime24, jobStatus, jobTypeOf, NOTES1_MAX, parseAcs, shortTime, storedUnits } from './utils.js?v=3';
 import { TERRITORIES, codeFromTerritory, composeFullAddress, parseAddress, territoryLabel } from './address-parse.js?v=4';
 
 let form = {
@@ -176,10 +176,9 @@ function logButtonHtml() {
 export function openBooking(prefill = {}) {
   const jobs = allJobs();
   const editing = Boolean(prefill.job_id);
-  const units = {
-    ...emptyUnits(),
-    ...(prefill.units || (prefill.acs != null || editing ? parseAcs(prefill.acs) : {})),
-  };
+  const units = (prefill.acs != null || editing)
+    ? parseAcs(prefill.acs)
+    : parseAcs(acsLabel(prefill.units || {}));
   form = {
     job_id: prefill.job_id || '',
     client_name: prefill.client_name || '',
@@ -372,14 +371,16 @@ function renderForm() {
             <div class="unit-strip">
               ${UNIT_TYPES.map((u) => `
                 <div class="unit ${(form.units[u.id] || 0) ? 'on' : ''}">
-                  <span class="unit-code">${u.id}</span>
+                  <span class="unit-code">${u.code || u.id}</span>
+                  ${u.label ? `<span class="unit-name">${u.label}</span>` : ''}
                   <b>${form.units[u.id] || 0}</b>
                   <div class="unit-ctrl">
-                    <button type="button" data-unit="${u.id}" data-delta="-1" aria-label="Fewer ${u.id}">−</button>
-                    <button type="button" data-unit="${u.id}" data-delta="1" aria-label="More ${u.id}">+</button>
+                    <button type="button" data-unit="${u.id}" data-delta="-1" aria-label="Fewer ${u.code || u.id}">−</button>
+                    <button type="button" data-unit="${u.id}" data-delta="1" aria-label="More ${u.code || u.id}">+</button>
                   </div>
                 </div>`).join('')}
             </div>
+            <p class="acs-preview">${escapeAttr(acsLabel(form.units)) || '—'}</p>
           </div>
           <div class="field${fieldClass('notes')}">
             <label>Notes 1 ${holdChip('notes', 'notes')} <span id="notes1Count" class="notes-count">${String(form.notes || '').length}/${NOTES1_MAX}</span></label>
@@ -572,7 +573,7 @@ function save(status = 'confirmed') {
     ...form,
     status: status === 'tentative' ? 'tentative' : 'confirmed',
     acs: form.job_type === 'cleaning' ? acsLabel(form.units) : '',
-    units: form.units,
+    units: form.job_type === 'cleaning' ? storedUnits(form.units) : emptyUnits(),
     notes,
     notes_long: form.notes_long,
     invoice: form.invoice || '',

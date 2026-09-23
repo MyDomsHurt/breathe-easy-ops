@@ -34,10 +34,11 @@ PROJECT = "breathe-easy-performance"
 COLLECTION = "jobs"
 TECH_ORDER = ["Matthew", "Tiago", "Nick", "Alun", "Iggi"]
 SKIP_LEADS = {"josh"}
-UNIT_TYPES = ["S", "W", "B", "C", "UC", "TV", "OU", "SwG", "EF", "PAU"]
+UNIT_TYPES = ["S", "W", "WP", "B", "C", "UC", "TV", "OU", "SwG", "EF", "PAU"]
 WEIGHTS = {
     "S": 1.0,
     "W": 0.85,
+    "WP": 1.1,
     "B": 1.3,
     "C": 1.8,
     "UC": 1.5,
@@ -50,6 +51,7 @@ WEIGHTS = {
 ALIASES = {
     "S": "S",
     "W": "W",
+    "WP": "WP",
     "B": "B",
     "C": "C",
     "UC": "UC",
@@ -64,7 +66,7 @@ ALIASES = {
 }
 TOKEN_RE = re.compile(r"(\d+(?:\.\d+)?)\s*([A-Za-z]+)")
 HAS_UNIT_RE = re.compile(
-    r"\d+(?:\.\d+)?\s*(?:SwG|SWG|UC|TV|OU|PAU|EF|BEP|OUTDOORS?|[SWBC])\b",
+    r"\d+(?:\.\d+)?\s*(?:SwG|SWG|UC|TV|OU|PAU|EF|BEP|WP|OUTDOORS?|[SWBC])\b",
     re.I,
 )
 NOISE_WORDS = {

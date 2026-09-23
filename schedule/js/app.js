@@ -7,7 +7,7 @@ import { firstEmptySlotIndex, hasTimeConflict, slotIndex } from './capacity.js';
 import { pulseRemaining, renderDayBoard, renderWeekBoard } from './board.js';
 import { closeBooking, openBooking } from './booking.js';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js';
-import { exportMasterRoster } from './export-roster.js';
+import { exportMasterRoster } from './export-roster.js?v=3';
 
 function calendarToday() {
   const d = new Date();
@@ -855,7 +855,7 @@ function bindOwnerTools() {
       exportBtn.disabled = true;
       try {
         const result = await exportMasterRoster();
-        toast('Exported ' + result.jobs + ' jobs · ' + result.weeks + ' weeks');
+        toast('Exported ' + result.jobs + ' jobs');
       } catch (err) {
         console.error(err);
         toast((err && err.message) || 'Export failed');

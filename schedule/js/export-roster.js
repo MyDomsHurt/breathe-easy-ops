@@ -1,26 +1,58 @@
 /**
- * Jeff-only master-roster .xlsx export from the live job store.
- * Layout: week tabs, lead blocks, 6-wide day bands (widened if a day has >6 jobs).
+ * Jeff-only live-jobs .xlsx export: one Jobs sheet, one row per job.
+ * Unit columns use the same ACS rules as td/dashboard/score-jobs.js
+ * (last unit-token segment, half-clean 0.5, BEP parsed but excluded from Units).
  */
 import { TEAMS } from './config.js';
 import { isCrewNote, cellTeamMembers } from './team-day.js';
-import { addDays, formatDay, mondayOf, pad, timeToMinutes } from './utils.js';
+import { pad, timeToMinutes } from './utils.js';
 import { allJobs, initStore, usingFirestore } from './store.js';
 
 const SHEETJS_SRC = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
-const FIELD_ROWS = [
-  ['Name', 'client_name'],
-  ['Time', 'time'],
-  ['Mobile', 'mobile'],
-  ['Address', 'address'],
-  ['ACs', 'acs'],
-  ['Notes', 'notes'],
-  ['Amount', 'amount'],
-  ['Invoice', 'invoice'],
-  ['Receipt', 'receipt'],
-  ['Payment', 'payment'],
+const LEAD_MAP = {
+  matthew: 'Matthew', tiago: 'Tiago', nick: 'Nick', alun: 'Alun',
+  iggi: 'Iggi', josh: 'Josh', jut: 'Josh',
+};
+const UNIT_TYPES = ['S', 'W', 'B', 'C', 'UC', 'TV', 'OU', 'SwG', 'EF', 'PAU'];
+const ALIASES = {
+  S: 'S', W: 'W', B: 'B', C: 'C', UC: 'UC', TV: 'TV', OU: 'OU',
+  SWG: 'SwG', SW: 'SwG', EF: 'EF', PAU: 'PAU',
+  OUTDOOR: 'OU', OUTDOORS: 'OU',
+};
+const HAS_UNIT_RE = /\d+(?:\.\d+)?\s*(?:SwG|SWG|UC|TV|OU|PAU|EF|BEP|OUTDOORS?|[SWBC])\b/i;
+const PAREN_S_RE = /\(\s*S\s*\)/i;
+const NOISE_WORDS = {
+  HALF: 1, PRICE: 1, CLEAN: 1, CLEANED: 1, CREDIT: 1, REFUND: 1, SAVE: 1, SAVED: 1,
+  TOTAL: 1, FULL: 1, HOUR: 1, HOURS: 1, PM: 1, AM: 1, AS: 1, AND: 1, NEED: 1, ACS: 1,
+  BEDROOM: 1, BEDROOMS: 1, TODAY: 1, DID: 1, ONLY: 1, FILTER: 1, FILTERS: 1, FAN: 1,
+  FANS: 1, COIL: 1, KITCHEN: 1, MASTER: 1, LIVING: 1, ROOM: 1, ROOMS: 1, CANNOT: 1,
+  CANT: 1, ACCESS: 1, FOR: 1, THE: 1, WITH: 1, FROM: 1, WILL: 1, COME: 1, BACK: 1,
+  AFTER: 1, MR: 1, WONG: 1, FIXED: 1, BROKEN: 1, IS: 1, IN: 1, OF: 1, TO: 1, A: 1,
+  PLUS: 1, ALL: 1, THERE: 1, TAKE: 1, OUT: 1, UNIT: 1, UNITS: 1, PER: 1, OFF: 1,
+  RESCHEDULE: 1, RESCHEDULED: 1, RETURN: 1, RETURNS: 1, VISIT: 1, FREE: 1,
+  INFLUENCER: 1, COLLAB: 1, DAY: 1, FINISHED: 1, G: 1, F: 1, OTHER: 1, BOTH: 1,
+  DINING: 1, HELPER: 1, POOR: 1, INSTALLATION: 1, SEE: 1, NICK: 1, CHAT: 1,
+  SUPER: 1, HEAVY: 1, PPL: 1, PEOPLE: 1, KIDS: 1, BABY: 1, TOILET: 1, SPACE: 1,
+  ENOUGH: 1, NOT: 1, NO: 1, SO: 1, DIDNT: 1, DIDN: 1, REPAIR: 1, NEXT: 1, BY: 1,
+  ON: 1, AT: 1, INTO: 1, TWO: 1, ACCOUNTS: 1, DIVIDED: 1, WINE: 1, CHILLERS: 1,
+  CHILLER: 1, THERMAL: 1, AUG: 1, MAY: 1, JUN: 1, JUL: 1, SEP: 1, OCT: 1, NOV: 1,
+  DEC: 1, JAN: 1, FEB: 1, MAR: 1, APR: 1, ADDRESSES: 1, BRAND: 1, NEW: 1,
+  GRILLS: 1, GRILL: 1, REACH: 1, HE: 1, DEDUCT: 1, DEDCUT: 1, SMASH: 1,
+};
+const EQUIPMENT_UNKNOWN = {
+  VENTILATOR: 1, VENTILATIOR: 1, DEHUMIDIFIER: 1, FS: 1, PH: 1, LEAK: 1,
+  LEAKING: 1, INTERVIEW: 1, FILMING: 1, BATHROOM: 1, TECHNICIAN: 1,
+};
+const HEADERS = [
+  'Job ID', 'Date', 'Time', 'Team', 'Who\u2019s on', 'Client', 'Mobile', 'Address', 'ACs',
+  'S', 'W', 'B', 'C', 'UC', 'TV', 'OU', 'SwG', 'EF', 'PAU', 'BEP',
+  'Units', 'Return', 'Amount', 'Invoice', 'Receipt', 'Payment', 'Notes',
 ];
-const BAND_MIN = 6;
+const TEXT_COLS = { 0: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1, 21: 1, 23: 1, 24: 1, 25: 1, 26: 1 };
+const DATE_COL = 1;
+const NUM_COLS = { 9: 1, 10: 1, 11: 1, 12: 1, 13: 1, 14: 1, 15: 1, 16: 1, 17: 1, 18: 1, 19: 1, 20: 1, 22: 1 };
+const TEAM_RANK = {};
+TEAMS.forEach((t, i) => { TEAM_RANK[t] = i; });
 
 function loadSheetJS() {
   if (window.XLSX && window.XLSX.utils) return Promise.resolve(window.XLSX);
@@ -42,145 +74,393 @@ function todayIso() {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-function sortByTime(jobs) {
-  return jobs.slice().sort((a, b) => {
-    const d = timeToMinutes(a.time) - timeToMinutes(b.time);
-    if (d) return d;
-    return String(a.job_id || '').localeCompare(String(b.job_id || ''));
-  });
+function canonicalLead(job) {
+  const raw = String(job && job.team_lead || '').trim();
+  return LEAD_MAP[raw.toLowerCase()] || '';
 }
 
-function jobField(job, key) {
-  if (!job) return '';
-  if (key === 'amount') {
-    if (job.amount == null || job.amount === '') return '';
-    const n = Number(job.amount);
-    return Number.isFinite(n) ? n : String(job.amount);
-  }
-  const v = job[key];
-  return v == null ? '' : v;
+function emptyUnits() {
+  const o = {};
+  UNIT_TYPES.forEach((k) => { o[k] = 0; });
+  return o;
 }
-
-function weekNInMonth(mondayIso) {
-  const month = mondayIso.slice(0, 7);
-  let d = mondayOf(`${month}-01`);
-  if (d.slice(0, 7) !== month) d = addDays(d, 7);
-  let n = 0;
-  while (d <= mondayIso && d.slice(0, 7) === month) {
-    n += 1;
-    d = addDays(d, 7);
-  }
-  return n || 1;
+function canonicalType(token) {
+  const t = String(token || '').toUpperCase();
+  if (t === 'BEP') return 'BEP';
+  return ALIASES[t] || null;
 }
-
-function sheetName(mondayIso, used) {
-  let name = `Week ${weekNInMonth(mondayIso)}`;
-  if (used.has(name)) name = mondayIso;
-  name = String(name).replace(/[:\\/?*[\]]/g, '-').slice(0, 31);
-  if (used.has(name)) name = mondayIso.slice(0, 31);
-  used.add(name);
-  return name;
+function addUnit(counts, typ, n) {
+  if (typ === 'BEP' || !typ) return;
+  counts[typ] = (counts[typ] || 0) + Number(n);
 }
-
-function whoOnWeek(all, leadJobs, lead) {
-  const counts = {};
-  leadJobs.forEach((j) => {
-    const w = cellTeamMembers(all, j.date, lead) || String(j.team_members || '').trim();
-    if (!w) return;
-    counts[w] = (counts[w] || 0) + 1;
-  });
-  let best = '';
-  let n = 0;
-  Object.keys(counts).forEach((k) => {
-    if (counts[k] > n) {
-      n = counts[k];
-      best = k;
+function unitsDictCounts(job) {
+  const units = job && job.units;
+  if (!units || typeof units !== 'object' || Array.isArray(units)) return null;
+  const counts = emptyUnits();
+  Object.keys(units).forEach((k) => {
+    const typ = canonicalType(k);
+    if (typ && typ !== 'BEP') {
+      const n = Number(units[k] || 0);
+      if (!isNaN(n)) addUnit(counts, typ, n);
     }
   });
-  return best;
+  return UNIT_TYPES.some((k) => counts[k]) ? counts : null;
+}
+function isEmptyAcs(job) {
+  const acs = job && job.acs;
+  return acs == null || String(acs).trim() === '';
+}
+function isReturn(job) {
+  if (job && job.is_return === true) return true;
+  if (String(job && job.job_type || '').trim().toLowerCase() === 'return') return true;
+  return isEmptyAcs(job) && unitsDictCounts(job) == null;
+}
+function hasUnitTokens(text) {
+  return HAS_UNIT_RE.test(text || '');
+}
+function lastUnitSegment(acs) {
+  let s = String(acs || '').replace(/\u00a0/g, ' ').trim();
+  if (!s) return '';
+  s = s.replace(/=\s*>/g, '=>');
+  const parts = s.split(/\s*=>\s*|\s*>\s*/).map((p) => p.trim()).filter(Boolean);
+  if (!parts.length) return s;
+  for (let i = parts.length - 1; i >= 0; i--) {
+    if (hasUnitTokens(parts[i]) || /half\s*clean/i.test(parts[i])) return parts[i];
+  }
+  return parts[parts.length - 1];
+}
+function stripHalfPrice(text) {
+  let s = String(text || '').replace(/\([^)]*half\s*price[^)]*\)/gi, ' ');
+  s = s.replace(/half\s*prices?/gi, ' ');
+  return s;
+}
+function impliedType(acs) {
+  const found = [];
+  const re = /(\d+(?:\.\d+)?)\s*([A-Za-z]+)/g;
+  let m;
+  while ((m = re.exec(acs || ''))) {
+    const typ = canonicalType(m[2]);
+    if (typ && typ !== 'BEP' && found.indexOf(typ) === -1) found.push(typ);
+  }
+  return found.length === 1 ? found[0] : null;
+}
+function halfToken(n, typ) {
+  return ' ' + (Number(n) * 0.5) + typ + ' ';
+}
+function replaceAll(s, re, fn) {
+  return s.replace(re, fn);
+}
+function replaceOnce(s, re, fn) {
+  let done = false;
+  return s.replace(re, function () {
+    if (done) return arguments[0];
+    done = true;
+    return fn.apply(null, arguments);
+  });
+}
+function rewriteHalfClean(segment, original) {
+  let s = segment;
+  s = s.replace(/\([^)]*need return[^)]*\)/gi, ' ');
+  s = s.replace(/need return for \d+(?:\.\d+)?\s*[A-Za-z]+/gi, ' ');
+  const uncleanRe = /(\d+(?:\.\d+)?)\s*([A-Za-z]+)\s*(?:cannot be cleaned|can'?t clean|no access|didn'?t clean|didnt clean)/i;
+  let m = uncleanRe.exec(s);
+  while (m) {
+    const typ = canonicalType(m[2]);
+    const n = parseFloat(m[1]);
+    const prefix = s.slice(0, m.index);
+    const suffix = s.slice(m.index + m[0].length);
+    const precededByPlus = /\+\s*$/.test(prefix);
+    let nextPrefix = prefix;
+    if (typ && typ !== 'BEP' && !precededByPlus) {
+      nextPrefix = replaceOnce(prefix, /(\d+(?:\.\d+)?)\s*([A-Za-z]+)/, function (all, num, tok) {
+        if (canonicalType(tok) !== typ) return all;
+        const left = parseFloat(num) - n;
+        return left > 0 ? ' ' + left + typ + ' ' : ' ';
+      });
+    }
+    s = nextPrefix + ' ' + suffix;
+    uncleanRe.lastIndex = 0;
+    m = uncleanRe.exec(s);
+  }
+  s = s.replace(/\(\s*,\s*/g, '(');
+  function halfNType(all, num, tok) {
+    const typ = canonicalType(tok);
+    if (!typ || typ === 'BEP') return all;
+    return halfToken(num, typ);
+  }
+  function splitNM(all, num, tok, halfN) {
+    const typ = canonicalType(tok);
+    if (!typ || typ === 'BEP') return all;
+    const n = parseFloat(num);
+    const hn = parseFloat(halfN);
+    return ' ' + Math.max(n - hn, 0) + typ + ' ' + (hn * 0.5) + typ + ' ';
+  }
+  s = replaceAll(s, /(\d+(?:\.\d+)?)\s*([A-Za-z]+)\s*\(\s*(\d+(?:\.\d+)?)\s*half\s*clean(?:ed)?[^)]*\)?/gi, splitNM);
+  const restateRe = /\(\s*(\d+(?:\.\d+)?)\s*([A-Za-z]+)\s+half\s*clean(?:ed)?[^)]*\)/gi;
+  let restated = false;
+  s = s.replace(restateRe, function (all, num, tok, offset, whole) {
+    if (restated) return all;
+    const typ = canonicalType(tok);
+    if (!typ || typ === 'BEP') return all;
+    const n = parseFloat(num);
+    const before = whole.slice(0, offset);
+    const after = whole.slice(offset + all.length);
+    const pattern = new RegExp('(\\d+(?:\\.\\d+)?)\\s*' + typ + '\\b', 'i');
+    if (pattern.test(before)) {
+      restated = true;
+      const dropped = replaceOnce(before, pattern, function (mm, cnt) {
+        const left = parseFloat(cnt) - n;
+        if (left <= 0) return halfToken(n, typ);
+        return ' ' + left + typ + ' ' + halfToken(n, typ);
+      });
+      s = dropped + after;
+      return all;
+    }
+    return halfToken(num, typ);
+  });
+  s = replaceAll(s, /(\d+(?:\.\d+)?)\s*([A-Za-z]+)\s*\(\s*half\s*(?:clean(?:ed)?)?[^)]*\)/gi, halfNType);
+  s = replaceAll(s, /(\d+(?:\.\d+)?)\s*([A-Za-z]+)\(?\s*half\s*clean(?:ed)?\b[^)]*\)?/gi, halfNType);
+  m = /(\d+(?:\.\d+)?)\s*([A-Za-z]+)\s+can only half clean/i.exec(s);
+  if (m) {
+    const typ = canonicalType(m[2]);
+    const n = parseFloat(m[1]);
+    if (typ && typ !== 'BEP') {
+      const prefix = s.slice(0, m.index);
+      const suffix = s.slice(m.index + m[0].length);
+      const pattern = new RegExp('(\\d+(?:\\.\\d+)?)\\s*' + typ + '\\b', 'i');
+      if (pattern.test(prefix)) {
+        s = replaceOnce(prefix, pattern, function (all, cnt) {
+          const left = parseFloat(cnt) - n;
+          if (left <= 0) return halfToken(n, typ);
+          return ' ' + left + typ + ' ' + halfToken(n, typ);
+        }) + suffix;
+      } else {
+        s = prefix + halfToken(n, typ) + suffix;
+      }
+    }
+  }
+  function fullPlusHalf(all, a, b) {
+    const typ = impliedType(original) || impliedType(segment);
+    if (!typ) return all;
+    return ' ' + (parseFloat(a) + parseFloat(b) * 0.5) + typ + ' ';
+  }
+  s = replaceAll(s, /(\d+(?:\.\d+)?)\s*full(?:\s*clean)?s?\s*\+?\s*(\d+(?:\.\d+)?)\s*half\s*clean/gi, fullPlusHalf);
+  s = replaceAll(s, /(\d+(?:\.\d+)?)\s*full\s+(\d+(?:\.\d+)?)\s*half\s*clean/gi, fullPlusHalf);
+  if (/both\s+half\s*clean/i.test(s)) {
+    s = s.replace(/(\d+(?:\.\d+)?)\s*([A-Za-z]+)/g, function (all, num, tok) {
+      const typ = canonicalType(tok);
+      if (!typ || typ === 'BEP') return all;
+      return halfToken(num, typ);
+    });
+    s = s.replace(/both\s+half\s*clean(?:ed)?/gi, ' ');
+  }
+  let leftover = /half\s*clean/i.test(s);
+  if (leftover) {
+    const m3 = /(\d+(?:\.\d+)?)\s*half\s*clean(?:ed)?/i.exec(s);
+    const typ = impliedType(original);
+    if (m3 && typ) {
+      const n = parseFloat(m3[1]);
+      s = replaceOnce(s, /(\d+(?:\.\d+)?)\s*half\s*clean(?:ed)?/i, function () { return halfToken(n, typ); });
+      s = replaceOnce(s, new RegExp('(\\d+(?:\\.\\d+)?)\\s*(' + typ + ')\\b', 'i'), function (all, cnt, tok) {
+        if (canonicalType(tok) !== typ) return all;
+        const left = parseFloat(cnt) - n;
+        return left <= 0 ? ' ' : ' ' + left + typ + ' ';
+      });
+    }
+  }
+  leftover = /half\s*clean/i.test(s);
+  return [s, !leftover];
+}
+function parsePlainUnits(text) {
+  const counts = emptyUnits();
+  const unknown = [];
+  const re = /(\d+(?:\.\d+)?)\s*([A-Za-z]+)/g;
+  let m;
+  while ((m = re.exec(text || ''))) {
+    const typ = canonicalType(m[2]);
+    if (typ === 'BEP') continue;
+    if (typ) { addUnit(counts, typ, parseFloat(m[1])); continue; }
+    const word = m[2].toUpperCase();
+    if (NOISE_WORDS[word] || word === 'FULL' || word === 'HALF' || EQUIPMENT_UNKNOWN[word]) continue;
+    unknown.push(m[1] + m[2]);
+  }
+  return [counts, unknown];
+}
+function parseAcs(acs) {
+  const raw = String(acs || '').replace(/\u00a0/g, ' ').trim();
+  if (!raw) return [emptyUnits(), true, 'empty_return'];
+  if (/team\s*meeting/i.test(raw)) return [emptyUnits(), true, 'zero_skip'];
+  if (/\bleak(?:ing)?\b/i.test(raw)) return [emptyUnits(), true, 'zero_day'];
+  if (/\brefunds?\b/i.test(raw) && !hasUnitTokens(raw) && !PAREN_S_RE.test(raw)) return [emptyUnits(), true, 'zero_day'];
+  if (/\bcall\b/i.test(raw) && !hasUnitTokens(raw) && !PAREN_S_RE.test(raw)) return [emptyUnits(), true, 'zero_day'];
+  if (/^(PH|INTERVIEW|FILMING|TECHNICIAN INTERVIEW)$/i.test(raw)) return [emptyUnits(), false, 'non-unit ACS'];
+  let segment = lastUnitSegment(raw);
+  segment = stripHalfPrice(segment);
+  const hw = rewriteHalfClean(segment, raw);
+  const rewritten = hw[0];
+  const halfSure = hw[1];
+  if (/half\s*clean/i.test(segment) && !halfSure) return [emptyUnits(), false, 'ambiguous half-clean'];
+  const pu = parsePlainUnits(rewritten);
+  let counts = pu[0];
+  const unknown = pu[1];
+  if (!UNIT_TYPES.some((k) => counts[k]) && (PAREN_S_RE.test(raw) || PAREN_S_RE.test(rewritten))) {
+    addUnit(counts, 'S', 1);
+  }
+  if (!UNIT_TYPES.some((k) => counts[k])) {
+    if (unknown.length) return [emptyUnits(), false, 'unparsed ACS'];
+    return [emptyUnits(), false, 'no countable units'];
+  }
+  return [counts, true, ''];
+}
+function unitsFromJob(job) {
+  const dictCounts = unitsDictCounts(job);
+  if (isEmptyAcs(job)) {
+    if (dictCounts) return [dictCounts, true, ''];
+    return [emptyUnits(), true, 'empty_return'];
+  }
+  return parseAcs(job.acs);
+}
+function countBep(text) {
+  let n = 0;
+  const re = /(\d+(?:\.\d+)?)\s*BEP\b/gi;
+  let m;
+  while ((m = re.exec(text || ''))) n += parseFloat(m[1]);
+  return n;
+}
+function scoreTypes(job) {
+  const out = emptyUnits();
+  out.BEP = 0;
+  if (isReturn(job)) return out;
+  const u = unitsFromJob(job);
+  UNIT_TYPES.forEach((k) => { out[k] = Number(u[0][k] || 0); });
+  const raw = String(job && job.acs || '').replace(/\u00a0/g, ' ').trim();
+  if (raw) {
+    const seg = stripHalfPrice(lastUnitSegment(raw));
+    const hw = rewriteHalfClean(seg, raw);
+    out.BEP = countBep(hw[0]);
+  } else if (job && job.units && job.units.BEP != null) {
+    const n = Number(job.units.BEP);
+    out.BEP = isNaN(n) ? 0 : n;
+  }
+  return out;
 }
 
-function buildWeekGrid(mondayIso, weekJobs, all) {
-  const days = Array.from({ length: 7 }, (_, i) => addDays(mondayIso, i));
-  const byLead = {};
-  TEAMS.forEach((lead) => { byLead[lead] = []; });
-  weekJobs.forEach((j) => {
-    const lead = String(j.team_lead || '').trim();
-    if (!byLead[lead]) return;
-    byLead[lead].push(j);
-  });
-  const leads = TEAMS.filter((lead) => byLead[lead].length);
-  const widths = days.map((date) => {
-    let max = 0;
-    leads.forEach((lead) => {
-      const n = byLead[lead].filter((j) => j.date === date).length;
-      if (n > max) max = n;
-    });
-    return Math.max(BAND_MIN, max);
-  });
-  const starts = [];
-  let col = 1;
-  widths.forEach((w) => {
-    starts.push(col);
-    col += w;
-  });
-  const totalCols = col;
-  const rows = [];
-  function blankRow() {
-    return Array.from({ length: totalCols }, () => '');
-  }
-  const dateRow = blankRow();
-  days.forEach((date, i) => {
-    dateRow[starts[i]] = formatDay(date, { weekday: 'short', month: 'short' });
-  });
-  rows.push(dateRow);
+function notesOf(job) {
+  const a = String(job && job.notes || '').trim();
+  const b = String(job && job.notes_long || '').trim();
+  if (a && b) return a + '\n' + b;
+  return a || b;
+}
 
-  leads.forEach((lead, li) => {
-    if (li) rows.push(blankRow());
-    const who = whoOnWeek(all, byLead[lead], lead);
-    const head = blankRow();
-    head[0] = who ? `${lead} · ${who}` : lead;
-    rows.push(head);
-    FIELD_ROWS.forEach(([label]) => {
-      const row = blankRow();
-      row[0] = label;
-      rows.push(row);
-    });
-    const fieldStart = rows.length - FIELD_ROWS.length;
-    days.forEach((date, di) => {
-      const dayJobs = sortByTime(byLead[lead].filter((j) => j.date === date));
-      const origin = starts[di];
-      dayJobs.forEach((job, ji) => {
-        FIELD_ROWS.forEach(([, key], fi) => {
-          rows[fieldStart + fi][origin + ji] = jobField(job, key);
-        });
-      });
+function isoToDate(iso) {
+  const p = String(iso || '').split('-').map(Number);
+  if (p.length < 3 || !p[0] || !p[1] || !p[2]) return null;
+  return new Date(p[0], p[1] - 1, p[2]);
+}
+
+function amountOf(job) {
+  if (job.amount == null || job.amount === '') return '';
+  const n = Number(job.amount);
+  return Number.isFinite(n) ? n : '';
+}
+
+function buildRows(jobs, all) {
+  const real = (jobs || []).filter((j) => {
+    if (!j || j.deleted || isCrewNote(j)) return false;
+    const date = String(j.date || '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+    return Boolean(canonicalLead(j));
+  });
+  real.sort((a, b) => {
+    const da = String(a.date).localeCompare(String(b.date));
+    if (da) return da;
+    const ta = TEAM_RANK[canonicalLead(a)] - TEAM_RANK[canonicalLead(b)];
+    if (ta) return ta;
+    const tm = timeToMinutes(a.time) - timeToMinutes(b.time);
+    if (tm) return tm;
+    return String(a.job_id || '').localeCompare(String(b.job_id || ''));
+  });
+  return real.map((j) => {
+    const lead = canonicalLead(j);
+    const types = scoreTypes(j);
+    const units = UNIT_TYPES.reduce((s, k) => s + Number(types[k] || 0), 0);
+    const ret = isReturn(j);
+    return [
+      String(j.job_id || ''),
+      isoToDate(j.date),
+      j.time == null ? '' : String(j.time),
+      lead,
+      cellTeamMembers(all, j.date, lead) || '',
+      j.client_name == null ? '' : String(j.client_name),
+      j.mobile == null ? '' : String(j.mobile),
+      j.address == null ? '' : String(j.address),
+      j.acs == null ? '' : String(j.acs),
+      types.S, types.W, types.B, types.C, types.UC, types.TV, types.OU, types.SwG, types.EF, types.PAU, types.BEP,
+      units,
+      ret ? 'Y' : '',
+      amountOf(j),
+      j.invoice == null ? '' : String(j.invoice),
+      j.receipt == null ? '' : String(j.receipt),
+      j.payment == null ? '' : String(j.payment),
+      notesOf(j),
+    ];
+  });
+}
+
+function cellFor(c, v) {
+  if (v == null || v === '') return null;
+  if (c === DATE_COL && v instanceof Date && !isNaN(v)) {
+    return { t: 'd', v: v, z: 'yyyy-mm-dd' };
+  }
+  if (NUM_COLS[c] && typeof v === 'number' && isFinite(v)) {
+    return { t: 'n', v: v };
+  }
+  if (TEXT_COLS[c]) {
+    return { t: 's', v: String(v), z: '@' };
+  }
+  if (typeof v === 'number' && isFinite(v)) return { t: 'n', v: v };
+  return { t: 's', v: String(v) };
+}
+
+function toSheet(headers, rows) {
+  const XLSX = window.XLSX;
+  const ws = {};
+  const cols = headers.length;
+  const lastR = rows.length;
+  headers.forEach((h, c) => {
+    ws[XLSX.utils.encode_cell({ r: 0, c: c })] = { t: 's', v: h };
+  });
+  rows.forEach((row, i) => {
+    const r = i + 1;
+    row.forEach((v, c) => {
+      const cell = cellFor(c, v);
+      if (cell) ws[XLSX.utils.encode_cell({ r: r, c: c })] = cell;
     });
   });
-  return rows;
+  ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: lastR, c: cols - 1 } });
+  ws['!autofilter'] = { ref: ws['!ref'] };
+  ws['!views'] = [{ state: 'frozen', ySplit: 1, topLeftCell: 'A2', activePane: 'bottomLeft' }];
+  ws['!freeze'] = { xSplit: 0, ySplit: 1, topLeftCell: 'A2', state: 'frozen' };
+  ws['!cols'] = headers.map((h, c) => {
+    if (c === 0) return { wch: 18 };
+    if (c === 1) return { wch: 12 };
+    if (c === 5 || c === 7 || c === 8 || c === 26) return { wch: 28 };
+    if (c === 4) return { wch: 18 };
+    if (NUM_COLS[c]) return { wch: 8 };
+    return { wch: 14 };
+  });
+  return ws;
 }
 
 function exportJobs(jobs) {
-  const real = (jobs || []).filter((j) => j && !j.deleted && !isCrewNote(j) && j.date);
-  if (!real.length) {
-    throw new Error('No jobs to export');
-  }
-  const byWeek = {};
-  real.forEach((j) => {
-    const mon = mondayOf(j.date);
-    (byWeek[mon] || (byWeek[mon] = [])).push(j);
-  });
-  const mondays = Object.keys(byWeek).sort();
-  const used = new Set();
+  const rows = buildRows(jobs, jobs);
+  if (!rows.length) throw new Error('No jobs to export');
   const wb = window.XLSX.utils.book_new();
-  mondays.forEach((mon) => {
-    const aoa = buildWeekGrid(mon, byWeek[mon], jobs);
-    const ws = window.XLSX.utils.aoa_to_sheet(aoa);
-    window.XLSX.utils.book_append_sheet(wb, ws, sheetName(mon, used));
-  });
-  const name = `breathe-easy-roster-${todayIso()}.xlsx`;
+  const ws = toSheet(HEADERS, rows);
+  window.XLSX.utils.book_append_sheet(wb, ws, 'Jobs');
+  const name = `breathe-easy-jobs-${todayIso()}.xlsx`;
   window.XLSX.writeFile(wb, name);
-  return { weeks: mondays.length, jobs: real.length, name };
+  return { jobs: rows.length, name };
 }
 
 export async function exportMasterRoster() {

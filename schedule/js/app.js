@@ -7,6 +7,7 @@ import { firstEmptySlotIndex, hasTimeConflict, slotIndex } from './capacity.js';
 import { pulseRemaining, renderDayBoard, renderWeekBoard } from './board.js';
 import { closeBooking, openBooking } from './booking.js';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js';
+import { exportMasterRoster } from './export-roster.js';
 
 function calendarToday() {
   const d = new Date();
@@ -810,6 +811,7 @@ function bindSearch() {
 function bindOwnerTools() {
   const box = $('ownerTools');
   const importBtn = $('importJobs');
+  const exportBtn = $('exportRoster');
   const replaceBtn = $('replaceSepDec');
   const resetBtn = $('resetDemo');
   if (!isOwnerUser(signedInEmail)) {
@@ -843,6 +845,25 @@ function bindOwnerTools() {
       }
     });
   }
+  if (exportBtn) {
+    exportBtn.addEventListener('click', async () => {
+      if (!isOwnerUser(signedInEmail)) return;
+      if (!usingFirestore()) {
+        toast('Sign in to export the live roster');
+        return;
+      }
+      exportBtn.disabled = true;
+      try {
+        const result = await exportMasterRoster();
+        toast('Exported ' + result.jobs + ' jobs · ' + result.weeks + ' weeks');
+      } catch (err) {
+        console.error(err);
+        toast((err && err.message) || 'Export failed');
+      } finally {
+        exportBtn.disabled = false;
+      }
+    });
+  }
   if (replaceBtn) {
     replaceBtn.addEventListener('click', async () => {
       if (!isOwnerUser(signedInEmail)) return;
@@ -857,7 +878,7 @@ function bindOwnerTools() {
       try {
         const result = await replaceSepDecFromSheet();
         paint();
-        toast('Removed ' + result.removed + ' · wrote ' + result.written);
+        toast('Removed ' + result.removed + ' · wrote ' + result.written + ' jobs · ' + (result.crew || 0) + ' crew notes');
       } catch (err) {
         console.error(err);
         toast((err && err.message) || 'Replace failed');

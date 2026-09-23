@@ -536,6 +536,15 @@ button.day-col-head:hover { background: #e0f2fe; }
   background: #e0f2fe;
   z-index: 2;
 }
+.job-card.drop-ok,
+.empty-slot.drop-ok {
+  outline: 3px solid #0284c7;
+  outline-offset: -1px;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.28);
+  background: #bfdbfe;
+  z-index: 3;
+  position: relative;
+}
 
 .cell-top {
   display: flex;
@@ -708,9 +717,10 @@ button.day-col-head:hover { background: #e0f2fe; }
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.03em;
-  cursor: default;
+  cursor: grab;
   user-select: none;
 }
+.lunch-card.is-dragging { opacity: 0.45; cursor: grabbing; }
 .week-cell .lunch-card {
   padding: 2px 8px;
   font-size: 10px;

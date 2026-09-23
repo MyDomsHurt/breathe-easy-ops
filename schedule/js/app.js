@@ -1,10 +1,10 @@
 import { DISTRICTS, JOB_TYPES, TEAMS } from './config.js?v=3';
-import { isCrewNote } from './team-day.js';
-import { addDays, formatDay, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, normalizeLunch, pad, parseISO, shortTime, weekDays, workWeekDays } from './utils.js';
+import { findCrewNote, isCrewNote } from './team-day.js';
+import { addDays, formatDay, formatTime24, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, normalizeLunch, pad, parseISO, shortTime, weekDays, workWeekDays } from './utils.js';
 import { allJobs, getJob, importExistingJobs, placeJobInSlot, redo, removeJob, resetDemo, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js';
 import { startScheduleAuth } from './auth.js';
-import { firstEmptySlotIndex, hasTimeConflict, slotIndex } from './capacity.js';
-import { pulseRemaining, renderDayBoard, renderWeekBoard } from './board.js?v=7';
+import { daySlotsOf, firstEmptySlotIndex, hasTimeConflict, jobsForTeamDay, layoutSlots, slotIndex } from './capacity.js';
+import { pulseRemaining, renderDayBoard, renderWeekBoard } from './board.js?v=8';
 import { closeBooking, openBooking } from './booking.js?v=8';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js?v=2';
 import { exportMasterRoster } from './export-roster.js?v=19';
@@ -354,12 +354,6 @@ function bindBoardClicks() {
       startLunchEdit(lunchEdit);
       return;
     }
-    const lunchCard = e.target.closest('[data-lunch-card]');
-    if (lunchCard) {
-      e.preventDefault();
-      e.stopPropagation();
-      return;
-    }
     const van = e.target.closest('[data-edit-van]');
     if (van) {
       e.preventDefault();
@@ -397,6 +391,8 @@ function bindBoardClicks() {
 }
 
 let dragJobId = '';
+let dragKind = '';
+let dragLunchFrom = null;
 let suppressClick = false;
 let dropHint = null;
 
@@ -407,9 +403,17 @@ function clearDropTargets() {
   dropHint = null;
 }
 
-function setDropSlot(slot) {
-  const n = Number(slot);
-  dropHint = Number.isFinite(n) ? { slot: n } : null;
+function highlightDropTarget(el) {
+  document.querySelectorAll('#boardMount .drop-ok').forEach((node) => {
+    if (node !== el) node.classList.remove('drop-ok');
+  });
+  if (el) el.classList.add('drop-ok');
+}
+
+function pointerDropEl(e) {
+  const empty = e.target.closest('[data-empty-slot]');
+  if (empty) return empty;
+  return e.target.closest('[data-job]');
 }
 
 function slotFromPoint(e, date, team, exceptId) {
@@ -426,35 +430,83 @@ function slotFromPoint(e, date, team, exceptId) {
   return firstEmptySlotIndex(allJobs(), date, team, exceptId);
 }
 
+function laidSlotsFor(date, team) {
+  const jobs = jobsForTeamDay(allJobs(), date, team);
+  return layoutSlots(jobs, daySlotsOf(findCrewNote(allJobs(), date, team)));
+}
+
+function lunchTimeFromJob(job) {
+  return normalizeLunch(job && job.time) || formatTime24(job && job.time) || '13:00';
+}
+
+function lunchTimeForEmptySlot(date, team, slot) {
+  const laid = laidSlotsFor(date, team);
+  let prev = null;
+  const max = Number.isFinite(slot) ? slot : laid.length;
+  for (let i = 0; i < max; i += 1) {
+    if (laid[i]) prev = laid[i];
+  }
+  if (!prev) return '13:00';
+  return lunchTimeFromJob(prev);
+}
+
+function placeLunch(date, team, time, slot) {
+  const source = dragLunchFrom;
+  setTeamDayLunch(date, team, time, slot);
+  if (source && (source.date !== date || source.team !== team)) {
+    setTeamDayLunch(source.date, source.team, '');
+  }
+  toast(`Lunch ${time}`);
+}
+
 function bindBoardDrag() {
   const mount = $('boardMount');
   const blank = $('blankAppt');
   if (blank) {
     blank.addEventListener('dragstart', (e) => {
+      dragKind = 'job';
       dragJobId = 'new-appointment';
+      dragLunchFrom = null;
       blank.classList.add('is-dragging');
       e.dataTransfer.setData('text/plain', 'new-appointment');
       e.dataTransfer.effectAllowed = 'copy';
     });
     blank.addEventListener('dragend', () => {
       dragJobId = '';
+      dragKind = '';
+      dragLunchFrom = null;
       blank.classList.remove('is-dragging');
       clearDropTargets();
     });
   }
   mount.addEventListener('dragstart', (e) => {
+    const lunch = e.target.closest('[data-lunch-card]');
+    if (lunch) {
+      const cell = lunch.closest('[data-date][data-team]');
+      dragKind = 'lunch';
+      dragJobId = 'lunch';
+      dragLunchFrom = cell ? { date: cell.dataset.date, team: cell.dataset.team } : null;
+      lunch.classList.add('is-dragging');
+      e.dataTransfer.setData('text/plain', 'lunch');
+      e.dataTransfer.effectAllowed = 'move';
+      return;
+    }
     const chip = e.target.closest('[data-job]');
     if (!chip) {
       e.preventDefault();
       return;
     }
+    dragKind = 'job';
     dragJobId = chip.dataset.job;
+    dragLunchFrom = null;
     chip.classList.add('is-dragging');
     e.dataTransfer.setData('text/plain', dragJobId);
     e.dataTransfer.effectAllowed = 'move';
   });
   mount.addEventListener('dragend', () => {
     dragJobId = '';
+    dragKind = '';
+    dragLunchFrom = null;
     clearDropTargets();
   });
   mount.addEventListener('dragover', (e) => {
@@ -462,33 +514,60 @@ function bindBoardDrag() {
     if (!cell || !dragJobId) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = dragJobId === 'new-appointment' ? 'copy' : 'move';
+    const over = pointerDropEl(e);
+    highlightDropTarget(over);
+    if (dragKind === 'lunch') {
+      const emptyOver = e.target.closest('[data-empty-slot]');
+      const jobOver = e.target.closest('[data-job]');
+      const emptySlot = emptyOver ? Number(emptyOver.dataset.slot) : NaN;
+      dropHint = {
+        kind: 'lunch',
+        jobId: jobOver ? jobOver.dataset.job : '',
+        slot: Number.isFinite(emptySlot) ? emptySlot : null,
+      };
+      return;
+    }
     const job = dragJobId === 'new-appointment' ? null : getJob(dragJobId);
     const sameStack = job && job.date === cell.dataset.date && job.team_lead === cell.dataset.team;
-    document.querySelectorAll('#boardMount .drop-ok').forEach((el) => {
-      if (el !== cell) el.classList.remove('drop-ok');
-    });
-    const emptyOver = e.target.closest('[data-empty-slot]');
-    document.querySelectorAll('#boardMount [data-empty-slot].drop-ok').forEach((el) => {
-      if (el !== emptyOver) el.classList.remove('drop-ok');
-    });
-    cell.classList.add('drop-ok');
-    if (emptyOver) emptyOver.classList.add('drop-ok');
-    setDropSlot(slotFromPoint(e, cell.dataset.date, cell.dataset.team, sameStack ? dragJobId : null));
+    dropHint = { slot: slotFromPoint(e, cell.dataset.date, cell.dataset.team, sameStack ? dragJobId : null) };
   });
   mount.addEventListener('drop', (e) => {
     const cell = e.target.closest('[data-date][data-team]');
     const id = e.dataTransfer.getData('text/plain') || dragJobId;
+    const kind = dragKind;
     const hint = dropHint;
     clearDropTargets();
     dragJobId = '';
+    dragKind = '';
     $('blankAppt')?.classList.remove('is-dragging');
-    if (!cell || !id) return;
+    if (!cell || !id) {
+      dragLunchFrom = null;
+      return;
+    }
     e.preventDefault();
     e.stopPropagation();
     suppressClick = true;
     const date = cell.dataset.date;
     const team = cell.dataset.team;
-    if (!date || !team) return;
+    if (!date || !team) {
+      dragLunchFrom = null;
+      return;
+    }
+    if (kind === 'lunch' || id === 'lunch') {
+      const overJob = hint && hint.jobId ? getJob(hint.jobId) : getJob(e.target.closest('[data-job]')?.dataset.job);
+      if (overJob) {
+        placeLunch(date, team, lunchTimeFromJob(overJob), null);
+      } else {
+        const slot = hint && Number.isFinite(hint.slot)
+          ? hint.slot
+          : Number(e.target.closest('[data-empty-slot]')?.dataset.slot);
+        const time = lunchTimeForEmptySlot(date, team, slot);
+        placeLunch(date, team, time, Number.isFinite(slot) ? slot : null);
+      }
+      dragLunchFrom = null;
+      return;
+    }
+    dragLunchFrom = null;
     const slot = hint && Number.isFinite(hint.slot)
       ? hint.slot
       : firstEmptySlotIndex(allJobs(), date, team, id === 'new-appointment' ? null : id);

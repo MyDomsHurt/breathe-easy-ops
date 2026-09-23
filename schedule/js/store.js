@@ -431,12 +431,13 @@ export function setTeamDaySlots(date, team, count) {
   emit();
 }
 
-export function setTeamDayLunch(date, team, lunch) {
+export function setTeamDayLunch(date, team, lunch, slot) {
   const noteId = crewNoteId(date, team);
   const prevNote = getJob(noteId);
   const members = prevNote
     ? String(prevNote.team_members || '').trim()
     : cellTeamMembers(allJobs(), date, team);
+  const slotN = Number(slot);
   writeJob(toCanonical({
     job_id: noteId,
     date,
@@ -451,6 +452,7 @@ export function setTeamDayLunch(date, team, lunch) {
     status: 'confirmed',
     highlight_members: prevNote ? !!prevNote.highlight_members : false,
     lunch: lunch || null,
+    lunch_slot: lunch && Number.isFinite(slotN) ? slotN : null,
   }, prevNote));
   emit();
 }

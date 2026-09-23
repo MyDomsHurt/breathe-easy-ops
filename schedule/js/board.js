@@ -125,8 +125,8 @@ function boardCardHtml(job, conflict, week) {
   </button>`;
 }
 
-function lunchCardHtml(time) {
-  return `<div class="lunch-card" data-lunch-card="1">
+function lunchCardHtml(time, date, team) {
+  return `<div class="lunch-card" draggable="true" data-lunch-card="1" data-edit-lunch="${esc(date)}" data-edit-lunch-team="${esc(team)}" data-lunch-value="${esc(time)}" title="Drag to move lunch, or click to set time">
     <span class="lunch-label">Lunch</span>
     <span class="lunch-time">${esc(time)}</span>
   </div>`;
@@ -137,20 +137,25 @@ function emptySlotHtml(date, team, index, slim) {
   return `<button type="button" class="${cls}" data-book-date="${esc(date)}" data-book-team="${esc(team)}" data-empty-slot="1" data-slot="${index}" aria-label="Add booking"></button>`;
 }
 
-function renderSlotStack(slots, lunchTime, conflicts, mode, full, date, team) {
+function renderSlotStack(slots, lunchTime, conflicts, mode, full, date, team, lunchSlot) {
   const time = normalizeLunch(lunchTime);
   const lunchMins = time ? startMinutes({ time }) : null;
+  const pin = Number.isFinite(Number(lunchSlot)) ? Number(lunchSlot) : null;
   const week = mode === 'week';
   const renderJob = (j) => boardCardHtml(j, conflicts.has(j.job_id), week);
   const out = [];
   let placedLunch = !time;
   for (let i = 0; i < slots.length; i += 1) {
+    if (!placedLunch && pin != null && i === pin) {
+      out.push(lunchCardHtml(time, date, team));
+      placedLunch = true;
+    }
     const j = slots[i];
     if (j) {
-      if (!placedLunch) {
+      if (!placedLunch && pin == null) {
         const t = startMinutes(j);
         if (t == null || t >= lunchMins) {
-          out.push(lunchCardHtml(time));
+          out.push(lunchCardHtml(time, date, team));
           placedLunch = true;
         }
       }
@@ -159,7 +164,7 @@ function renderSlotStack(slots, lunchTime, conflicts, mode, full, date, team) {
       out.push(emptySlotHtml(date, team, i, week));
     }
   }
-  if (!placedLunch) out.push(lunchCardHtml(time));
+  if (!placedLunch) out.push(lunchCardHtml(time, date, team));
   return out.join('');
 }
 
@@ -182,7 +187,9 @@ function cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs) {
   const slots = daySlotsOf(note);
   const full = !!(note && (note.day_full === true || note.day_full === 'true'));
   const laid = layoutSlots(shown, slots);
-  const body = renderSlotStack(laid, lunch, conflicts, mode, full, date, team);
+  const lunchSlotRaw = Number(note && note.lunch_slot);
+  const lunchSlot = Number.isFinite(lunchSlotRaw) ? lunchSlotRaw : null;
+  const body = renderSlotStack(laid, lunch, conflicts, mode, full, date, team, lunchSlot);
   const van = cellTeamMembers(lookup, date, team);
   const vanHi = isHi(note && note.highlight_members);
   const vanLabel = van || "Who's on";

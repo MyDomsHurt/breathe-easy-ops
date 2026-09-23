@@ -5,9 +5,9 @@ import { allJobs, getJob, importExistingJobs, placeJobInSlot, redo, removeJob, r
 import { startScheduleAuth } from './auth.js';
 import { firstEmptySlotIndex, hasTimeConflict, slotIndex } from './capacity.js';
 import { pulseRemaining, renderDayBoard, renderWeekBoard } from './board.js?v=2';
-import { closeBooking, openBooking } from './booking.js?v=4';
+import { closeBooking, openBooking } from './booking.js?v=5';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js';
-import { exportMasterRoster } from './export-roster.js?v=15';
+import { exportMasterRoster } from './export-roster.js?v=16';
 
 function calendarToday() {
   const d = new Date();

@@ -12,9 +12,10 @@ export const TERRITORIES = [
   { code: 'N-T', label: 'New Territories' },
   { code: 'S-K', label: 'Sai Kung' },
   { code: 'L-T', label: 'Lantau' },
+  { code: 'L-M', label: 'Lamma Island' },
 ];
 
-const CODE_ALIASES = { 'N-TW': 'N-T', 'L-M': 'KLN' };
+const CODE_ALIASES = { 'N-TW': 'N-T' };
 
 const NEIGHBOURHOODS = [
   'Mid-Levels', 'The Peak', 'Happy Valley', 'Causeway Bay', 'Wan Chai', 'Sheung Wan',

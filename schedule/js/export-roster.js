@@ -6,6 +6,7 @@
 import { TEAMS } from './config.js';
 import { isCrewNote, cellTeamMembers } from './team-day.js';
 import { pad, timeToMinutes } from './utils.js';
+import { isJeffEmail } from '../../shared/firebase-config.js';
 import { allJobs, initStore, usingFirestore } from './store.js';
 
 const SHEETJS_SRC = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
@@ -553,7 +554,24 @@ function exportJobs(jobs) {
   return { jobs: rows.length, name: xlsxName, json: jsonName };
 }
 
+function toastJeffOnly() {
+  const msg = 'Only Jeff can export the roster';
+  const el = document.getElementById('toast');
+  if (el) {
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastJeffOnly._t);
+    toastJeffOnly._t = setTimeout(() => el.classList.remove('show'), 2600);
+  }
+  throw new Error(msg);
+}
+
 export async function exportMasterRoster() {
+  const email = (typeof firebase !== 'undefined'
+    && firebase.auth
+    && firebase.auth().currentUser
+    && firebase.auth().currentUser.email) || '';
+  if (!isJeffEmail(email)) toastJeffOnly();
   await initStore();
   if (!usingFirestore()) {
     throw new Error('Sign in to export the live roster');

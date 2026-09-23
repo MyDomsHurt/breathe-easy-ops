@@ -7,7 +7,7 @@ import { firstEmptySlotIndex, hasTimeConflict, slotIndex } from './capacity.js';
 import { pulseRemaining, renderDayBoard, renderWeekBoard } from './board.js';
 import { closeBooking, openBooking } from './booking.js';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js';
-import { exportMasterRoster } from './export-roster.js?v=6';
+import { exportMasterRoster } from './export-roster.js?v=7';
 
 function calendarToday() {
   const d = new Date();
@@ -824,7 +824,10 @@ function bindOwnerTools() {
   if (box) box.hidden = false;
   if (importBtn) {
     importBtn.addEventListener('click', async () => {
-      if (!isOwnerUser(signedInEmail)) return;
+      if (!isOwnerUser(signedInEmail)) {
+        toast('Only Jeff can import jobs');
+        return;
+      }
       if (!usingFirestore()) {
         toast('Sign in to import into the live store');
         return;
@@ -847,7 +850,10 @@ function bindOwnerTools() {
   }
   if (exportBtn) {
     exportBtn.addEventListener('click', async () => {
-      if (!isOwnerUser(signedInEmail)) return;
+      if (!isOwnerUser(signedInEmail)) {
+        toast('Only Jeff can export the roster');
+        return;
+      }
       if (!usingFirestore()) {
         toast('Sign in to export the live roster');
         return;
@@ -866,7 +872,10 @@ function bindOwnerTools() {
   }
   if (replaceBtn) {
     replaceBtn.addEventListener('click', async () => {
-      if (!isOwnerUser(signedInEmail)) return;
+      if (!isOwnerUser(signedInEmail)) {
+        toast('Only Jeff can replace Sep–Dec');
+        return;
+      }
       if (!usingFirestore()) {
         toast('Sign in to replace Sep–Dec in the live store');
         return;
@@ -889,7 +898,10 @@ function bindOwnerTools() {
   }
   if (resetBtn) {
     resetBtn.addEventListener('click', () => {
-      if (!isOwnerUser(signedInEmail)) return;
+      if (!isOwnerUser(signedInEmail)) {
+        toast('Only Jeff can reset the demo');
+        return;
+      }
       if (usingFirestore()) {
         toast('Local demo reset is only for the offline fallback');
         return;

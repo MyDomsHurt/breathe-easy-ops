@@ -12,7 +12,7 @@
  * Reuses the existing web app; no new Firebase project, no service account.
  */
 
-import { JOBS_COLLECTION } from './firebase-config.js';
+import { JOBS_COLLECTION, currentFirebaseUser, firestoreLeadFilter } from './firebase-config.js';
 import { normalizeJob } from './job.js';
 
 const BATCH_LIMIT = 400;
@@ -30,12 +30,19 @@ export function createFirestoreAdapter(options = {}) {
     return firebase.firestore().collection(collectionName);
   }
 
+  function jobsQuery() {
+    const user = options.user || currentFirebaseUser();
+    const team = firestoreLeadFilter(user && user.email);
+    if (team) return col().where('team_lead', '==', team);
+    return col();
+  }
+
   return {
     name: 'firestore',
     collection: collectionName,
 
     async load() {
-      const snap = await col().get();
+      const snap = await jobsQuery().get();
       return snap.docs.map(docToJob);
     },
 
@@ -75,7 +82,7 @@ export function createFirestoreAdapter(options = {}) {
 
     subscribeRemote(onChange) {
       if (typeof onChange !== 'function') return () => {};
-      return col().onSnapshot(
+      return jobsQuery().onSnapshot(
         (snap) => {
           onChange(snap.docs.map(docToJob));
         },

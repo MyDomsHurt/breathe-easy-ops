@@ -159,6 +159,21 @@
         return;
       }
 
+      var email = (user.email || "").toLowerCase().trim();
+      var leadMap = {
+        "matthewgross2001@gmail.com": "Matthew",
+        "tiagogiri334@gmail.com": "Tiago",
+        "neltrestium@gmail.com": "Nick",
+        "sudor23@gmail.com": "Alun",
+        "iggi.king@gmail.com": "Iggi",
+        "joshua@breathe-easyhk.com": "Josh"
+      };
+      window.BE_AUTH_EMAIL = email;
+      window.BE_LOCKED_TEAM = leadMap[email] || "";
+      window.BE_VIEWER = window.BE_LOCKED_TEAM
+        ? { kind: email === "joshua@breathe-easyhk.com" ? "josh" : "lead", team: window.BE_LOCKED_TEAM }
+        : { kind: "office", team: "" };
+
       updateUserChip(user);
       showApp();
 

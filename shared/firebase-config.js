@@ -27,6 +27,25 @@ export const ALLOWLIST = [
   'tiagogiri334@gmail.com',
 ];
 
+export const OFFICE_EMAILS = [
+  'jefflamb1992@gmail.com',
+  'info@breathe-easyhk.com',
+  'ruby@breathe-easyhk.com',
+  'perry@breathe-easyhk.com',
+  'n.marie.lamb@gmail.com',
+];
+
+export const JEFF_EMAIL = 'jefflamb1992@gmail.com';
+export const JOSH_EMAIL = 'joshua@breathe-easyhk.com';
+
+export const LEAD_EMAILS = {
+  'matthewgross2001@gmail.com': 'Matthew',
+  'tiagogiri334@gmail.com': 'Tiago',
+  'neltrestium@gmail.com': 'Nick',
+  'sudor23@gmail.com': 'Alun',
+  'iggi.king@gmail.com': 'Iggi',
+};
+
 export const USER_NAMES = {
   'jefflamb1992@gmail.com': 'Admin',
   'info@breathe-easyhk.com': 'Customer Service',
@@ -53,9 +72,48 @@ export function displayNameForEmail(email) {
 export const JOBS_COLLECTION = 'jobs';
 
 const ALLOWED = ALLOWLIST.map((e) => e.toLowerCase());
+const OFFICE = OFFICE_EMAILS.map((e) => e.toLowerCase());
+
+function emailKey(email) {
+  return String(email || '').toLowerCase().trim();
+}
 
 export function isAllowedEmail(email) {
-  return ALLOWED.indexOf(String(email || '').toLowerCase().trim()) !== -1;
+  return ALLOWED.indexOf(emailKey(email)) !== -1;
+}
+
+export function isOfficeEmail(email) {
+  return OFFICE.indexOf(emailKey(email)) !== -1;
+}
+
+export function isJeffEmail(email) {
+  return emailKey(email) === JEFF_EMAIL;
+}
+
+export function isJoshEmail(email) {
+  return emailKey(email) === JOSH_EMAIL;
+}
+
+export function isBookingAllowedEmail(email) {
+  return isOfficeEmail(email);
+}
+
+export function leadTeamForEmail(email) {
+  return LEAD_EMAILS[emailKey(email)] || '';
+}
+
+export function viewerForEmail(email) {
+  const key = emailKey(email);
+  if (!key) return { kind: 'none', team: '' };
+  if (OFFICE.indexOf(key) !== -1) return { kind: 'office', team: '' };
+  if (key === JOSH_EMAIL) return { kind: 'josh', team: 'Josh' };
+  const team = LEAD_EMAILS[key];
+  if (team) return { kind: 'lead', team: team };
+  return { kind: 'none', team: '' };
+}
+
+export function firestoreLeadFilter(email) {
+  return leadTeamForEmail(email);
 }
 
 export function isRealSignedInUser(user) {
@@ -92,4 +150,7 @@ export function shouldUseFirestore(user) {
 if (typeof window !== 'undefined') {
   window.BE_FIREBASE_CONFIG = FIREBASE_CONFIG;
   window.BE_ALLOWLIST = ALLOWLIST;
+  window.BE_OFFICE_EMAILS = OFFICE_EMAILS;
+  window.BE_LEAD_EMAILS = LEAD_EMAILS;
+  window.BEViewerForEmail = viewerForEmail;
 }

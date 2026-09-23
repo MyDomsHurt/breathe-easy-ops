@@ -98,8 +98,17 @@ function finishLoadedData(){
   }
 }
 
+function emptyDashboardData(){
+  DATA = { technicians: {}, ranking: [], weeks: [], generated: '', daily: {} };
+  TECH_ORDER.forEach(n => {
+    DATA.technicians[n] = { name: n, weeks: [], points: 0, units: 0 };
+  });
+  finishLoadedData();
+}
+
 async function loadJsonFallback(){
   const [res, wres] = await Promise.all([fetch('data.json'), fetch('weeks.json')]);
+  if(!res.ok || !wres.ok) throw new Error('public json unavailable');
   DATA = await res.json();
   const weeks = await wres.json();
   const cols = weeks._cols;
@@ -155,7 +164,12 @@ async function loadData(){
   } catch (err) {
     console.warn('Live Performance score unavailable, using data.json', err);
   }
-  await loadJsonFallback();
+  try {
+    await loadJsonFallback();
+  } catch (err) {
+    console.warn('Public JSON fallback unavailable', err);
+    emptyDashboardData();
+  }
 }
 
 window.BEOnPerfJobsChanged = function BEOnPerfJobsChanged(jobs){
@@ -167,15 +181,27 @@ window.BEOnPerfJobsChanged = function BEOnPerfJobsChanged(jobs){
   if (typeof route === 'function') route();
 };
 
+function viewerKind(){
+  return (window.BE_VIEWER && window.BE_VIEWER.kind) || 'office';
+}
+function lockedTechName(){
+  return viewerKind() === 'lead' ? (window.BE_VIEWER.team || '') : '';
+}
+function canSeeAllTechs(){
+  return viewerKind() === 'office' || viewerKind() === 'josh';
+}
 function setNav(active){
-  const names = techNames();
+  const lock = lockedTechName();
+  const names = lock ? [lock] : techNames();
   const standingsOn = active === '#/standings' || active === '#/compete';
   const teamActive = active === '#/team' ? ' active' : '';
-  $('nav-links').innerHTML =
-    names.map(n => `<a href="#/tech/${n}" class="${active === ('#/tech/'+n) ? 'active' : ''}">${n}</a>`).join('') +
-    `<span class="nav-sep"></span>` +
-    `<a href="#/team" class="${teamActive}">Full Team</a>` +
-    `<a href="#/standings" class="nav-compete${standingsOn ? ' active' : ''}">Standings</a>`;
+  let html = names.map(n => `<a href="#/tech/${n}" class="${active === ('#/tech/'+n) ? 'active' : ''}">${n}</a>`).join('');
+  if(canSeeAllTechs()){
+    html += `<span class="nav-sep"></span>` +
+      `<a href="#/team" class="${teamActive}">Full Team</a>` +
+      `<a href="#/standings" class="nav-compete${standingsOn ? ' active' : ''}">Standings</a>`;
+  }
+  $('nav-links').innerHTML = html;
   renderPeriodBar();
 }
 
@@ -702,8 +728,23 @@ function renderTech(name){
 }
 
 function route(){
-  const hash = location.hash || '#/team';
-  if(hash.startsWith('#/tech/')) renderTech(decodeURIComponent(hash.replace('#/tech/', '')));
+  const lock = lockedTechName();
+  let hash = location.hash || (lock ? '#/tech/' + lock : '#/team');
+  if(lock){
+    const allowed = '#/tech/' + lock;
+    if(hash !== allowed){
+      if(location.hash !== allowed) location.hash = allowed;
+      hash = allowed;
+    }
+  }
+  if(hash.startsWith('#/tech/')){
+    const name = decodeURIComponent(hash.replace('#/tech/', ''));
+    if(lock && name !== lock){
+      renderTech(lock);
+      return;
+    }
+    renderTech(name);
+  }
   else if(hash === '#/standings' || hash === '#/compete') renderCompetition();
   else renderTeam();
 }

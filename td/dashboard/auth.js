@@ -113,6 +113,21 @@
       });
       return;
     }
+    var leadMap = {
+      "matthewgross2001@gmail.com": "Matthew",
+      "tiagogiri334@gmail.com": "Tiago",
+      "neltrestium@gmail.com": "Nick",
+      "sudor23@gmail.com": "Alun",
+      "iggi.king@gmail.com": "Iggi"
+    };
+    window.BE_AUTH_EMAIL = email;
+    if (leadMap[email]) {
+      window.BE_VIEWER = { kind: "lead", team: leadMap[email] };
+    } else if (email === "joshua@breathe-easyhk.com") {
+      window.BE_VIEWER = { kind: "josh", team: "Josh" };
+    } else {
+      window.BE_VIEWER = { kind: "office", team: "" };
+    }
     showApp(user);
   });
 })();

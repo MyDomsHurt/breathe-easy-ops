@@ -8,13 +8,13 @@ Project: **breathe-easy-performance** (existing). Collection: **`jobs`**. Docume
 
 1. Open [Firebase console](https://console.firebase.google.com/) → project **breathe-easy-performance**.
 2. Build → **Firestore Database**. Create the database if it does not exist (production mode).
-3. **Rules** tab. Paste [`firestore.rules`](firestore.rules) and **Publish**. Signed-in is not enough: the Google email must be on the same allowlist as TD/Booking (`td/js/auth.js`). The app does not deploy rules.
+3. **Rules** tab. Paste [`firestore.rules`](firestore.rules) and **Publish**. The app does not deploy rules.
 
 ```
-match /jobs/{jobId} {
-  allow read, write: if request.auth != null
-    && request.auth.token.email.lower() in [ /* allowlist emails */ ];
-}
+Office emails: read + write all jobs.
+Josh: read all jobs, no write.
+Five leads: read only jobs where team_lead is their name. No write.
+Booking sign-in is office-only; leads and Josh cannot open Booking.
 ```
 
 4. **Authentication** → Settings → **Authorized domains**. Include:
@@ -35,7 +35,7 @@ Boot does **not** upload the 2710-job archive.
 2. Create bookings as usual — each save writes one Firestore document.
 3. To copy current seed + TD archive **once**, click **Import existing jobs** and confirm. Do not run that on every computer.
 
-If Firestore is empty, `/td` keeps showing `jobs.json` so technicians are not looking at a blank screen. As soon as live jobs exist, TD uses Firestore and updates from snapshots.
+If Firestore is empty, Live Schedule / Performance stay empty. `jobs.json` and `data.json` are not public on the TD site.
 
 ## Local fallback
 

@@ -1,40 +1,52 @@
 rules_version = '2';
-// Allowlist (same emails as td/js/auth.js and shared/firebase-config.js).
-// Jeff must Publish these rules again in Firebase console → Firestore →
-// Rules after this change. The app does not deploy rules.
-//   iggi.king@gmail.com
-//   info@breathe-easyhk.com
+// Jeff publishes these in Firebase console → Firestore → Rules after merge.
+// The app does not deploy rules.
+//
+// Office (read + write all jobs):
 //   jefflamb1992@gmail.com
-//   joshua@breathe-easyhk.com
-//   matthewgross2001@gmail.com
-//   n.marie.lamb@gmail.com
-//   neltrestium@gmail.com
-//   perry@breathe-easyhk.com
+//   info@breathe-easyhk.com
 //   ruby@breathe-easyhk.com
-//   sudor23@gmail.com
-//   tiagogiri334@gmail.com
+//   perry@breathe-easyhk.com
+//   n.marie.lamb@gmail.com
+// Josh: read all jobs, no write (joshua@breathe-easyhk.com)
+// Five leads: read only jobs where team_lead is their name. No write.
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isAllowlisted() {
-      return request.auth != null
-        && request.auth.token.email is string
-        && request.auth.token.email.lower() in [
-          'iggi.king@gmail.com',
-          'info@breathe-easyhk.com',
-          'jefflamb1992@gmail.com',
-          'joshua@breathe-easyhk.com',
-          'matthewgross2001@gmail.com',
-          'n.marie.lamb@gmail.com',
-          'neltrestium@gmail.com',
-          'perry@breathe-easyhk.com',
-          'ruby@breathe-easyhk.com',
-          'sudor23@gmail.com',
-          'tiagogiri334@gmail.com'
-        ];
+    function signedIn() {
+      return request.auth != null && request.auth.token.email is string;
+    }
+    function email() {
+      return request.auth.token.email.lower();
+    }
+    function isOffice() {
+      return signedIn() && email() in [
+        'jefflamb1992@gmail.com',
+        'info@breathe-easyhk.com',
+        'ruby@breathe-easyhk.com',
+        'perry@breathe-easyhk.com',
+        'n.marie.lamb@gmail.com'
+      ];
+    }
+    function isJosh() {
+      return signedIn() && email() == 'joshua@breathe-easyhk.com';
+    }
+    function leadName() {
+      return email() == 'matthewgross2001@gmail.com' ? 'Matthew'
+        : email() == 'tiagogiri334@gmail.com' ? 'Tiago'
+        : email() == 'neltrestium@gmail.com' ? 'Nick'
+        : email() == 'sudor23@gmail.com' ? 'Alun'
+        : email() == 'iggi.king@gmail.com' ? 'Iggi'
+        : '';
+    }
+    function isLead() {
+      return signedIn() && leadName() != '';
     }
 
     match /jobs/{jobId} {
-      allow read, write: if isAllowlisted();
+      allow read: if isOffice()
+        || isJosh()
+        || (isLead() && resource.data.team_lead == leadName());
+      allow write: if isOffice();
     }
   }
 }

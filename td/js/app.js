@@ -23,7 +23,11 @@ const EMAIL_TO_TEAM = {
 
 function teamFromEmail(email) {
   const key = String(email || '').toLowerCase().trim();
-  return EMAIL_TO_TEAM[key] || 'Matthew';
+  return EMAIL_TO_TEAM[key] || '';
+}
+
+function lockedTeam() {
+  return window.BE_LOCKED_TEAM || '';
 }
 let viewMode = 'date';
 
@@ -386,7 +390,8 @@ function buildTeamButtons() {
   function fill(container, includeAll) {
     if (!container) return;
     container.innerHTML = '';
-    const names = includeAll ? ['all'].concat(TEAMS) : TEAMS.slice();
+    const lock = lockedTeam();
+    const names = lock ? [lock] : (includeAll ? ['all'].concat(TEAMS) : TEAMS.slice());
     names.forEach(t => {
       const btn = document.createElement('button');
       btn.dataset.team = t;
@@ -400,9 +405,10 @@ function buildTeamButtons() {
   fill(sidebar, true);
   const sel = document.getElementById('techTeamSelect');
   if (sel) {
-    const current = (!currentFilters.team || currentFilters.team === 'all') ? 'Matthew' : currentFilters.team;
+    const lock = lockedTeam();
+    const current = lock || ((!currentFilters.team || currentFilters.team === 'all') ? 'Matthew' : currentFilters.team);
     sel.innerHTML = '';
-    TEAMS.forEach(t => {
+    (lock ? [lock] : TEAMS).forEach(t => {
       const opt = document.createElement('option');
       opt.value = t;
       opt.textContent = t;
@@ -410,6 +416,7 @@ function buildTeamButtons() {
       sel.appendChild(opt);
     });
     sel.value = current;
+    sel.disabled = !!lock;
   }
 }
 
@@ -436,6 +443,11 @@ function bindEvents() {
   function onTeamClick(e) {
     const btn = e.target.closest('.team-btn');
     if (!btn) return;
+    if (lockedTeam()) {
+      currentFilters.team = lockedTeam();
+      applyFilters();
+      return;
+    }
     currentFilters.team = btn.dataset.team;
     document.querySelectorAll('.team-btn').forEach(b => {
       const on = b.dataset.team === currentFilters.team;
@@ -452,7 +464,7 @@ function bindEvents() {
   const techSelect = document.getElementById('techTeamSelect');
   if (techSelect) {
     techSelect.addEventListener('change', e => {
-      currentFilters.team = e.target.value || 'Matthew';
+      currentFilters.team = lockedTeam() || e.target.value || 'Matthew';
       applyFilters();
     });
   }
@@ -642,7 +654,8 @@ function applyRoleUI() {
   currentFilters.type = 'all';
   currentFilters.range = 'this_week';
   currentFilters.day = todayISO();
-  if (!currentFilters.team || currentFilters.team === 'all') currentFilters.team = 'Matthew';
+  if (lockedTeam()) currentFilters.team = lockedTeam();
+  else if (!currentFilters.team || currentFilters.team === 'all') currentFilters.team = 'Matthew';
   buildTeamButtons();
   paintRangeButtons(currentFilters.range);
   syncHeaderHeight();
@@ -797,6 +810,7 @@ function visibleCrewNotes() {
 }
 
 function applyFilters() {
+  if (lockedTeam()) currentFilters.team = lockedTeam();
   const bounds = getRangeBounds(currentFilters.range);
   filtered = allJobs.filter(j => {
     if (isCrewNote(j)) return false;
@@ -1262,7 +1276,9 @@ function esc(str) {
 
 window.onAuthReady = function(user) {
   viewMode = 'date';
-  currentFilters.team = teamFromEmail(user && user.email);
+  const lock = teamFromEmail(user && user.email);
+  window.BE_LOCKED_TEAM = lock;
+  currentFilters.team = lock || 'Matthew';
   currentFilters.range = 'this_week';
   currentFilters.day = todayISO();
   init();

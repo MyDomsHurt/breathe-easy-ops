@@ -1,10 +1,10 @@
 /**
- * Google allowlist gate — same project and emails as /td.
+ * Google allowlist gate — office emails only. Leads and Josh cannot open Booking.
  */
 
 import {
   ensureFirebaseApp,
-  isAllowedEmail,
+  isBookingAllowedEmail,
 } from '../../shared/firebase-config.js';
 
 export function startScheduleAuth() {
@@ -71,7 +71,7 @@ export function startScheduleAuth() {
         window.location.reload();
         return;
       }
-      if (!isAllowedEmail(user.email)) {
+      if (!isBookingAllowedEmail(user.email)) {
         auth.signOut().then(() => {
           showLogin();
           setError('This Google account is not authorised for Booking.');

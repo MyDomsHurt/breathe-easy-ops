@@ -15,7 +15,7 @@ import {
   loadExistingCanonicalJobs,
 } from '../../shared/store.js';
 import { appendChange, asChanges, fromScheduleJob } from '../../shared/job.js';
-import { shouldUseFirestore } from '../../shared/firebase-config.js';
+import { isJeffEmail, shouldUseFirestore } from '../../shared/firebase-config.js';
 import { CREW_SOURCE, cellTeamMembers, crewNoteId, isCrewNote } from './team-day.js';
 import { planSlotTake, slotCountFor, slotFloor } from './capacity.js';
 
@@ -130,6 +130,25 @@ function toCanonical(input, prev) {
     source: (prev && prev.source) || input.source || 'local',
     deleted: false,
   });
+}
+
+function denyJeffOnly(action) {
+  const msg = 'Only Jeff can ' + action;
+  try {
+    const el = document.getElementById('toast');
+    if (el) {
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(denyJeffOnly._t);
+      denyJeffOnly._t = setTimeout(() => el.classList.remove('show'), 2600);
+    }
+  } catch (e) { /* ignore */ }
+  throw new Error(msg);
+}
+
+function requireJeff(action) {
+  if (isJeffEmail(currentActorEmail())) return;
+  denyJeffOnly(action);
 }
 
 function currentActorEmail() {
@@ -517,6 +536,7 @@ export function redo() {
 }
 
 export function resetDemo() {
+  requireJeff('reset the demo');
   if (usingFirestore()) {
     return { blocked: true };
   }
@@ -538,6 +558,7 @@ export function resetDemo() {
  * One-time, explicit upload of seed + TD archive. Never called on boot.
  */
 export async function importExistingJobs() {
+  requireJeff('import jobs');
   if (!ops) throw new Error('Store is not ready');
   const baseUrl = new URL('../../', import.meta.url).href;
   const { jobs, stats } = await loadExistingCanonicalJobs({ baseUrl });
@@ -555,10 +576,12 @@ function inSepDec2026(date) {
 }
 
 /**
- * Soft-delete Sep–Dec 2026 jobs, then upsert the sheet JSON.
+ * Soft-delete Sep–Dec 2026 jobs (including crew notes), then upsert
+ * jobs[] and crew_notes[] from the sheet JSON.
  * Does not touch August or earlier. Not Import existing jobs.
  */
 export async function replaceSepDecFromSheet() {
+  requireJeff('replace Sep–Dec');
   if (!ops) throw new Error('Store is not ready');
   const url = new URL('../data/sheet-import-sep-dec-2026.json', import.meta.url);
   const res = await fetch(url.href);
@@ -566,6 +589,7 @@ export async function replaceSepDecFromSheet() {
   const payload = await res.json();
   const rows = Array.isArray(payload) ? payload : (payload && payload.jobs);
   if (!Array.isArray(rows)) throw new Error('Sheet import is not a list');
+  const notes = (payload && !Array.isArray(payload) && payload.crew_notes) || [];
 
   let removed = 0;
   for (const job of ops.listJobs({ includeDeleted: true })) {
@@ -584,8 +608,23 @@ export async function replaceSepDecFromSheet() {
     writeJob(fromScheduleJob({ ...row, deleted: false }), 'created');
     written += 1;
   }
+
+  let crew = 0;
+  for (const row of Array.isArray(notes) ? notes : []) {
+    const date = String(row && row.date || '').trim();
+    if (!inSepDec2026(date)) continue;
+    const id = String(row && row.job_id || '').trim();
+    if (!id) continue;
+    writeJob(fromScheduleJob({
+      ...row,
+      job_id: id,
+      source: CREW_SOURCE,
+      deleted: false,
+    }), null);
+    crew += 1;
+  }
   emit();
-  return { removed, written };
+  return { removed, written, crew };
 }
 
 export { jobTypeOf };

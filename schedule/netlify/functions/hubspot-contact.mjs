@@ -231,7 +231,11 @@ export async function handler(event) {
     const handled = await handleHubSpotEvents(payload);
     return { statusCode: 200, body: JSON.stringify({ ok: true, handled }) };
   } catch (err) {
-    console.error('hubspot-contact', err && err.message);
-    return { statusCode: 500, body: 'Error' };
+    const message = String((err && err.message) || 'Error');
+    return {
+      statusCode: 500,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ok: false, error: message }),
+    };
   }
 }

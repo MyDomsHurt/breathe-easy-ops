@@ -446,9 +446,20 @@ button, input, select, textarea { font-family: inherit; }
 }
 
 .roster {
-  min-width: calc(132px + var(--days, 6) * 188px);
+  width: max-content;
+  min-width: 100%;
   display: grid;
-  grid-template-columns: 132px repeat(var(--days, 6), minmax(188px, 1fr));
+  grid-template-columns: 132px repeat(var(--days, 6), minmax(240px, 1fr));
+}
+
+.roster > .board-head,
+.roster > .team-row-label {
+  min-width: 132px;
+}
+
+.roster > .day-col-head,
+.roster > .roster-cell {
+  min-width: 240px;
 }
 
 .board-head, .team-row-label, .day-col-head, .roster-cell {
@@ -1094,7 +1105,7 @@ button.day-col-head:hover { background: #e0f2fe; }
   font-weight: 700;
   line-height: 1.2;
   color: #334155;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .job-card-detailed .compact-col-main {
   display: flex;
@@ -1127,24 +1138,28 @@ button.day-col-head:hover { background: #e0f2fe; }
   color: #1e293b;
   overflow: hidden;
   max-height: calc(1.35em * 3);
-  overflow-wrap: anywhere;
-  word-break: break-word;
+  overflow-wrap: break-word;
 }
-.job-card-detailed .compact-notes {
+.job-card-detailed .compact-notes,
+.job-card-detailed .detailed-notes2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  overflow-wrap: break-word;
   margin: 6px 0 0;
   font-size: 14px;
-  font-weight: 500;
   line-height: 1.4;
+  max-height: calc(1.4em * 2);
+}
+.job-card-detailed .compact-notes {
+  font-weight: 500;
   color: #8E7CC3;
 }
 .job-card-detailed .detailed-notes2 {
-  margin: 6px 0 0;
-  font-size: 14px;
   font-weight: 400;
-  line-height: 1.4;
   color: #0f172a;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
 }
 .job-card-detailed .compact-col-meta {
   display: flex;

@@ -138,37 +138,51 @@ function encodeFields(obj) {
   return { fields };
 }
 
-async function fsRequest(method, id, payload, mask) {
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function firestoreError(method, status) {
+  const err = new Error('Firestore ' + method + ' ' + status);
+  if (status === 429) err.statusCode = 503;
+  return err;
+}
+
+async function fsRequest(method, id, payload, mask, opts) {
   const token = await firebaseIdToken();
-  let url = firestoreUrl(id);
+  const query = [];
   if (mask && mask.length) {
-    url += '?' + mask.map((f) => 'updateMask.fieldPaths=' + encodeURIComponent(f)).join('&');
+    mask.forEach((f) => query.push('updateMask.fieldPaths=' + encodeURIComponent(f)));
   }
-  const res = await fetch(url, {
-    method,
-    headers: {
-      Authorization: 'Bearer ' + token,
-      'Content-Type': 'application/json',
-    },
-    body: payload ? JSON.stringify(payload) : undefined,
-  });
-  if ((method === 'GET' || method === 'DELETE') && res.status === 404) return { missing: true };
-  if (!res.ok) {
-    throw new Error('Firestore ' + method + ' ' + res.status);
+  if (opts && opts.mustExist) query.push('currentDocument.exists=true');
+  const url = firestoreUrl(id) + (query.length ? '?' + query.join('&') : '');
+  async function once() {
+    return fetch(url, {
+      method,
+      headers: {
+        Authorization: 'Bearer ' + token,
+        'Content-Type': 'application/json',
+      },
+      body: payload ? JSON.stringify(payload) : undefined,
+    });
   }
+  let res = await once();
+  if (method === 'PATCH' && res.status === 429) {
+    await sleep(1000);
+    res = await once();
+    if (res.status === 429) throw firestoreError('PATCH', 429);
+  }
+  if (method === 'DELETE' && res.status === 404) return { missing: true };
+  if (opts && opts.mustExist && res.status === 404) return { missing: true };
+  if (!res.ok) throw firestoreError(method, res.status);
   if (method === 'DELETE') return { ok: true };
   return res.json();
 }
 
-async function docExists(id) {
-  const got = await fsRequest('GET', id);
-  return !got.missing;
-}
-
-async function mergeContact(id, fields) {
+async function mergeContact(id, fields, opts) {
   const data = { hubspot_id: String(id), ...fields };
   const mask = Object.keys(data);
-  await fsRequest('PATCH', id, encodeFields(data), mask);
+  return fsRequest('PATCH', id, encodeFields(data), mask, opts);
 }
 
 async function getHubSpotContact(id) {
@@ -203,16 +217,15 @@ export async function handleHubSpotEvents(events) {
     }
     const hsName = ev.propertyName;
     if (!HUBSPOT_PROPERTY_MAP[hsName]) continue;
-    const exists = await docExists(id);
-    if (!exists) {
-      const props = await getHubSpotContact(id);
-      if (!props) continue;
-      await mergeContact(id, mappedFieldsFromHubSpotProperties(props));
-      handled += 1;
-      continue;
-    }
     const field = HUBSPOT_PROPERTY_MAP[hsName];
-    await mergeContact(id, { [field]: mapHubSpotValue(hsName, ev.propertyValue) });
+    const value = mapHubSpotValue(hsName, ev.propertyValue);
+    const patched = await mergeContact(id, { [field]: value }, { mustExist: true });
+    if (patched && patched.missing) {
+      const props = await getHubSpotContact(id);
+      const fields = props ? mappedFieldsFromHubSpotProperties(props) : {};
+      fields[field] = value;
+      await mergeContact(id, fields);
+    }
     handled += 1;
   }
   return handled;
@@ -238,8 +251,9 @@ export async function handler(event) {
   } catch (err) {
     const message = String((err && err.message) || 'Error');
     console.error(message);
+    const status = err && err.statusCode === 503 ? 503 : 500;
     return {
-      statusCode: 500,
+      statusCode: status,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ok: false, error: message }),
     };

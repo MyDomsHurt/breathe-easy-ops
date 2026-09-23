@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/app.css?v=11" />
+  <link rel="stylesheet" href="css/app.css?v=12" />
 </head>
 <body>
   <div id="loginScreen" class="login-screen">
@@ -102,7 +102,18 @@
 
     <section id="viewContacts" hidden>
       <div class="contacts-toolbar">
-        <input id="contactsSearch" type="search" placeholder="Search name or phone" autocomplete="off" />
+        <input id="contactsSearch" type="search" placeholder="Search name, phone, Instagram, stream, tag" autocomplete="off" />
+        <span id="contactsCount" class="contacts-count"></span>
+        <button type="button" class="ghost-btn" id="contactsAllBtn" aria-pressed="false">All</button>
+        <select id="contactsStream" aria-label="Stream"></select>
+        <select id="contactsTag" aria-label="Tag"></select>
+        <select id="contactsLanguage" aria-label="Language"></select>
+        <label class="contacts-check"><input type="checkbox" id="contactsHasAddress" /> Has address</label>
+        <select id="contactsSort" aria-label="Sort">
+          <option value="name">Name</option>
+          <option value="deals">Deals</option>
+          <option value="revenue">Revenue</option>
+        </select>
         <button type="button" class="ghost-btn" id="importHubspotCsv" hidden>Import HubSpot CSV</button>
         <input id="importHubspotFile" type="file" accept=".csv,text/csv" hidden />
       </div>
@@ -127,6 +138,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
-  <script type="module" src="js/app.js?v=24"></script>
+  <script type="module" src="js/app.js?v=25"></script>
 </body>
 </html>

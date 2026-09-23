@@ -8,8 +8,9 @@ import { pulseRemaining, renderDayBoard, renderWeekBoard } from './board.js?v=8'
 import { closeBooking, openBooking } from './booking.js?v=8';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js?v=2';
 import { exportMasterRoster } from './export-roster.js?v=19';
-import { initContactsStore, subscribeContacts } from './contacts-store.js?v=1';
-import { importHubspotFile, renderContacts } from './contacts.js?v=1';
+import { allContacts, initContactsStore, subscribeContacts } from './contacts-store.js?v=1';
+import { fillContactFilterSelect, importHubspotFile, renderContacts } from './contacts.js?v=2';
+import { uniqueContactValues } from './contacts-query.js?v=1';
 
 function calendarToday() {
   const d = new Date();
@@ -37,6 +38,12 @@ const state = {
   showSunday: false,
   contactQuery: '',
   contactId: '',
+  contactAll: false,
+  contactStream: '',
+  contactTag: '',
+  contactLanguage: '',
+  contactHasAddress: false,
+  contactSort: 'name',
 };
 
 function $(id) {
@@ -140,9 +147,16 @@ function paint() {
   } else if (state.view === 'jobs') {
     renderJobsList($('jobsMount'), jobs, state.query);
   } else if (state.view === 'contacts') {
+    syncContactFilters();
     const picked = renderContacts($('contactsMount'), {
       query: state.contactQuery,
       selectedId: state.contactId,
+      all: state.contactAll,
+      stream: state.contactStream,
+      tag: state.contactTag,
+      language: state.contactLanguage,
+      hasAddress: state.contactHasAddress,
+      sort: state.contactSort,
     });
     if (picked && picked.hubspot_id) state.contactId = picked.hubspot_id;
   }
@@ -719,6 +733,22 @@ function bindFilters() {
   syncFilterUi();
 }
 
+function syncContactFilters() {
+  const list = allContacts();
+  fillContactFilterSelect($('contactsStream'), uniqueContactValues(list, 'stream'), state.contactStream, 'Stream');
+  fillContactFilterSelect($('contactsTag'), uniqueContactValues(list, 'tag'), state.contactTag, 'Tag');
+  fillContactFilterSelect($('contactsLanguage'), uniqueContactValues(list, 'language'), state.contactLanguage, 'Language');
+  const allBtn = $('contactsAllBtn');
+  if (allBtn) {
+    allBtn.classList.toggle('on', state.contactAll);
+    allBtn.setAttribute('aria-pressed', state.contactAll ? 'true' : 'false');
+  }
+  const hasAddr = $('contactsHasAddress');
+  if (hasAddr) hasAddr.checked = state.contactHasAddress;
+  const sortSel = $('contactsSort');
+  if (sortSel && sortSel.value !== state.contactSort) sortSel.value = state.contactSort;
+}
+
 function bindChrome() {
   document.querySelectorAll('[data-nav]').forEach((el) => {
     el.addEventListener('click', (e) => {
@@ -821,6 +851,20 @@ function bindChrome() {
   const contactsMount = $('contactsMount');
   if (contactsMount) {
     contactsMount.addEventListener('click', (e) => {
+      const copy = e.target.closest('[data-copy-phone]');
+      if (copy) {
+        e.preventDefault();
+        e.stopPropagation();
+        const num = copy.dataset.copyPhone || '';
+        if (!num) return;
+        const done = () => toast('Copied ' + num);
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(num).then(done).catch(() => window.prompt('Copy phone', num));
+        } else {
+          window.prompt('Copy phone', num);
+        }
+        return;
+      }
       const row = e.target.closest('[data-contact]');
       if (!row) return;
       state.contactId = row.dataset.contact;
@@ -831,6 +875,48 @@ function bindChrome() {
   if (contactsSearch) {
     contactsSearch.addEventListener('input', (e) => {
       state.contactQuery = e.target.value;
+      paint();
+    });
+  }
+  const allBtn = $('contactsAllBtn');
+  if (allBtn) {
+    allBtn.addEventListener('click', () => {
+      state.contactAll = !state.contactAll;
+      paint();
+    });
+  }
+  const streamSel = $('contactsStream');
+  if (streamSel) {
+    streamSel.addEventListener('change', (e) => {
+      state.contactStream = e.target.value;
+      paint();
+    });
+  }
+  const tagSel = $('contactsTag');
+  if (tagSel) {
+    tagSel.addEventListener('change', (e) => {
+      state.contactTag = e.target.value;
+      paint();
+    });
+  }
+  const langSel = $('contactsLanguage');
+  if (langSel) {
+    langSel.addEventListener('change', (e) => {
+      state.contactLanguage = e.target.value;
+      paint();
+    });
+  }
+  const hasAddr = $('contactsHasAddress');
+  if (hasAddr) {
+    hasAddr.addEventListener('change', (e) => {
+      state.contactHasAddress = !!e.target.checked;
+      paint();
+    });
+  }
+  const sortSel = $('contactsSort');
+  if (sortSel) {
+    sortSel.addEventListener('change', (e) => {
+      state.contactSort = e.target.value || 'name';
       paint();
     });
   }

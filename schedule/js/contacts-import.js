@@ -17,6 +17,12 @@ const COL_ALIASES = {
   address_territory: ['billing state', 'billing_state'],
   deals: ['number of associated deals', 'deals', 'num_associated_deals'],
   revenue: ['total revenue', 'revenue', 'total_revenue'],
+  stream: ['stream'],
+  tag: ['crm tag', 'hubsoot_tags', 'tag'],
+  language: ['language'],
+  groups: ['groups', 'group'],
+  instagram: ['instagram'],
+  owner: ['contact owner', 'owner', 'hubspot_owner_id'],
 };
 
 function normHeader(s) {
@@ -112,6 +118,12 @@ export function rowToContact(row, index) {
     address_territory: cellAt(row, index.address_territory),
     deals: cellAt(row, index.deals),
     revenue: cellAt(row, index.revenue),
+    stream: cellAt(row, index.stream),
+    tag: cellAt(row, index.tag),
+    language: cellAt(row, index.language),
+    groups: cellAt(row, index.groups),
+    instagram: cellAt(row, index.instagram),
+    owner: cellAt(row, index.owner),
   });
 }
 

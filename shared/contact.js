@@ -15,6 +15,12 @@ export const CONTACT_FIELDS = [
   'address_territory',
   'deals',
   'revenue',
+  'stream',
+  'tag',
+  'language',
+  'groups',
+  'instagram',
+  'owner',
 ];
 
 function textOrEmpty(value) {
@@ -59,7 +65,30 @@ export function normalizeContact(raw) {
     address_territory: textOrEmpty(input.address_territory),
     deals: asNumber(input.deals),
     revenue: asNumber(input.revenue),
+    stream: textOrEmpty(input.stream),
+    tag: textOrEmpty(input.tag),
+    language: textOrEmpty(input.language),
+    groups: textOrEmpty(input.groups),
+    instagram: textOrEmpty(input.instagram),
+    owner: textOrEmpty(input.owner),
   };
+}
+
+export function phoneDigits(phone) {
+  return String(phone || '').replace(/\D/g, '');
+}
+
+export function phoneTail8(phone) {
+  return phoneDigits(phone).slice(-8);
+}
+
+export function contactHasAddress(c) {
+  return !!(c && (
+    String(c.address || '').trim()
+    || String(c.address_line1 || '').trim()
+    || String(c.address_street || '').trim()
+    || String(c.address_place || '').trim()
+  ));
 }
 
 export function contactDisplayName(c) {
@@ -73,4 +102,7 @@ export default {
   normalizePhone,
   normalizeContact,
   contactDisplayName,
+  phoneDigits,
+  phoneTail8,
+  contactHasAddress,
 };

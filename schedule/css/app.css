@@ -1360,6 +1360,7 @@ button.day-col-head:hover { background: #e0f2fe; }
 .contacts-toolbar {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   margin: 0 0 12px;
 }
@@ -1373,46 +1374,74 @@ button.day-col-head:hover { background: #e0f2fe; }
   font-size: 13px;
   background: white;
 }
+.contacts-toolbar select {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 13px;
+  background: white;
+  color: var(--ink);
+}
+.contacts-count {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.contacts-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+}
 .contacts-layout {
   display: grid;
-  grid-template-columns: minmax(220px, 320px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
   gap: 16px;
   min-height: 62vh;
+  align-items: start;
 }
-.contacts-list {
-  overflow-y: auto;
+.contacts-table-wrap {
+  overflow: auto;
   max-height: 70vh;
   background: white;
   border: 1px solid var(--line);
   border-radius: 16px;
   box-shadow: var(--shadow);
 }
-.contacts-row {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
+.contacts-table {
   width: 100%;
-  border: 0;
-  border-bottom: 1px solid #eef2f6;
-  background: white;
-  padding: 10px 12px;
+  border-collapse: collapse;
+}
+.contacts-table th {
   text-align: left;
-  font: inherit;
-  cursor: pointer;
-}
-.contacts-row strong {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--ink);
-}
-.contacts-row span {
-  font-size: 12px;
+  font-size: 11px;
+  letter-spacing: .05em;
+  text-transform: uppercase;
   color: var(--muted);
-  font-variant-numeric: tabular-nums;
+  background: #f8fafc;
+  padding: 10px 12px;
+  position: sticky;
+  top: 0;
 }
-.contacts-row:hover { background: #f8fafc; }
-.contacts-row.on { background: #e0f2fe; }
+.contacts-table td {
+  padding: 9px 12px;
+  border-top: 1px solid #eef2f6;
+  font-size: 13px;
+  vertical-align: top;
+}
+.contacts-table tr.contacts-row { cursor: pointer; }
+.contacts-table tr.contacts-row:hover td { background: #f8fafc; }
+.contacts-table tr.contacts-row.on td { background: #e0f2fe; }
+.contact-copy {
+  margin-left: 8px;
+  padding: 2px 8px;
+  font-size: 11px;
+}
 .contact-pane {
   background: white;
   border: 1px solid var(--line);
@@ -2227,5 +2256,6 @@ button.day-col-head:hover { background: #e0f2fe; }
   .header-filters { order: 6; }
   .jobs-table { display: block; overflow: auto; }
   .contacts-layout { grid-template-columns: 1fr; }
+  .contacts-toolbar input[type="search"] { max-width: none; }
   .drawer { width: 100%; }
 }

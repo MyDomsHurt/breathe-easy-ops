@@ -4,10 +4,10 @@ import { addDays, formatDay, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth
 import { allJobs, getJob, importExistingJobs, placeJobInSlot, redo, removeJob, resetDemo, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js';
 import { startScheduleAuth } from './auth.js';
 import { firstEmptySlotIndex, hasTimeConflict, slotIndex } from './capacity.js';
-import { pulseRemaining, renderDayBoard, renderWeekBoard } from './board.js';
+import { pulseRemaining, renderDayBoard, renderWeekBoard } from './board.js?v=2';
 import { closeBooking, openBooking } from './booking.js';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js';
-import { exportMasterRoster } from './export-roster.js?v=9';
+import { exportMasterRoster } from './export-roster.js?v=10';
 
 function calendarToday() {
   const d = new Date();

@@ -1,19 +1,10 @@
-import { TEAM_META } from './config.js';
+import { DISTRICTS, TEAM_META } from './config.js';
 import { conflictingJobIds, daySlotsOf, districtsForTeamOnDay, firstEmptySlotIndex, jobsForTeamDay, layoutSlots, slotFloor } from './capacity.js';
 import { cellTeamMembers, findCrewNote } from './team-day.js';
-import { isHeld } from '../../shared/job.js';
-import { districtChipsHtml, esc, formatDay, formatMoney, isToday, isWeekend, jobStatus, jobTypeOf, normalizeLunch, notes1Text, shortAddress, shortTime, startMinutes } from './utils.js';
+import { districtChipsHtml, esc, formatDay, isToday, isWeekend, jobStatus, jobTypeOf, normalizeLunch, shortTime, startMinutes } from './utils.js';
 
 function teamColor(name) {
   return TEAM_META[name]?.color || '#64748b';
-}
-
-function markedType(type) {
-  return type === 'return' || type === 'influencer';
-}
-
-function rightMark(job) {
-  return job.acs ? `<span class="acs${isHeld(job, 'acs') ? ' hi' : ''}">${esc(job.acs)}</span>` : '';
 }
 
 function hoverTitle(job) {
@@ -22,20 +13,8 @@ function hoverTitle(job) {
     .join(' · ');
 }
 
-function isUnpaid(job) {
-  return String(job && job.payment_status || '').trim().toUpperCase() === 'UNPAID';
-}
-
-function unpaidTip(job) {
-  return isUnpaid(job) ? '<span class="unpaid-tip" aria-hidden="true"></span>' : '';
-}
-
 function isHi(value) {
   return value === true || value === 'true';
-}
-
-function hi(job, key) {
-  return isHeld(job, key) ? ' hi' : '';
 }
 
 const PULSE_MS = 20000;
@@ -52,50 +31,86 @@ export function pulseRemaining(job, now = Date.now()) {
   return remain;
 }
 
-function chipHtml(job, conflict) {
-  const type = jobTypeOf(job);
-  const extra = markedType(type) ? type : '';
-  const tentative = jobStatus(job) === 'tentative' ? ' tentative' : '';
-  const notes = notes1Text(job);
-  const notesRow = notes ? `<div class="chip-notes${hi(job, 'notes')}">${esc(notes)}</div>` : '';
-  const who = job.client_name
-    ? `<div class="who${hi(job, 'client')}">${esc(job.client_name)}</div>` : '';
-  const tent = tentative ? '<span class="tag tentative">TENT</span>' : '';
-  const pulse = pulseRemaining(job) ? ' is-pulse' : '';
-  return `<button class="job-chip ${extra}${tentative}${pulse}" draggable="true" data-job="${job.job_id}" style="--team:${teamColor(job.team_lead)}" title="${esc(hoverTitle(job))}">
-    ${who}
-    <div class="chip-top">
-      <span class="when${conflict ? ' time-conflict' : ''}${hi(job, 'time')}">${esc(shortTime(job))}</span>
-      ${tent}${rightMark(job)}
-    </div>
-    <div class="chip-addr${hi(job, 'address')}">${esc(shortAddress(job))}</div>
-    ${notesRow}
-    ${unpaidTip(job)}
-  </button>`;
+const DISTRICT_FALLBACK = { border: '#D1D5DB' };
+
+function formatMobile(raw) {
+  let d = String(raw || '').replace(/[^\d]/g, '');
+  if (!d) return '';
+  if (d.indexOf('852') === 0 && d.length >= 11) d = d.slice(-8);
+  if (d.length > 8) d = d.slice(-8);
+  if (d.length === 8) return d.slice(0, 4) + ' ' + d.slice(4);
+  return d;
 }
 
-function cardHtml(job, conflict) {
-  const type = jobTypeOf(job);
-  const extra = markedType(type) ? type : '';
-  const tentative = jobStatus(job) === 'tentative' ? ' tentative' : '';
-  const notes = notes1Text(job);
-  const notesRow = notes ? `<p class="card-notes${hi(job, 'notes')}">${esc(notes)}</p>` : '';
-  const money = type === 'cleaning' && job.amount != null
-    ? `<span class="card-money${hi(job, 'amount')}">${formatMoney(job.amount)}</span>` : '';
-  const who = job.client_name
-    ? `<div class="who${hi(job, 'client')}">${esc(job.client_name)}</div>` : '';
-  const tent = tentative ? '<span class="tag tentative">TENT</span>' : '';
+function liveAcsBadges(acs) {
+  if (!acs) return '';
+  const re = /(?<!\d)(\d{1,2})\s*(BEP|UC|S|W|B|C)\b/gi;
+  const bits = [];
+  let m;
+  while ((m = re.exec(String(acs))) !== null) {
+    const type = m[2].toUpperCase();
+    const kind = type === 'S' ? 's' : type === 'W' ? 'w' : type === 'B' ? 'b' : 'x';
+    bits.push(`<span class="live-u live-u-${kind}">${esc(m[1] + type)}</span>`);
+  }
+  if (!bits.length) return '';
+  return `<span class="live-units">${bits.join('')}</span>`;
+}
+
+function compactTypeMark(job) {
+  const t = jobTypeOf(job);
+  if (t === 'return') return 'Return';
+  if (t === 'influencer') return 'Collab';
+  if (t === 'inspection') return 'Inspection';
+  if (t === 'other') return 'Other';
+  return 'Service';
+}
+
+function jobIsPaid(j) {
+  const s = j && j.payment_status != null ? String(j.payment_status).trim().toUpperCase() : '';
+  if (s === 'PAID') return true;
+  if (s === 'UNPAID') return false;
+  return !!(j && j.receipt && String(j.receipt).trim());
+}
+
+function compactPayMark(j) {
+  const pay = String(j && j.payment || '').trim().toLowerCase();
+  if (pay === 'free') return 'Free';
+  return jobIsPaid(j) ? 'Paid' : 'Unpaid';
+}
+
+function boardCardHtml(job, conflict) {
+  const hold = jobStatus(job) === 'tentative';
+  const dist = DISTRICTS[job.district] || DISTRICT_FALLBACK;
+  const left = hold ? '#ca8a04' : dist.border;
+  const unitsBit = liveAcsBadges(job.acs) || (job.acs
+    ? `<span class="compact-units">${esc(job.acs)}</span>`
+    : '');
+  const mobile = formatMobile(job.mobile);
+  const addr = String(job.address || '').trim();
+  const notes1 = String(job.notes || '').trim();
+  const notes2 = String(job.notes_long || '').trim();
+  const payWord = compactPayMark(job);
   const pulse = pulseRemaining(job) ? ' is-pulse' : '';
-  return `<button class="job-card ${extra}${tentative}${pulse}" draggable="true" data-job="${job.job_id}" style="--team:${teamColor(job.team_lead)}" title="${esc(hoverTitle(job))}">
-    ${who}
-    <div class="card-top">
-      <strong class="when${conflict ? ' time-conflict' : ''}${hi(job, 'time')}">${esc(shortTime(job))}</strong>
-      ${tent}${rightMark(job)}
+  const timeCls = conflict ? ' time-conflict' : '';
+  const name = String(job.client_name || '').trim();
+  return `<button type="button" class="job-card job-card-detailed${hold ? ' is-tentative' : ''}${pulse}" draggable="true" data-job="${esc(job.job_id)}" style="border-left:4px solid ${left}" title="${esc(hoverTitle(job))}">
+    <div class="compact-row">
+      <div class="compact-col compact-col-time">
+        <span class="compact-time${timeCls}">${esc(shortTime(job))}</span>
+        ${unitsBit}
+      </div>
+      <div class="compact-col compact-col-main">
+        ${name ? `<span class="compact-name">${esc(name)}</span>` : ''}
+        ${mobile ? `<p class="detailed-phone">${esc(mobile)}</p>` : ''}
+        ${addr ? `<p class="compact-addr">${esc(addr)}</p>` : ''}
+        ${notes1 ? `<p class="compact-notes">${esc(notes1)}</p>` : ''}
+        ${notes2 ? `<p class="detailed-notes2">${esc(notes2)}</p>` : ''}
+      </div>
+      <div class="compact-col compact-col-meta">
+        <span class="compact-type">${compactTypeMark(job)}</span>
+        <span class="compact-pay${payWord === 'Unpaid' ? ' is-unpaid' : ''}">${payWord}</span>
+      </div>
     </div>
-    <div class="card-addr${hi(job, 'address')}">${esc(shortAddress(job, 56))}</div>
-    ${notesRow}
-    ${money}
-    ${unpaidTip(job)}
   </button>`;
 }
 
@@ -113,7 +128,7 @@ function emptySlotHtml(date, team, index) {
 function renderSlotStack(slots, lunchTime, conflicts, mode, full, date, team) {
   const time = normalizeLunch(lunchTime);
   const lunchMins = time ? startMinutes({ time }) : null;
-  const renderJob = (j) => (mode === 'day' ? cardHtml(j, conflicts.has(j.job_id)) : chipHtml(j, conflicts.has(j.job_id)));
+  const renderJob = (j) => boardCardHtml(j, conflicts.has(j.job_id));
   const out = [];
   let placedLunch = !time;
   for (let i = 0; i < slots.length; i += 1) {

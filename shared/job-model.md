@@ -45,8 +45,12 @@ Placement on that grid also needs `date`, `week` (optional/derived), `team_lead`
 | `team_members` | optional | string \| null | Who is on the van that day. Booking writes a shared crew note (`source: team-day-crew`, `job_id: crew-YYYY-MM-DD-{team}`) and copies the same string onto every real job on that team-day. |
 | `client_name` | yes | string | Sheet **Name**. |
 | `mobile` | yes | string \| null | Sheet **Mobile**. |
-| `address` | yes | string \| null | Sheet **Address**. |
-| `district` | yes | string \| null | Area code (`HKN`, `KLN`, `N-T`, …). |
+| `address` | yes | string \| null | Sheet **Address**. Full Address 1 from the cleaner. |
+| `address_line1` | optional | string \| null | Cleaner Line 1 (flat, floor, block, building). Empty on old jobs. |
+| `address_street` | optional | string \| null | Cleaner Street (number + road). Empty on old jobs. |
+| `address_place` | optional | string \| null | Neighbourhood (Mid-Levels), never a territory code. Empty on old jobs. |
+| `address_extra` | optional | string \| null | Cleaner Extra (fees, walk-up, helper). Empty on old jobs. |
+| `district` | yes | string \| null | Territory code (`HKN`, `HKS`, `KLN`, `N-T`, `S-K`, `L-T`, `L-M`). |
 | `acs` | yes | string \| null | Unit label (`3S`, `1S 2W`). Empty / missing means return **when** `job_type` is `return`. Do not infer return from empty ACs if `job_type` is already `cleaning` or `influencer`. |
 | `notes` | yes | string \| null | Sheet **Notes**. |
 | `amount` | yes | number \| null | Sheet **Amount**. `0` is allowed (free / influencer). |
@@ -160,6 +164,10 @@ Sources: `td/data/jobs.json`, `jobs_part_*.json`, `jobs-sample.json`.
   "client_name": "Priya Shah",
   "mobile": "9881 2204",
   "address": "Flat 12, 5/F, 88 Queens Road East, Wan Chai",
+  "address_line1": null,
+  "address_street": null,
+  "address_place": null,
+  "address_extra": null,
   "district": "HKN",
   "acs": "3S",
   "notes": null,

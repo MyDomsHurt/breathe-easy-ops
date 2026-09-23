@@ -82,6 +82,13 @@ function compactPayMark(j) {
   return jobIsPaid(j) ? 'Paid' : 'Unpaid';
 }
 
+function weekAddressLine(job) {
+  const street = String(job && job.address_street || '').trim();
+  const place = String(job && job.address_place || '').trim();
+  if (street || place) return [street, place].filter(Boolean).join(', ');
+  return String(job && job.address || '').trim();
+}
+
 function boardCardHtml(job, conflict, week) {
   const hold = jobStatus(job) === 'tentative';
   const dist = DISTRICTS[job.district] || DISTRICT_FALLBACK;
@@ -90,7 +97,7 @@ function boardCardHtml(job, conflict, week) {
     ? `<span class="compact-units">${esc(job.acs)}</span>`
     : '');
   const mobile = week ? '' : formatMobile(job.mobile);
-  const addr = String(job.address || '').trim();
+  const addr = week ? weekAddressLine(job) : String(job.address || '').trim();
   const notes1 = String(job.notes || '').trim();
   const notes2 = week ? '' : String(job.notes_long || '').trim();
   const payWord = compactPayMark(job);

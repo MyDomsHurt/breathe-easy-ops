@@ -12,6 +12,10 @@ let form = {
   client_name: '',
   mobile: '',
   address: '',
+  address_line1: '',
+  address_street: '',
+  address_place: '',
+  address_extra: '',
   district: '',
   units: emptyUnits(),
   date: '',
@@ -184,6 +188,10 @@ export function openBooking(prefill = {}) {
     client_name: prefill.client_name || '',
     mobile: prefill.mobile || '',
     address: prefill.address || '',
+    address_line1: prefill.address_line1 || '',
+    address_street: prefill.address_street || '',
+    address_place: prefill.address_place || '',
+    address_extra: prefill.address_extra || '',
     district: prefill.district || '',
     units,
     date: prefill.date || '',
@@ -459,7 +467,13 @@ function bindForm() {
     renderHits(e.target.value);
   });
   $('#mobileInput').addEventListener('input', (e) => { form.mobile = e.target.value; });
-  $('#addressInput').addEventListener('input', (e) => { form.address = e.target.value; });
+  $('#addressInput').addEventListener('input', (e) => {
+    form.address = e.target.value;
+    form.address_line1 = '';
+    form.address_street = '';
+    form.address_place = '';
+    form.address_extra = '';
+  });
   $('#districtInput').addEventListener('change', (e) => { form.district = e.target.value; renderForm(); });
   bindAddressCleaner();
   $('#dateInput').addEventListener('change', (e) => { form.date = e.target.value; renderForm(); });
@@ -548,6 +562,10 @@ function renderHits(q) {
       form.mobile = client.mobile;
       form.address = client.address;
       form.district = client.district;
+      form.address_line1 = client.address_line1 || '';
+      form.address_street = client.address_street || '';
+      form.address_place = client.address_place || '';
+      form.address_extra = client.address_extra || '';
       renderForm();
     });
   });
@@ -680,6 +698,10 @@ function bindAddressCleaner() {
     }
     form.address = line;
     if (code) form.district = code;
+    form.address_line1 = collapseAddr(cleaner.line1);
+    form.address_street = collapseAddr(cleaner.street);
+    form.address_place = collapseAddr(cleaner.district);
+    form.address_extra = collapseAddr(cleaner.extra);
     const addr = $('#addressInput');
     if (addr) addr.value = form.address;
     const dist = $('#districtInput');

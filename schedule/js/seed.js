@@ -40,6 +40,10 @@ export function uniqueClientsFrom(jobs) {
         mobile: j.mobile,
         address: j.address,
         district: j.district,
+        address_line1: j.address_line1,
+        address_street: j.address_street,
+        address_place: j.address_place,
+        address_extra: j.address_extra,
       });
     }
   }

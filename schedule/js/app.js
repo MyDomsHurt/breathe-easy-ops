@@ -1,13 +1,13 @@
 import { DISTRICTS, JOB_TYPES, TEAMS } from './config.js';
 import { isCrewNote } from './team-day.js';
 import { addDays, formatDay, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, normalizeLunch, pad, parseISO, shortTime, weekDays, workWeekDays } from './utils.js';
-import { allJobs, getJob, importExistingJobs, placeJobInSlot, redo, removeJob, replaceSepDecFromSheet, resetDemo, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js';
+import { allJobs, getJob, importExistingJobs, placeJobInSlot, redo, removeJob, resetDemo, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js';
 import { startScheduleAuth } from './auth.js';
 import { firstEmptySlotIndex, hasTimeConflict, slotIndex } from './capacity.js';
 import { pulseRemaining, renderDayBoard, renderWeekBoard } from './board.js';
 import { closeBooking, openBooking } from './booking.js';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js';
-import { exportMasterRoster } from './export-roster.js?v=7';
+import { exportMasterRoster } from './export-roster.js?v=8';
 
 function calendarToday() {
   const d = new Date();
@@ -812,7 +812,6 @@ function bindOwnerTools() {
   const box = $('ownerTools');
   const importBtn = $('importJobs');
   const exportBtn = $('exportRoster');
-  const replaceBtn = $('replaceSepDec');
   const resetBtn = $('resetDemo');
   if (!isOwnerUser(signedInEmail)) {
     if (box) {
@@ -867,32 +866,6 @@ function bindOwnerTools() {
         toast((err && err.message) || 'Export failed');
       } finally {
         exportBtn.disabled = false;
-      }
-    });
-  }
-  if (replaceBtn) {
-    replaceBtn.addEventListener('click', async () => {
-      if (!isOwnerUser(signedInEmail)) {
-        toast('Only Jeff can replace Sep–Dec');
-        return;
-      }
-      if (!usingFirestore()) {
-        toast('Sign in to replace Sep–Dec in the live store');
-        return;
-      }
-      if (!confirm('Soft-delete every live job dated 1 Sep–31 Dec 2026, then write the sheet import.\n\nAugust and earlier stay. Continue?')) {
-        return;
-      }
-      replaceBtn.disabled = true;
-      try {
-        const result = await replaceSepDecFromSheet();
-        paint();
-        toast('Removed ' + result.removed + ' · wrote ' + result.written + ' jobs · ' + (result.crew || 0) + ' crew notes');
-      } catch (err) {
-        console.error(err);
-        toast((err && err.message) || 'Replace failed');
-      } finally {
-        replaceBtn.disabled = false;
       }
     });
   }

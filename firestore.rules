@@ -2,13 +2,13 @@ rules_version = '2';
 // Jeff publishes these in Firebase console → Firestore → Rules after merge.
 // The app does not deploy rules.
 //
-// Office (read + write all jobs):
+// Office + Josh (read + write all jobs):
 //   jefflamb1992@gmail.com
 //   info@breathe-easyhk.com
 //   ruby@breathe-easyhk.com
 //   perry@breathe-easyhk.com
 //   n.marie.lamb@gmail.com
-// Josh: read all jobs, no write (joshua@breathe-easyhk.com)
+//   joshua@breathe-easyhk.com
 // Five leads: read only jobs where team_lead is their name. No write.
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -46,7 +46,7 @@ service cloud.firestore {
       allow read: if isOffice()
         || isJosh()
         || (isLead() && resource.data.team_lead == leadName());
-      allow write: if isOffice();
+      allow write: if isOffice() || isJosh();
     }
   }
 }

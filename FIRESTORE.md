@@ -11,10 +11,9 @@ Project: **breathe-easy-performance** (existing). Collection: **`jobs`**. Docume
 3. **Rules** tab. Paste [`firestore.rules`](firestore.rules) and **Publish**. The app does not deploy rules.
 
 ```
-Office emails: read + write all jobs.
-Josh: read all jobs, no write.
+Office emails + Josh: read + write all jobs.
 Five leads: read only jobs where team_lead is their name. No write.
-Booking sign-in is office-only; leads and Josh cannot open Booking.
+Booking sign-in is office + Josh; five leads cannot open Booking.
 ```
 
 4. **Authentication** → Settings → **Authorized domains**. Include:

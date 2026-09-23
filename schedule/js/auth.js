@@ -1,5 +1,5 @@
 /**
- * Google allowlist gate — office emails only. Leads and Josh cannot open Booking.
+ * Google allowlist gate — office + Josh. Five leads cannot open Booking.
  */
 
 import {

@@ -95,7 +95,7 @@ export function isJoshEmail(email) {
 }
 
 export function isBookingAllowedEmail(email) {
-  return isOfficeEmail(email);
+  return isOfficeEmail(email) || isJoshEmail(email);
 }
 
 export function leadTeamForEmail(email) {

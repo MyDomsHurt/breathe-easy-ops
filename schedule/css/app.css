@@ -1278,6 +1278,41 @@ button.day-col-head:hover { background: #e0f2fe; }
   flex-direction: column;
 }
 
+.addr-clean {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #f8fafc;
+}
+.addr-clean > label {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.addr-clean textarea {
+  width: 100%;
+  min-height: 64px;
+  resize: vertical;
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+.addr-clean-actions {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0;
+}
+.addr-clean .field { margin-bottom: 8px; }
+.addr-clean .field:last-child { margin-bottom: 0; }
+
 .drawer-head {
   padding: 16px 20px 14px;
   border-bottom: 1px solid var(--line);

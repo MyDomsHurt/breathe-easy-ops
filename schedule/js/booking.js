@@ -5,6 +5,7 @@ import { uniqueClientsFrom } from './seed.js';
 import { displayNameForEmail } from '../../shared/firebase-config.js';
 import { highlightOf } from '../../shared/job.js';
 import { acsLabel, emptyUnits, formatDay, formatTime24, jobStatus, jobTypeOf, NOTES1_MAX, parseAcs, shortTime } from './utils.js';
+import { AREA_CODES, composeFullAddress, parseAddress } from './address-parse.js';
 
 let form = {
   job_id: '',
@@ -30,6 +31,36 @@ let form = {
   changes: [],
   stack_order: '',
 };
+
+let cleaner = {
+  raw: '',
+  line1: '',
+  street: '',
+  city: '',
+  country: 'Hong Kong',
+  extra: '',
+  composed: '',
+};
+
+function resetCleaner(address) {
+  cleaner = {
+    raw: address || '',
+    line1: '',
+    street: '',
+    city: '',
+    country: 'Hong Kong',
+    extra: '',
+    composed: '',
+  };
+}
+
+function refreshComposed() {
+  cleaner.composed = composeFullAddress({
+    line1: cleaner.line1,
+    street: cleaner.street,
+    city: cleaner.city,
+  });
+}
 
 function $(sel) {
   return document.querySelector(sel);
@@ -181,6 +212,7 @@ export function openBooking(prefill = {}) {
     const ranked = suggestTeams(jobs, { date: form.date, district: form.district });
     form.team_lead = ranked[0]?.team || 'Josh';
   }
+  resetCleaner(form.address);
   renderForm();
   const root = $('#bookingRoot');
   root.classList.add('open');
@@ -287,6 +319,46 @@ function renderForm() {
             <label>Address ${holdChip('address', 'address')}</label>
             <input id="addressInput" value="${escapeAttr(form.address)}" />
           </div>
+          <div class="addr-clean">
+            <label>Address cleaner</label>
+            <textarea id="addrCleanRaw" rows="3" placeholder="Paste messy address">${escapeAttr(cleaner.raw)}</textarea>
+            <div class="addr-clean-actions">
+              <button type="button" class="ghost-btn" id="addrCleanBtn">Clean</button>
+            </div>
+            <div class="grid-2">
+              <div class="field">
+                <label>Line 1</label>
+                <input id="addrLine1" value="${escapeAttr(cleaner.line1)}" />
+              </div>
+              <div class="field">
+                <label>Street</label>
+                <input id="addrStreet" value="${escapeAttr(cleaner.street)}" />
+              </div>
+              <div class="field">
+                <label>City</label>
+                <select id="addrCity">
+                  <option value="">Select</option>
+                  ${AREA_CODES.map((c) => `<option value="${c}" ${cleaner.city === c ? 'selected' : ''}>${c}</option>`).join('')}
+                </select>
+              </div>
+              <div class="field">
+                <label>Country</label>
+                <input id="addrCountry" value="${escapeAttr(cleaner.country)}" />
+              </div>
+            </div>
+            <div class="field">
+              <label>Full Address 1</label>
+              <input id="addrComposed" value="${escapeAttr(cleaner.composed)}" />
+            </div>
+            <div class="addr-clean-actions">
+              <button type="button" class="ghost-btn" id="addrCopyBtn">Copy</button>
+              <button type="button" class="primary-btn" id="addrApplyBtn">Apply</button>
+            </div>
+            <div class="field">
+              <label>Extra</label>
+              <input id="addrExtra" value="${escapeAttr(cleaner.extra)}" placeholder="Fees, ceiling, helper — not part of the address" />
+            </div>
+          </div>
         </section>
 
         <section class="form-block">
@@ -383,6 +455,7 @@ function bindForm() {
   $('#mobileInput').addEventListener('input', (e) => { form.mobile = e.target.value; });
   $('#addressInput').addEventListener('input', (e) => { form.address = e.target.value; });
   $('#districtInput').addEventListener('change', (e) => { form.district = e.target.value; renderForm(); });
+  bindAddressCleaner();
   $('#dateInput').addEventListener('change', (e) => { form.date = e.target.value; renderForm(); });
   $('#timeInput').addEventListener('input', (e) => { form.time = e.target.value; });
   $('#timeInput').addEventListener('change', (e) => {
@@ -528,6 +601,74 @@ function cancelJob() {
   closeBooking();
   window.dispatchEvent(new CustomEvent('be:toast', { detail: `Cancelled ${name || 'job'}` }));
   window.dispatchEvent(new CustomEvent('be:changed'));
+}
+
+function bindAddressCleaner() {
+  const raw = $('#addrCleanRaw');
+  if (!raw) return;
+  raw.addEventListener('input', (e) => { cleaner.raw = e.target.value; });
+  const syncComposed = () => {
+    refreshComposed();
+    const el = $('#addrComposed');
+    if (el) el.value = cleaner.composed;
+  };
+  $('#addrLine1')?.addEventListener('input', (e) => { cleaner.line1 = e.target.value; syncComposed(); });
+  $('#addrStreet')?.addEventListener('input', (e) => { cleaner.street = e.target.value; syncComposed(); });
+  $('#addrCity')?.addEventListener('change', (e) => { cleaner.city = e.target.value; syncComposed(); });
+  $('#addrCountry')?.addEventListener('input', (e) => { cleaner.country = e.target.value; });
+  $('#addrComposed')?.addEventListener('input', (e) => { cleaner.composed = e.target.value; });
+  $('#addrExtra')?.addEventListener('input', (e) => { cleaner.extra = e.target.value; });
+  $('#addrCleanBtn')?.addEventListener('click', () => {
+    const parsed = parseAddress(cleaner.raw || form.address);
+    cleaner.line1 = parsed.line1;
+    cleaner.street = parsed.street;
+    cleaner.city = parsed.city;
+    cleaner.country = parsed.country || 'Hong Kong';
+    cleaner.extra = parsed.extra;
+    cleaner.composed = parsed.composed;
+    const set = (id, val) => { const el = $(id); if (el) el.value = val || ''; };
+    set('#addrLine1', cleaner.line1);
+    set('#addrStreet', cleaner.street);
+    const city = $('#addrCity');
+    if (city) city.value = cleaner.city || '';
+    set('#addrCountry', cleaner.country);
+    set('#addrComposed', cleaner.composed);
+    set('#addrExtra', cleaner.extra);
+  });
+  $('#addrCopyBtn')?.addEventListener('click', () => {
+    const line = cleaner.composed || $('#addrComposed')?.value || '';
+    if (!line) {
+      toast('Nothing to copy');
+      return;
+    }
+    const done = () => toast('Copied Full Address 1');
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(line).then(done).catch(() => {
+        window.prompt('Copy Full Address 1', line);
+      });
+    } else {
+      window.prompt('Copy Full Address 1', line);
+    }
+  });
+  $('#addrApplyBtn')?.addEventListener('click', () => {
+    const line = collapseAddr(cleaner.composed || $('#addrComposed')?.value || '');
+    const city = cleaner.city || $('#addrCity')?.value || '';
+    if (!line) {
+      toast('Clean an address first');
+      return;
+    }
+    form.address = line;
+    if (city) form.district = city;
+    const addr = $('#addressInput');
+    if (addr) addr.value = form.address;
+    const dist = $('#districtInput');
+    if (dist && city) dist.value = city;
+    toast('Address applied');
+  });
+}
+
+function collapseAddr(s) {
+  return String(s || '').replace(/\s+/g, ' ').trim();
 }
 
 function toast(msg) {

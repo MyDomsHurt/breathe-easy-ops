@@ -1,7 +1,7 @@
 import { DISTRICTS, JOB_TYPES, TEAMS } from './config.js?v=3';
 import { findCrewNote, isCrewNote } from './team-day.js';
 import { addDays, formatDay, formatTime24, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, normalizeLunch, pad, parseISO, shortTime, weekDays, workWeekDays } from './utils.js';
-import { allJobs, applyPhonePatch, attachLiveJobContacts, formatLiveJobPhones, getJob, importExistingJobs, placeJobInSlot, redo, removeJob, resetDemo, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js?v=1';
+import { allJobs, applyPhonePatch, attachLiveJobContacts, formatLiveJobPhones, getJob, importExistingJobs, placeJobInSlot, redo, removeJob, resetDemo, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js?v=2';
 import { startScheduleAuth } from './auth.js';
 import { daySlotsOf, firstEmptySlotIndex, hasTimeConflict, jobsForTeamDay, layoutSlots, slotIndex } from './capacity.js';
 import { pulseRemaining, renderDayBoard, renderWeekBoard } from './board.js?v=8';
@@ -1094,7 +1094,7 @@ function bindOwnerTools() {
       applyPhonePatchBtn.disabled = true;
       try {
         const result = await applyPhonePatch();
-        toast(`${result.updated} updated · ${result.matched} already matched · ${result.missing} missing job id`);
+        toast(`${result.written} written · ${result.matched} already matched · ${result.failed} failed · ${result.missing} missing`);
       } catch (err) {
         console.error(err);
         toast((err && err.message) || 'Phone patch failed');

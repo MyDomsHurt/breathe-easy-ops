@@ -13,7 +13,7 @@ import {
   createStore,
   defaultAdapter,
   loadExistingCanonicalJobs,
-} from '../../shared/store.js';
+} from '../../shared/store.js?v=1';
 import { appendChange, asChanges, fromScheduleJob } from '../../shared/job.js';
 import { matchHubspotIdByPhone, parsePhone } from '../../shared/phone-parse.js';
 import { allContacts } from './contacts-store.js?v=1';
@@ -34,7 +34,7 @@ let recording = true;
 let holdEmit = 0;
 
 const PHONE_PATCH_URL = './data/phone-format-2026-09-24.json';
-const PHONE_PATCH_CHUNK = 25;
+const PHONE_PATCH_CHUNK = 10;
 
 export async function initStore(user) {
   if (ready && ops) return allJobs();
@@ -94,11 +94,16 @@ function emit() {
   listeners.forEach((fn) => fn(jobs));
 }
 
-function nextFrame() {
-  return new Promise((resolve) => {
-    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => resolve());
-    else setTimeout(resolve, 0);
-  });
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function is429(err) {
+  if (!err) return false;
+  const code = String(err.code || '').toLowerCase();
+  if (code === 'resource-exhausted' || code === '429') return true;
+  if (err.status === 429 || err.statusCode === 429) return true;
+  return /429|resource-exhausted|too many requests/i.test(String(err.message || ''));
 }
 
 function snapshot(job) {
@@ -272,7 +277,17 @@ function stampAudit(job, prev, action) {
 function writeJob(job, action) {
   const id = job && job.job_id;
   const prev = id ? getJob(id) : null;
-  return ops.upsertJob(stampAudit({ ...job, deleted: false }, prev, action));
+  const stamped = stampAudit({ ...job, deleted: false }, prev, action);
+  const pending = ops.upsertJob(stamped);
+  if (pending && typeof pending.then === 'function') pending.catch(() => {});
+  return ops.getJob(stamped.job_id) || stamped;
+}
+
+function writeJobRemote(job, action) {
+  const id = job && job.job_id;
+  const prev = id ? getJob(id) : null;
+  const stamped = stampAudit({ ...job, deleted: false }, prev, action);
+  return Promise.resolve(ops.upsertJob(stamped));
 }
 
 function eraseJob(id) {
@@ -474,6 +489,34 @@ export function setTeamDayLunch(date, team, lunch, slot) {
   emit();
 }
 
+async function persistPhoneRow(row) {
+  const next = toCanonical({
+    ...row.job,
+    mobile: row.mobile,
+    phone_cc: row.cc,
+    phone_national: row.nat,
+  }, row.job);
+  const saved = await writeJobRemote(next, 'saved');
+  if (ops && typeof ops.holdJobPhones === 'function') ops.holdJobPhones(saved);
+  return saved;
+}
+
+async function persistPhoneChunk(chunk) {
+  const run = () => Promise.allSettled(chunk.map((row) => persistPhoneRow(row)));
+  let settled = await run();
+  if (settled.some((s) => s.status === 'rejected' && is429(s.reason))) {
+    await sleep(2000);
+    settled = await run();
+  }
+  let written = 0;
+  let failed = 0;
+  settled.forEach((s) => {
+    if (s.status === 'fulfilled') written += 1;
+    else failed += 1;
+  });
+  return { written, failed };
+}
+
 export async function applyPhonePatch() {
   requireJeff('apply the phone patch');
   const res = await fetch(PHONE_PATCH_URL);
@@ -481,8 +524,9 @@ export async function applyPhonePatch() {
   const rows = await res.json();
   if (!Array.isArray(rows)) throw new Error('Phone patch JSON invalid');
 
-  let updated = 0;
+  let written = 0;
   let matched = 0;
+  let failed = 0;
   let missing = 0;
   const pending = [];
   for (const row of rows) {
@@ -513,26 +557,22 @@ export async function applyPhonePatch() {
 
   holdEmit += 1;
   recording = false;
+  if (ops && typeof ops.beginPhoneHold === 'function') ops.beginPhoneHold();
   try {
     for (let i = 0; i < pending.length; i += PHONE_PATCH_CHUNK) {
       const chunk = pending.slice(i, i + PHONE_PATCH_CHUNK);
-      for (const row of chunk) {
-        writeJob(toCanonical({
-          ...row.job,
-          mobile: row.mobile,
-          phone_cc: row.cc,
-          phone_national: row.nat,
-        }, row.job), 'saved');
-        updated += 1;
-      }
-      await nextFrame();
+      const result = await persistPhoneChunk(chunk);
+      written += result.written;
+      failed += result.failed;
+      await sleep(400);
     }
   } finally {
+    if (ops && typeof ops.endPhoneHold === 'function') ops.endPhoneHold();
     recording = true;
     holdEmit = Math.max(0, holdEmit - 1);
     emit();
   }
-  return { updated, matched, missing };
+  return { written, matched, failed, missing };
 }
 
 export function formatLiveJobPhones() {

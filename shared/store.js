@@ -42,6 +42,7 @@ export function createStore(options = {}) {
   const jobs = new Map();
   const listeners = new Set();
   let remoteUnsub = null;
+  let phoneHold = null;
 
   function snapshot(includeDeleted) {
     const list = [];
@@ -65,13 +66,17 @@ export function createStore(options = {}) {
   }
 
   function persistJob(job) {
+    let result;
     if (typeof adapter.upsert === 'function') {
-      const result = adapter.upsert(job);
-      return result && typeof result.then === 'function'
-        ? result.catch((err) => notify({ type: 'error', job, error: err }))
-        : undefined;
+      result = adapter.upsert(job);
+    } else {
+      result = persistAll();
     }
-    return persistAll();
+    const pending = result && typeof result.then === 'function' ? result : Promise.resolve(result);
+    return pending.catch((err) => {
+      notify({ type: 'error', job, error: err });
+      throw err;
+    });
   }
 
   function persistRemove(job, hard) {
@@ -100,12 +105,36 @@ export function createStore(options = {}) {
     }
   }
 
+  function applyPhoneHold(job) {
+    if (!phoneHold || !job || !job.job_id) return job;
+    const pin = phoneHold.get(String(job.job_id));
+    if (!pin) return job;
+    return {
+      ...job,
+      mobile: pin.mobile,
+      phone_cc: pin.phone_cc,
+      phone_national: pin.phone_national,
+    };
+  }
+
   function hydrate(list) {
+    const pinned = new Map();
+    if (phoneHold) {
+      phoneHold.forEach((pin, id) => {
+        const cur = jobs.get(id);
+        if (cur) pinned.set(id, applyPhoneHold(cur));
+      });
+    }
     jobs.clear();
     for (const raw of Array.isArray(list) ? list : []) {
-      const job = normalizeJob(raw);
-      if (job.job_id) jobs.set(job.job_id, job);
+      let job = normalizeJob(raw);
+      if (!job.job_id) continue;
+      job = applyPhoneHold(job);
+      jobs.set(job.job_id, job);
     }
+    pinned.forEach((job, id) => {
+      if (!jobs.has(id)) jobs.set(id, job);
+    });
   }
 
   const loaded = adapter.load ? adapter.load() : [];
@@ -137,6 +166,8 @@ export function createStore(options = {}) {
       return jobs.get(String(jobId)) || null;
     },
 
+    persistJob,
+
     upsertJob(input) {
       const incoming = input && typeof input === 'object' ? input : {};
       const id = String(incoming.job_id || '').trim() || assignJobId(incoming);
@@ -147,9 +178,26 @@ export function createStore(options = {}) {
       merged.job_id = id;
       merged.updated_at = nowFn();
       jobs.set(id, merged);
-      persistJob(merged);
+      const persisted = persistJob(merged);
       notify({ type: 'upsert', job: merged });
-      return merged;
+      return persisted.then(() => merged);
+    },
+
+    beginPhoneHold() {
+      phoneHold = new Map();
+    },
+
+    holdJobPhones(job) {
+      if (!phoneHold || !job || !job.job_id) return;
+      phoneHold.set(String(job.job_id), {
+        mobile: job.mobile || '',
+        phone_cc: job.phone_cc || '',
+        phone_national: job.phone_national || '',
+      });
+    },
+
+    endPhoneHold() {
+      phoneHold = null;
     },
 
     removeJob(jobId, { hard } = {}) {

@@ -54,6 +54,8 @@ let phoneClean = {
   full: '',
 };
 
+let cleanerPanel = '';
+
 function resetCleaner(address) {
   cleaner = {
     raw: address || '',
@@ -252,10 +254,11 @@ export function openBooking(prefill = {}) {
 
 export function closeBooking() {
   const root = $('#bookingRoot');
-  root.classList.remove('open', 'log-open');
+  root.classList.remove('open', 'log-open', 'clean-open');
   root.setAttribute('aria-hidden', 'true');
   const logPanel = $('#changeLog');
   if (logPanel) logPanel.setAttribute('hidden', '');
+  cleanerPanel = '';
 }
 
 function others() {
@@ -281,6 +284,7 @@ function renderForm() {
   $('#bookingRoot').innerHTML = `
     <div class="drawer-bg" data-close="1"></div>
     ${editing ? changeRailHtml() : ''}
+    <aside class="log-rail clean-rail" id="cleanerRail" hidden></aside>
     <aside class="drawer" role="dialog" aria-label="${editing ? 'Edit booking' : 'New booking'}">
       <div class="drawer-head">
         <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start">
@@ -314,7 +318,7 @@ function renderForm() {
           <div class="field field-primary${fieldClass('client')}">
             <label>Client ${holdChip('client', 'client')}</label>
             <div class="typeahead">
-              <input id="clientSearch" type="search" placeholder="Name or mobile" value="${escapeAttr(form.client_name)}" autocomplete="off" />
+              <input id="clientSearch" type="search" placeholder="Name or phone" value="${escapeAttr(form.client_name)}" autocomplete="off" />
               <div id="clientHits" class="typeahead-list" hidden></div>
             </div>
           </div>
@@ -334,7 +338,7 @@ function renderForm() {
         <section class="form-block form-block-quiet">
           <div class="grid-2">
             <div class="field${fieldClass('mobile')}">
-              <label>Mobile ${holdChip('mobile', 'mobile')}</label>
+              <label>Phone ${holdChip('mobile', 'phone')}</label>
               <input id="mobileInput" value="${escapeAttr(form.mobile)}" />
             </div>
             <div class="field${fieldClass('district')}">
@@ -345,77 +349,9 @@ function renderForm() {
               </select>
             </div>
           </div>
-          <div class="phone-clean">
-            <label>Phone cleaner</label>
-            <textarea id="phoneCleanRaw" rows="2" placeholder="Paste messy mobile">${escapeAttr(phoneClean.raw)}</textarea>
-            <div class="addr-clean-actions">
-              <button type="button" class="ghost-btn" id="phoneCleanBtn">Clean</button>
-            </div>
-            <div class="grid-2">
-              <div class="field">
-                <label>Country</label>
-                <input id="phoneCountry" value="${escapeAttr(phoneClean.country)}" placeholder="852" />
-              </div>
-              <div class="field">
-                <label>Number</label>
-                <input id="phoneNational" value="${escapeAttr(phoneClean.national)}" />
-              </div>
-            </div>
-            <div class="field">
-              <label>Full</label>
-              <input id="phoneFull" value="${escapeAttr(phoneClean.full)}" />
-            </div>
-            <div class="addr-clean-actions">
-              <button type="button" class="primary-btn" id="phoneApplyBtn">Apply</button>
-            </div>
-          </div>
           <div class="field${fieldClass('address')}">
             <label>Address ${holdChip('address', 'address')}</label>
             <input id="addressInput" value="${escapeAttr(form.address)}" />
-          </div>
-          <div class="addr-clean">
-            <label>Address cleaner</label>
-            <textarea id="addrCleanRaw" rows="3" placeholder="Paste messy address">${escapeAttr(cleaner.raw)}</textarea>
-            <div class="addr-clean-actions">
-              <button type="button" class="ghost-btn" id="addrCleanBtn">Clean</button>
-            </div>
-            <div class="grid-2">
-              <div class="field">
-                <label>Line 1</label>
-                <input id="addrLine1" value="${escapeAttr(cleaner.line1)}" />
-              </div>
-              <div class="field">
-                <label>Street</label>
-                <input id="addrStreet" value="${escapeAttr(cleaner.street)}" />
-              </div>
-              <div class="field">
-                <label>District</label>
-                <input id="addrDistrict" value="${escapeAttr(cleaner.district)}" placeholder="Mid-Levels" />
-              </div>
-              <div class="field">
-                <label>Territory</label>
-                <select id="addrTerritory">
-                  <option value="">Select</option>
-                  ${TERRITORIES.map((t) => {
-                    const val = `${t.label} (${t.code})`;
-                    const selected = cleaner.code === t.code ? 'selected' : '';
-                    return `<option value="${escapeAttr(val)}" ${selected}>${escapeAttr(val)}</option>`;
-                  }).join('')}
-                </select>
-              </div>
-            </div>
-            <div class="field">
-              <label>Full Address 1</label>
-              <input id="addrComposed" value="${escapeAttr(cleaner.composed)}" />
-            </div>
-            <div class="addr-clean-actions">
-              <button type="button" class="ghost-btn" id="addrCopyBtn">Copy</button>
-              <button type="button" class="primary-btn" id="addrApplyBtn">Apply</button>
-            </div>
-            <div class="field">
-              <label>Extra</label>
-              <input id="addrExtra" value="${escapeAttr(cleaner.extra)}" placeholder="Fees, ceiling, helper — not part of the address" />
-            </div>
           </div>
         </section>
 
@@ -484,6 +420,7 @@ function renderForm() {
     </aside>
   `;
   bindForm();
+  if (cleanerPanel) openCleaner(cleanerPanel);
 }
 
 function bindForm() {
@@ -499,6 +436,7 @@ function bindForm() {
       e.stopPropagation();
       const open = logPanel.hasAttribute('hidden');
       if (open) {
+        closeCleaner();
         logPanel.removeAttribute('hidden');
         root.classList.add('log-open');
       } else {
@@ -508,11 +446,21 @@ function bindForm() {
       logBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
     });
   }
+  root.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (!cleanerPanel) return;
+    e.preventDefault();
+    e.stopPropagation();
+    closeCleaner();
+  });
   $('#clientSearch').addEventListener('input', (e) => {
     form.client_name = e.target.value;
     renderHits(e.target.value);
   });
   $('#mobileInput').addEventListener('input', (e) => { form.mobile = e.target.value; });
+  $('#mobileInput').addEventListener('focus', () => {
+    if (cleanerPanel !== 'phone') openCleaner('phone');
+  });
   $('#addressInput').addEventListener('input', (e) => {
     form.address = e.target.value;
     form.address_line1 = '';
@@ -520,9 +468,10 @@ function bindForm() {
     form.address_place = '';
     form.address_extra = '';
   });
+  $('#addressInput').addEventListener('focus', () => {
+    if (cleanerPanel !== 'address') openCleaner('address');
+  });
   $('#districtInput').addEventListener('change', (e) => { form.district = e.target.value; renderForm(); });
-  bindAddressCleaner();
-  bindPhoneCleaner();
   $('#dateInput').addEventListener('change', (e) => { form.date = e.target.value; renderForm(); });
   $('#timeInput').addEventListener('input', (e) => { form.time = e.target.value; });
   $('#timeInput').addEventListener('change', (e) => {
@@ -676,10 +625,126 @@ function cancelJob() {
   window.dispatchEvent(new CustomEvent('be:changed'));
 }
 
+function closeLogPanel() {
+  const root = $('#bookingRoot');
+  const logPanel = $('#changeLog');
+  if (logPanel) logPanel.setAttribute('hidden', '');
+  $('#toggleLog')?.setAttribute('aria-expanded', 'false');
+  root?.classList.remove('log-open');
+}
+
+function closeCleaner() {
+  cleanerPanel = '';
+  const rail = $('#cleanerRail');
+  if (rail) rail.setAttribute('hidden', '');
+  $('#bookingRoot')?.classList.remove('clean-open');
+}
+
+function phoneCleanerFieldsHtml() {
+  return `
+    <div class="clean-fields">
+      <div class="grid-2">
+        <div class="field">
+          <label>Country</label>
+          <input id="phoneCountry" value="${escapeAttr(phoneClean.country)}" placeholder="852" />
+        </div>
+        <div class="field">
+          <label>Number</label>
+          <input id="phoneNational" value="${escapeAttr(phoneClean.national)}" />
+        </div>
+      </div>
+      <div class="field">
+        <label>Full</label>
+        <input id="phoneFull" value="${escapeAttr(phoneClean.full)}" />
+      </div>
+      <div class="addr-clean-actions">
+        <button type="button" class="primary-btn" id="phoneApplyBtn">Apply</button>
+      </div>
+    </div>`;
+}
+
+function addressCleanerFieldsHtml() {
+  return `
+    <div class="clean-fields">
+      <div class="field">
+        <label>Line 1</label>
+        <input id="addrLine1" value="${escapeAttr(cleaner.line1)}" />
+      </div>
+      <div class="field">
+        <label>Street</label>
+        <input id="addrStreet" value="${escapeAttr(cleaner.street)}" />
+      </div>
+      <div class="field">
+        <label>District</label>
+        <input id="addrDistrict" value="${escapeAttr(cleaner.district)}" placeholder="Mid-Levels" />
+      </div>
+      <div class="field">
+        <label>Territory</label>
+        <select id="addrTerritory">
+          <option value="">Select</option>
+          ${TERRITORIES.map((t) => {
+            const val = `${t.label} (${t.code})`;
+            const selected = cleaner.code === t.code ? 'selected' : '';
+            return `<option value="${escapeAttr(val)}" ${selected}>${escapeAttr(val)}</option>`;
+          }).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label>Full</label>
+        <input id="addrComposed" value="${escapeAttr(cleaner.composed)}" />
+      </div>
+      <div class="addr-clean-actions">
+        <button type="button" class="primary-btn" id="addrApplyBtn">Apply</button>
+      </div>
+    </div>`;
+}
+
+function seedPhoneCleaner() {
+  phoneClean.raw = form.mobile || '';
+  const parsed = parsePhone(phoneClean.raw);
+  phoneClean.country = parsed.country || '852';
+  phoneClean.national = parsed.national || '';
+  phoneClean.full = parsed.full || '';
+}
+
+function seedAddressCleaner() {
+  cleaner.raw = form.address || '';
+  const parsed = parseAddress(cleaner.raw);
+  cleaner.line1 = parsed.line1 || '';
+  cleaner.street = parsed.street || '';
+  cleaner.district = parsed.district || '';
+  cleaner.code = parsed.code || '';
+  cleaner.extra = parsed.extra || '';
+  cleaner.composed = parsed.composed || '';
+}
+
+function openCleaner(kind) {
+  closeLogPanel();
+  if (kind === 'phone') seedPhoneCleaner();
+  else seedAddressCleaner();
+  cleanerPanel = kind;
+  const rail = $('#cleanerRail');
+  const root = $('#bookingRoot');
+  if (!rail || !root) return;
+  const title = kind === 'phone' ? 'Phone' : 'Address';
+  rail.innerHTML = `
+    <div class="log-rail-head clean-rail-head">
+      <h3>${title}</h3>
+      <button type="button" class="icon-btn" id="closeCleaner" aria-label="Close">✕</button>
+    </div>
+    <div class="log-rail-body">${kind === 'phone' ? phoneCleanerFieldsHtml() : addressCleanerFieldsHtml()}</div>`;
+  rail.removeAttribute('hidden');
+  root.classList.add('clean-open');
+  $('#closeCleaner')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    closeCleaner();
+  });
+  if (kind === 'phone') bindPhoneCleaner();
+  else bindAddressCleaner();
+}
+
 function bindAddressCleaner() {
-  const raw = $('#addrCleanRaw');
-  if (!raw) return;
-  raw.addEventListener('input', (e) => { cleaner.raw = e.target.value; });
+  if (!$('#addrApplyBtn')) return;
   const syncComposed = () => {
     refreshComposed();
     const el = $('#addrComposed');
@@ -693,51 +758,6 @@ function bindAddressCleaner() {
     syncComposed();
   });
   $('#addrComposed')?.addEventListener('input', (e) => { cleaner.composed = e.target.value; });
-  $('#addrExtra')?.addEventListener('input', (e) => { cleaner.extra = e.target.value; });
-  $('#addrCleanBtn')?.addEventListener('click', () => {
-    const set = (id, val) => { const el = $(id); if (el) el.value = val || ''; };
-    const terr = $('#addrTerritory');
-    cleaner.line1 = '';
-    cleaner.street = '';
-    cleaner.district = '';
-    cleaner.code = '';
-    cleaner.extra = '';
-    cleaner.composed = '';
-    set('#addrLine1', '');
-    set('#addrStreet', '');
-    set('#addrDistrict', '');
-    if (terr) terr.value = '';
-    set('#addrComposed', '');
-    set('#addrExtra', '');
-    const parsed = parseAddress(cleaner.raw || form.address);
-    cleaner.line1 = parsed.line1 || '';
-    cleaner.street = parsed.street || '';
-    cleaner.district = parsed.district || '';
-    cleaner.code = parsed.code || '';
-    cleaner.extra = parsed.extra || '';
-    cleaner.composed = parsed.composed || '';
-    set('#addrLine1', cleaner.line1);
-    set('#addrStreet', cleaner.street);
-    set('#addrDistrict', cleaner.district);
-    if (terr) terr.value = cleaner.code ? territoryLabel(cleaner.code) : '';
-    set('#addrComposed', cleaner.composed);
-    set('#addrExtra', cleaner.extra);
-  });
-  $('#addrCopyBtn')?.addEventListener('click', () => {
-    const line = cleaner.composed || $('#addrComposed')?.value || '';
-    if (!line) {
-      toast('Nothing to copy');
-      return;
-    }
-    const done = () => toast('Copied Full Address 1');
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(line).then(done).catch(() => {
-        window.prompt('Copy Full Address 1', line);
-      });
-    } else {
-      window.prompt('Copy Full Address 1', line);
-    }
-  });
   $('#addrApplyBtn')?.addEventListener('click', () => {
     const line = collapseAddr(cleaner.composed || $('#addrComposed')?.value || '');
     const code = cleaner.code || codeFromTerritory($('#addrTerritory')?.value || '');
@@ -756,13 +776,12 @@ function bindAddressCleaner() {
     const dist = $('#districtInput');
     if (dist && code) dist.value = code;
     toast('Address applied');
+    closeCleaner();
   });
 }
 
 function bindPhoneCleaner() {
-  const raw = $('#phoneCleanRaw');
-  if (!raw) return;
-  raw.addEventListener('input', (e) => { phoneClean.raw = e.target.value; });
+  if (!$('#phoneApplyBtn')) return;
   const paintFull = () => {
     refreshPhoneFull();
     const el = $('#phoneFull');
@@ -777,16 +796,6 @@ function bindPhoneCleaner() {
     paintFull();
   });
   $('#phoneFull')?.addEventListener('input', (e) => { phoneClean.full = e.target.value; });
-  $('#phoneCleanBtn')?.addEventListener('click', () => {
-    const parsed = parsePhone(phoneClean.raw || form.mobile);
-    phoneClean.country = parsed.country || '852';
-    phoneClean.national = parsed.national || '';
-    phoneClean.full = parsed.full || '';
-    const set = (id, val) => { const el = $(id); if (el) el.value = val || ''; };
-    set('#phoneCountry', phoneClean.country);
-    set('#phoneNational', phoneClean.national);
-    set('#phoneFull', phoneClean.full);
-  });
   $('#phoneApplyBtn')?.addEventListener('click', () => {
     const full = String($('#phoneFull')?.value || phoneClean.full || '').replace(/\s+/g, '');
     phoneClean.full = full;
@@ -794,6 +803,7 @@ function bindPhoneCleaner() {
     const input = $('#mobileInput');
     if (input) input.value = form.mobile;
     toast(full ? 'Phone applied' : 'Phone cleared');
+    closeCleaner();
   });
 }
 

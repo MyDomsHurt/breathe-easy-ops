@@ -1593,6 +1593,17 @@ button.day-col-head:hover { background: #e0f2fe; }
   border-bottom: 1px solid var(--line);
   background: #fff;
 }
+.clean-rail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.clean-fields {
+  padding: 12px 12px 24px;
+}
+.clean-fields .field { margin-bottom: 10px; }
+.clean-fields .field:last-child { margin-bottom: 0; }
 .log-rail-head h3 {
   margin: 0;
   font-size: 16px;

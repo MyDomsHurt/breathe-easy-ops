@@ -319,9 +319,16 @@ function renderForm() {
               </span>
             </div>
             <input id="mobileInput" value="${escapeAttr(form.mobile)}" placeholder="+852…" aria-label="Full phone" />
+            <p class="clean-was" id="wasMobile" hidden></p>
             <div class="phone-split-row">
-              <input id="formPhoneCc" class="phone-cc" value="${escapeAttr(form.phone_cc)}" placeholder="852" inputmode="numeric" aria-label="Country code" />
-              <input id="formPhoneNational" class="phone-national" value="${escapeAttr(form.phone_national)}" placeholder="Number" inputmode="numeric" aria-label="National number" />
+              <div>
+                <input id="formPhoneCc" class="phone-cc" value="${escapeAttr(form.phone_cc)}" placeholder="852" inputmode="numeric" aria-label="Country code" />
+                <p class="clean-was" id="wasPhoneCc" hidden></p>
+              </div>
+              <div>
+                <input id="formPhoneNational" class="phone-national" value="${escapeAttr(form.phone_national)}" placeholder="Number" inputmode="numeric" aria-label="National number" />
+                <p class="clean-was" id="wasPhoneNational" hidden></p>
+              </div>
             </div>
             ${form.hubspot_id ? `<p class="split-full hubspot-id-line">HubSpot ${escapeAttr(form.hubspot_id)}</p>` : ''}
           </div>
@@ -334,18 +341,22 @@ function renderForm() {
               </span>
             </div>
             <input id="addressInput" value="${escapeAttr(form.address)}" placeholder="Full Address 1" aria-label="Full Address 1" />
+            <p class="clean-was" id="wasAddress" hidden></p>
             <div class="grid-2 addr-split">
               <div class="field">
                 <label>Line 1</label>
                 <input id="formAddrLine1" value="${escapeAttr(form.address_line1)}" />
+                <p class="clean-was" id="wasAddrLine1" hidden></p>
               </div>
               <div class="field">
                 <label>Street</label>
                 <input id="formAddrStreet" value="${escapeAttr(form.address_street)}" />
+                <p class="clean-was" id="wasAddrStreet" hidden></p>
               </div>
               <div class="field">
                 <label>District</label>
                 <input id="formAddrPlace" value="${escapeAttr(form.address_place)}" placeholder="Mid-Levels" />
+                <p class="clean-was" id="wasAddrPlace" hidden></p>
               </div>
               <div class="field">
                 <label>Territory</label>
@@ -353,6 +364,7 @@ function renderForm() {
                   <option value="">Select</option>
                   ${TERRITORIES.map((t) => `<option value="${t.code}" ${form.district === t.code ? 'selected' : ''}>${escapeAttr(t.label + ' (' + t.code + ')')}</option>`).join('')}
                 </select>
+                <p class="clean-was" id="wasAddrDistrict" hidden></p>
               </div>
             </div>
           </div>
@@ -665,6 +677,26 @@ function setCleanClass(el, matched) {
   el.classList.add(matched ? 'clean-match' : 'clean-change');
 }
 
+function districtWasLabel(code) {
+  const c = String(code || '');
+  if (!c) return '';
+  const t = TERRITORIES.find((x) => x.code === c);
+  return t ? `${t.label} (${t.code})` : c;
+}
+
+function paintWas(id, matched, prev) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (matched !== false) {
+    el.hidden = true;
+    el.textContent = '';
+    return;
+  }
+  const v = String(prev || '');
+  el.textContent = v ? 'was: ' + v : 'was:';
+  el.hidden = false;
+}
+
 function snapPhoneNow() {
   return {
     mobile: form.mobile || '',
@@ -712,13 +744,22 @@ function paintPhoneCleanColors() {
     setCleanClass($('#mobileInput'));
     setCleanClass($('#formPhoneCc'));
     setCleanClass($('#formPhoneNational'));
+    paintWas('wasMobile', null);
+    paintWas('wasPhoneCc', null);
+    paintWas('wasPhoneNational', null);
     if (apply) apply.hidden = true;
     return;
   }
   if (apply) apply.hidden = false;
-  setCleanClass($('#mobileInput'), sameClean(form.mobile, phoneSnap.mobile));
-  setCleanClass($('#formPhoneCc'), sameClean(form.phone_cc, phoneSnap.phone_cc));
-  setCleanClass($('#formPhoneNational'), sameClean(form.phone_national, phoneSnap.phone_national));
+  const matchFull = sameClean(form.mobile, phoneSnap.mobile);
+  const matchCc = sameClean(form.phone_cc, phoneSnap.phone_cc);
+  const matchNat = sameClean(form.phone_national, phoneSnap.phone_national);
+  setCleanClass($('#mobileInput'), matchFull);
+  setCleanClass($('#formPhoneCc'), matchCc);
+  setCleanClass($('#formPhoneNational'), matchNat);
+  paintWas('wasMobile', matchFull, phoneSnap.mobile);
+  paintWas('wasPhoneCc', matchCc, phoneSnap.phone_cc);
+  paintWas('wasPhoneNational', matchNat, phoneSnap.phone_national);
 }
 
 function paintAddrCleanColors() {
@@ -729,15 +770,30 @@ function paintAddrCleanColors() {
     setCleanClass($('#formAddrStreet'));
     setCleanClass($('#formAddrPlace'));
     setCleanClass($('#districtInput'));
+    paintWas('wasAddress', null);
+    paintWas('wasAddrLine1', null);
+    paintWas('wasAddrStreet', null);
+    paintWas('wasAddrPlace', null);
+    paintWas('wasAddrDistrict', null);
     if (apply) apply.hidden = true;
     return;
   }
   if (apply) apply.hidden = false;
-  setCleanClass($('#addressInput'), sameClean(form.address, addrSnap.address));
-  setCleanClass($('#formAddrLine1'), sameClean(form.address_line1, addrSnap.address_line1));
-  setCleanClass($('#formAddrStreet'), sameClean(form.address_street, addrSnap.address_street));
-  setCleanClass($('#formAddrPlace'), sameClean(form.address_place, addrSnap.address_place));
-  setCleanClass($('#districtInput'), sameClean(form.district, addrSnap.district));
+  const matchFull = sameClean(form.address, addrSnap.address);
+  const matchLine1 = sameClean(form.address_line1, addrSnap.address_line1);
+  const matchStreet = sameClean(form.address_street, addrSnap.address_street);
+  const matchPlace = sameClean(form.address_place, addrSnap.address_place);
+  const matchDist = sameClean(form.district, addrSnap.district);
+  setCleanClass($('#addressInput'), matchFull);
+  setCleanClass($('#formAddrLine1'), matchLine1);
+  setCleanClass($('#formAddrStreet'), matchStreet);
+  setCleanClass($('#formAddrPlace'), matchPlace);
+  setCleanClass($('#districtInput'), matchDist);
+  paintWas('wasAddress', matchFull, addrSnap.address);
+  paintWas('wasAddrLine1', matchLine1, addrSnap.address_line1);
+  paintWas('wasAddrStreet', matchStreet, addrSnap.address_street);
+  paintWas('wasAddrPlace', matchPlace, addrSnap.address_place);
+  paintWas('wasAddrDistrict', matchDist, districtWasLabel(addrSnap.district));
 }
 
 function restorePhoneIfPending() {

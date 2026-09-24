@@ -1516,6 +1516,7 @@ button.day-col-head:hover { background: #e0f2fe; }
   flex-direction: column;
 }
 
+.phone-clean,
 .addr-clean {
   margin-top: 12px;
   padding: 12px;
@@ -1523,6 +1524,7 @@ button.day-col-head:hover { background: #e0f2fe; }
   border-radius: 12px;
   background: #f8fafc;
 }
+.phone-clean > label,
 .addr-clean > label {
   display: block;
   font-size: 11px;
@@ -1532,6 +1534,7 @@ button.day-col-head:hover { background: #e0f2fe; }
   color: var(--muted);
   margin-bottom: 6px;
 }
+.phone-clean textarea,
 .addr-clean textarea {
   width: 100%;
   min-height: 64px;
@@ -1543,12 +1546,15 @@ button.day-col-head:hover { background: #e0f2fe; }
   border-radius: 8px;
   background: #fff;
 }
+.phone-clean .addr-clean-actions,
 .addr-clean-actions {
   display: flex;
   gap: 8px;
   margin: 8px 0;
 }
+.phone-clean .field,
 .addr-clean .field { margin-bottom: 8px; }
+.phone-clean .field:last-child,
 .addr-clean .field:last-child { margin-bottom: 0; }
 
 .drawer-head {

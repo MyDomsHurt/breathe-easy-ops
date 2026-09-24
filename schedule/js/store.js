@@ -15,6 +15,7 @@ import {
   loadExistingCanonicalJobs,
 } from '../../shared/store.js';
 import { appendChange, asChanges, fromScheduleJob } from '../../shared/job.js';
+import { parsePhone } from '../../shared/phone-parse.js';
 import { isJeffEmail, shouldUseFirestore } from '../../shared/firebase-config.js';
 import { CREW_SOURCE, cellTeamMembers, crewNoteId, isCrewNote } from './team-day.js';
 import { planSlotTake, slotCountFor, slotFloor } from './capacity.js';
@@ -455,6 +456,36 @@ export function setTeamDayLunch(date, team, lunch, slot) {
     lunch_slot: lunch && Number.isFinite(slotN) ? slotN : null,
   }, prevNote));
   emit();
+}
+
+export function formatLiveJobPhones() {
+  requireJeff('format phones');
+  let formatted = 0;
+  let ok = 0;
+  let skipped = 0;
+  recording = false;
+  for (const job of allJobs()) {
+    if (isCrewNote(job)) continue;
+    const raw = String(job.mobile || '').trim();
+    if (!raw) {
+      skipped += 1;
+      continue;
+    }
+    const parsed = parsePhone(raw);
+    if (!parsed.resolved || !parsed.full) {
+      skipped += 1;
+      continue;
+    }
+    if (parsed.full === raw) {
+      ok += 1;
+      continue;
+    }
+    writeJob(toCanonical({ ...job, mobile: parsed.full }, job), 'saved');
+    formatted += 1;
+  }
+  recording = true;
+  emit();
+  return { formatted, ok, skipped };
 }
 
 export function updateJob(id, input) {

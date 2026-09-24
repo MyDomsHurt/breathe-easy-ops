@@ -6,6 +6,7 @@ import { displayNameForEmail } from '../../shared/firebase-config.js';
 import { highlightOf } from '../../shared/job.js';
 import { acsLabel, emptyUnits, formatDay, formatTime24, jobStatus, jobTypeOf, NOTES1_MAX, parseAcs, shortTime, storedUnits } from './utils.js?v=3';
 import { TERRITORIES, codeFromTerritory, composeFullAddress, parseAddress, territoryLabel } from './address-parse.js?v=4';
+import { composePhone, parsePhone } from '../../shared/phone-parse.js';
 
 let form = {
   job_id: '',
@@ -46,6 +47,13 @@ let cleaner = {
   composed: '',
 };
 
+let phoneClean = {
+  raw: '',
+  country: '852',
+  national: '',
+  full: '',
+};
+
 function resetCleaner(address) {
   cleaner = {
     raw: address || '',
@@ -56,6 +64,19 @@ function resetCleaner(address) {
     extra: '',
     composed: '',
   };
+}
+
+function resetPhoneCleaner(mobile) {
+  phoneClean = {
+    raw: mobile || '',
+    country: '852',
+    national: '',
+    full: '',
+  };
+}
+
+function refreshPhoneFull() {
+  phoneClean.full = composePhone(phoneClean.country, phoneClean.national);
 }
 
 function refreshComposed() {
@@ -221,6 +242,7 @@ export function openBooking(prefill = {}) {
     form.team_lead = ranked[0]?.team || 'Josh';
   }
   resetCleaner(form.address);
+  resetPhoneCleaner(form.mobile);
   renderForm();
   const root = $('#bookingRoot');
   root.classList.add('open');
@@ -321,6 +343,30 @@ function renderForm() {
                 <option value="">Select</option>
                 ${Object.entries(DISTRICTS).map(([k, v]) => `<option value="${k}" ${form.district === k ? 'selected' : ''}>${v.short} · ${v.label}</option>`).join('')}
               </select>
+            </div>
+          </div>
+          <div class="phone-clean">
+            <label>Phone cleaner</label>
+            <textarea id="phoneCleanRaw" rows="2" placeholder="Paste messy mobile">${escapeAttr(phoneClean.raw)}</textarea>
+            <div class="addr-clean-actions">
+              <button type="button" class="ghost-btn" id="phoneCleanBtn">Clean</button>
+            </div>
+            <div class="grid-2">
+              <div class="field">
+                <label>Country</label>
+                <input id="phoneCountry" value="${escapeAttr(phoneClean.country)}" placeholder="852" />
+              </div>
+              <div class="field">
+                <label>Number</label>
+                <input id="phoneNational" value="${escapeAttr(phoneClean.national)}" />
+              </div>
+            </div>
+            <div class="field">
+              <label>Full</label>
+              <input id="phoneFull" value="${escapeAttr(phoneClean.full)}" />
+            </div>
+            <div class="addr-clean-actions">
+              <button type="button" class="primary-btn" id="phoneApplyBtn">Apply</button>
             </div>
           </div>
           <div class="field${fieldClass('address')}">
@@ -476,6 +522,7 @@ function bindForm() {
   });
   $('#districtInput').addEventListener('change', (e) => { form.district = e.target.value; renderForm(); });
   bindAddressCleaner();
+  bindPhoneCleaner();
   $('#dateInput').addEventListener('change', (e) => { form.date = e.target.value; renderForm(); });
   $('#timeInput').addEventListener('input', (e) => { form.time = e.target.value; });
   $('#timeInput').addEventListener('change', (e) => {
@@ -560,6 +607,7 @@ function renderHits(q) {
       if (!client) return;
       form.client_name = client.name;
       form.mobile = client.mobile;
+      phoneClean.raw = client.mobile || '';
       form.address = client.address;
       form.district = client.district;
       form.address_line1 = client.address_line1 || '';
@@ -596,6 +644,7 @@ function save(status = 'confirmed') {
     notes_long: form.notes_long,
     invoice: form.invoice || '',
     highlight: highlightOf({ highlight: form.highlight }),
+    mobile: parsePhone(form.mobile).full,
     time: formatTime24(form.time) || String(form.time || '').trim(),
     payment: form.payment,
     payment_status: paymentStatusFromLabel(form.payment),
@@ -707,6 +756,44 @@ function bindAddressCleaner() {
     const dist = $('#districtInput');
     if (dist && code) dist.value = code;
     toast('Address applied');
+  });
+}
+
+function bindPhoneCleaner() {
+  const raw = $('#phoneCleanRaw');
+  if (!raw) return;
+  raw.addEventListener('input', (e) => { phoneClean.raw = e.target.value; });
+  const paintFull = () => {
+    refreshPhoneFull();
+    const el = $('#phoneFull');
+    if (el) el.value = phoneClean.full;
+  };
+  $('#phoneCountry')?.addEventListener('input', (e) => {
+    phoneClean.country = e.target.value;
+    paintFull();
+  });
+  $('#phoneNational')?.addEventListener('input', (e) => {
+    phoneClean.national = e.target.value;
+    paintFull();
+  });
+  $('#phoneFull')?.addEventListener('input', (e) => { phoneClean.full = e.target.value; });
+  $('#phoneCleanBtn')?.addEventListener('click', () => {
+    const parsed = parsePhone(phoneClean.raw || form.mobile);
+    phoneClean.country = parsed.country || '852';
+    phoneClean.national = parsed.national || '';
+    phoneClean.full = parsed.full || '';
+    const set = (id, val) => { const el = $(id); if (el) el.value = val || ''; };
+    set('#phoneCountry', phoneClean.country);
+    set('#phoneNational', phoneClean.national);
+    set('#phoneFull', phoneClean.full);
+  });
+  $('#phoneApplyBtn')?.addEventListener('click', () => {
+    const full = String($('#phoneFull')?.value || phoneClean.full || '').replace(/\s+/g, '');
+    phoneClean.full = full;
+    form.mobile = full;
+    const input = $('#mobileInput');
+    if (input) input.value = form.mobile;
+    toast(full ? 'Phone applied' : 'Phone cleared');
   });
 }
 

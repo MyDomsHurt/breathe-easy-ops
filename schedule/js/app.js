@@ -1,11 +1,11 @@
 import { DISTRICTS, JOB_TYPES, TEAMS } from './config.js?v=3';
 import { findCrewNote, isCrewNote } from './team-day.js';
 import { addDays, formatDay, formatTime24, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, normalizeLunch, pad, parseISO, shortTime, weekDays, workWeekDays } from './utils.js';
-import { allJobs, getJob, importExistingJobs, placeJobInSlot, redo, removeJob, resetDemo, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js';
+import { allJobs, formatLiveJobPhones, getJob, importExistingJobs, placeJobInSlot, redo, removeJob, resetDemo, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js';
 import { startScheduleAuth } from './auth.js';
 import { daySlotsOf, firstEmptySlotIndex, hasTimeConflict, jobsForTeamDay, layoutSlots, slotIndex } from './capacity.js';
 import { pulseRemaining, renderDayBoard, renderWeekBoard } from './board.js?v=8';
-import { closeBooking, openBooking } from './booking.js?v=8';
+import { closeBooking, openBooking } from './booking.js?v=9';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js?v=2';
 import { exportMasterRoster } from './export-roster.js?v=19';
 import { allContacts, initContactsStore, subscribeContacts } from './contacts-store.js?v=1';
@@ -1007,6 +1007,7 @@ function bindOwnerTools() {
   const box = $('ownerTools');
   const importBtn = $('importJobs');
   const exportBtn = $('exportRoster');
+  const formatPhonesBtn = $('formatPhones');
   const resetBtn = $('resetDemo');
   if (!isOwnerUser(signedInEmail)) {
     if (box) {
@@ -1061,6 +1062,25 @@ function bindOwnerTools() {
         toast((err && err.message) || 'Export failed');
       } finally {
         exportBtn.disabled = false;
+      }
+    });
+  }
+  if (formatPhonesBtn) {
+    formatPhonesBtn.addEventListener('click', async () => {
+      if (!isOwnerUser(signedInEmail)) {
+        toast('Only Jeff can format phones');
+        return;
+      }
+      formatPhonesBtn.disabled = true;
+      try {
+        const result = formatLiveJobPhones();
+        paint();
+        toast(`${result.formatted} formatted · ${result.ok} already ok · ${result.skipped} skipped`);
+      } catch (err) {
+        console.error(err);
+        toast((err && err.message) || 'Format phones failed');
+      } finally {
+        formatPhonesBtn.disabled = false;
       }
     });
   }

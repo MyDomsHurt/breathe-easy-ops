@@ -1742,6 +1742,9 @@ button.day-col-head:hover { background: #e0f2fe; }
   font-weight: 500;
   color: #7b8a99;
 }
+p.hubspot-id-line {
+  margin: 4px 0 0;
+}
 .addr-split { margin-top: 2px; }
 .addr-split .field label {
   font-size: 10px;

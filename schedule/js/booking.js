@@ -1,12 +1,13 @@
 import { DISTRICTS, JOB_TYPES, PAYMENTS, TEAMS, TEAM_META, UNIT_TYPES } from './config.js?v=3';
 import { overlapWarning, stackOrderOnSave, suggestTeams, teamMembersOnDay } from './capacity.js';
 import { addJob, allJobs, removeJob, updateJob } from './store.js';
+import { allContacts } from './contacts-store.js?v=1';
 import { uniqueClientsFrom } from './seed.js';
 import { displayNameForEmail } from '../../shared/firebase-config.js';
 import { highlightOf } from '../../shared/job.js';
 import { acsLabel, emptyUnits, formatDay, formatTime24, jobStatus, jobTypeOf, NOTES1_MAX, parseAcs, shortTime, storedUnits } from './utils.js?v=3';
 import { TERRITORIES, codeFromTerritory, composeFullAddress, parseAddress, territoryLabel } from './address-parse.js?v=4';
-import { composePhone, parsePhone } from '../../shared/phone-parse.js';
+import { composePhone, matchHubspotIdByPhone, parsePhone } from '../../shared/phone-parse.js';
 
 let form = {
   job_id: '',
@@ -14,6 +15,7 @@ let form = {
   mobile: '',
   phone_cc: '',
   phone_national: '',
+  hubspot_id: '',
   address: '',
   address_line1: '',
   address_street: '',
@@ -214,6 +216,7 @@ export function openBooking(prefill = {}) {
     mobile: prefill.mobile || '',
     phone_cc: prefill.phone_cc || '',
     phone_national: prefill.phone_national || '',
+    hubspot_id: prefill.hubspot_id || '',
     address: prefill.address || '',
     address_line1: prefill.address_line1 || '',
     address_street: prefill.address_street || '',
@@ -367,6 +370,7 @@ function renderForm() {
               <input id="formPhoneNational" class="phone-national" value="${escapeAttr(form.phone_national)}" placeholder="Number" inputmode="numeric" aria-label="National number" />
             </div>
             <input id="mobileInput" class="split-full" value="${escapeAttr(form.mobile)}" placeholder="+852…" aria-label="Full phone" />
+            ${form.hubspot_id ? `<p class="split-full hubspot-id-line">HubSpot ${escapeAttr(form.hubspot_id)}</p>` : ''}
           </div>
           <div class="field${fieldClass('address')}" style="margin-top:12px">
             <div class="split-head">
@@ -648,6 +652,7 @@ function save(status = 'confirmed') {
     mobile: phone.mobile,
     phone_cc: phone.phone_cc,
     phone_national: phone.phone_national,
+    hubspot_id: matchHubspotIdByPhone(phone.mobile, allContacts()).hubspot_id || '',
     address: addr.address,
     address_line1: addr.address_line1,
     address_street: addr.address_street,

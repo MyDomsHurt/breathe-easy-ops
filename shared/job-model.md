@@ -47,6 +47,7 @@ Placement on that grid also needs `date`, `week` (optional/derived), `team_lead`
 | `mobile` | yes | string \| null | Sheet **Mobile**. E.164 Full (`+85291234567`). Empty if no phone. |
 | `phone_cc` | optional | string \| null | Country calling-code digits (`852`, `65`). Empty if no phone. |
 | `phone_national` | optional | string \| null | National digits. Empty if no phone. |
+| `hubspot_id` | optional | string \| null | Contacts row matched by phone. Empty if unmatched or ambiguous. |
 | `address` | yes | string \| null | Sheet **Address**. Full Address 1 from the cleaner. |
 | `address_line1` | optional | string \| null | Cleaner Line 1 (flat, floor, block, building). Empty on old jobs. |
 | `address_street` | optional | string \| null | Cleaner Street (number + road). Empty on old jobs. |

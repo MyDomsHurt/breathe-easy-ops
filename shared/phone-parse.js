@@ -46,6 +46,63 @@ export function composePhone(country, national) {
   return c ? '+' + c + n : '';
 }
 
+function last8(digits) {
+  const d = String(digits || '').replace(/\D/g, '');
+  return d.length >= 8 ? d.slice(-8) : '';
+}
+
+function contactE164(c) {
+  const raw = c && c.phone != null ? String(c.phone).trim() : '';
+  if (!raw) return '';
+  const p = parsePhone(raw);
+  return p.full || raw;
+}
+
+function contactIsHk(c) {
+  const p = parsePhone(c && c.phone);
+  return p.country === '852' || String(c && c.phone || '').replace(/\s/g, '').startsWith('+852');
+}
+
+/**
+ * Attach a job phone to a Contacts row.
+ * Exact E.164 first. Then last-8 among 852 contacts only.
+ * One hit → hubspot_id. Zero or two+ → empty.
+ */
+export function matchHubspotIdByPhone(jobMobile, contacts) {
+  const parsed = parsePhone(jobMobile);
+  const e164 = parsed.full || '';
+  const rows = Array.isArray(contacts) ? contacts : [];
+  if (!e164 && !parsed.national) return { hubspot_id: '', status: 'unmatched' };
+
+  const exact = [];
+  if (e164) {
+    rows.forEach((c) => {
+      if (contactE164(c) === e164) exact.push(c);
+    });
+  }
+  if (exact.length === 1) {
+    const id = String(exact[0].hubspot_id || '').trim();
+    return { hubspot_id: id, status: id ? 'one' : 'unmatched' };
+  }
+  if (exact.length > 1) return { hubspot_id: '', status: 'ambiguous' };
+
+  const jobHk = parsed.country === '852' || (e164 && e164.startsWith('+852'));
+  const tail = last8(parsed.national || e164);
+  if (!jobHk || tail.length !== 8) return { hubspot_id: '', status: 'unmatched' };
+
+  const hkHits = [];
+  rows.forEach((c) => {
+    if (!contactIsHk(c)) return;
+    if (last8(contactE164(c) || (c && c.phone)) === tail) hkHits.push(c);
+  });
+  if (hkHits.length === 1) {
+    const id = String(hkHits[0].hubspot_id || '').trim();
+    return { hubspot_id: id, status: id ? 'one' : 'unmatched' };
+  }
+  if (hkHits.length > 1) return { hubspot_id: '', status: 'ambiguous' };
+  return { hubspot_id: '', status: 'unmatched' };
+}
+
 export function parsePhone(raw) {
   const original = String(raw == null ? '' : raw);
   if (!original.trim()) return emptyResult();

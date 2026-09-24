@@ -15,7 +15,8 @@ import {
   loadExistingCanonicalJobs,
 } from '../../shared/store.js';
 import { appendChange, asChanges, fromScheduleJob } from '../../shared/job.js';
-import { parsePhone } from '../../shared/phone-parse.js';
+import { matchHubspotIdByPhone, parsePhone } from '../../shared/phone-parse.js';
+import { allContacts } from './contacts-store.js?v=1';
 import { isJeffEmail, shouldUseFirestore } from '../../shared/firebase-config.js';
 import { CREW_SOURCE, cellTeamMembers, crewNoteId, isCrewNote } from './team-day.js';
 import { planSlotTake, slotCountFor, slotFloor } from './capacity.js';
@@ -173,6 +174,7 @@ const DIFF_FIELDS = [
   ['mobile', 'Mobile'],
   ['phone_cc', 'Country'],
   ['phone_national', 'National'],
+  ['hubspot_id', 'HubSpot'],
   ['district', 'District'],
   ['address', 'Address'],
   ['address_line1', 'Line 1'],
@@ -493,6 +495,31 @@ export function formatLiveJobPhones() {
   recording = true;
   emit();
   return { formatted, ok, skipped };
+}
+
+export function attachLiveJobContacts() {
+  requireJeff('attach phones');
+  const contacts = allContacts();
+  let attached = 0;
+  let already = 0;
+  let unmatched = 0;
+  let ambiguous = 0;
+  recording = false;
+  for (const job of allJobs()) {
+    if (isCrewNote(job)) continue;
+    const hit = matchHubspotIdByPhone(job.mobile, contacts);
+    const nextId = hit.status === 'one' ? hit.hubspot_id : '';
+    const prevId = String(job.hubspot_id || '').trim();
+    if (hit.status === 'ambiguous') ambiguous += 1;
+    else if (hit.status === 'unmatched' || !nextId) unmatched += 1;
+    else if (prevId && prevId === nextId) already += 1;
+    else attached += 1;
+    if (prevId === nextId) continue;
+    writeJob(toCanonical({ ...job, hubspot_id: nextId || null }, job), 'saved');
+  }
+  recording = true;
+  emit();
+  return { attached, already, unmatched, ambiguous };
 }
 
 export function updateJob(id, input) {

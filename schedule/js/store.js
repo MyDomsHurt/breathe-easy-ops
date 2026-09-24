@@ -171,6 +171,8 @@ const DIFF_FIELDS = [
   ['date', 'Date'],
   ['time', 'Time'],
   ['mobile', 'Mobile'],
+  ['phone_cc', 'Country'],
+  ['phone_national', 'National'],
   ['district', 'District'],
   ['address', 'Address'],
   ['address_line1', 'Line 1'],
@@ -480,7 +482,12 @@ export function formatLiveJobPhones() {
       ok += 1;
       continue;
     }
-    writeJob(toCanonical({ ...job, mobile: parsed.full }, job), 'saved');
+    writeJob(toCanonical({
+      ...job,
+      mobile: parsed.full,
+      phone_cc: parsed.country,
+      phone_national: parsed.national,
+    }, job), 'saved');
     formatted += 1;
   }
   recording = true;

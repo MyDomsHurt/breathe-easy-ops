@@ -44,7 +44,9 @@ Placement on that grid also needs `date`, `week` (optional/derived), `team_lead`
 | `team_lead` | yes | string | Row on the week board (Josh, Matthew, Tiago, Nick, Alun, Iggi). |
 | `team_members` | optional | string \| null | Who is on the van that day. Booking writes a shared crew note (`source: team-day-crew`, `job_id: crew-YYYY-MM-DD-{team}`) and copies the same string onto every real job on that team-day. |
 | `client_name` | yes | string | Sheet **Name**. |
-| `mobile` | yes | string \| null | Sheet **Mobile**. |
+| `mobile` | yes | string \| null | Sheet **Mobile**. E.164 Full (`+85291234567`). Empty if no phone. |
+| `phone_cc` | optional | string \| null | Country calling-code digits (`852`, `65`). Empty if no phone. |
+| `phone_national` | optional | string \| null | National digits. Empty if no phone. |
 | `address` | yes | string \| null | Sheet **Address**. Full Address 1 from the cleaner. |
 | `address_line1` | optional | string \| null | Cleaner Line 1 (flat, floor, block, building). Empty on old jobs. |
 | `address_street` | optional | string \| null | Cleaner Street (number + road). Empty on old jobs. |

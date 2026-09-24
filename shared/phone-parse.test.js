@@ -1,13 +1,18 @@
 import { composePhone, FIXTURES, parsePhone } from './phone-parse.js';
 
+const out = (typeof console !== 'undefined' && console.log)
+  ? (...a) => console.log(...a)
+  : (...a) => print(a.join(' '));
+
 function fail(msg) {
-  console.error(msg);
-  process.exitCode = 1;
+  out(msg);
+  if (typeof process !== 'undefined') process.exitCode = 1;
+  else throw new Error(msg);
 }
 
 let passed = 0;
 for (const fx of FIXTURES) {
-  if (fx.id === 'compose') {
+  if (fx.id.startsWith('compose')) {
     const actual = composePhone(fx.country, fx.national);
     if (actual !== fx.expect.composed) {
       fail(`${fx.id}: expected ${JSON.stringify(fx.expect.composed)} got ${JSON.stringify(actual)}`);
@@ -27,6 +32,6 @@ for (const fx of FIXTURES) {
   }
 }
 
-if (!process.exitCode) {
-  console.log(`ok ${FIXTURES.length} fixtures, ${passed} assertions`);
+if (typeof process === 'undefined' || !process.exitCode) {
+  out(`ok ${FIXTURES.length} fixtures, ${passed} assertions`);
 }

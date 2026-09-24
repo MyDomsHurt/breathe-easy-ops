@@ -45,17 +45,17 @@ const EQUIPMENT_UNKNOWN = {
   LEAKING: 1, INTERVIEW: 1, FILMING: 1, BATHROOM: 1, TECHNICIAN: 1,
 };
 const HEADERS = [
-  'Job ID', 'Date', 'Time', 'Team', 'Who\u2019s on', 'Client', 'Mobile', 'Address',
+  'Job ID', 'Date', 'Time', 'Team', 'Who\u2019s on', 'Client', 'Mobile', 'Country', 'National', 'Address',
   'Line 1', 'Street', 'Place', 'Extra', 'ACs',
   'S', 'W', 'WP', 'B', 'C', 'UC', 'TV', 'OU', 'SwG', 'EF', 'PAU', 'BEP',
   'Units', 'Return', 'Amount', 'Invoice', 'Receipt', 'Payment', 'Notes 1', 'Notes 2',
 ];
 const TEXT_COLS = {
-  0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1, 9: 1, 10: 1, 11: 1, 12: 1,
-  26: 1, 28: 1, 29: 1, 30: 1, 31: 1, 32: 1,
+  0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1, 9: 1, 10: 1, 11: 1, 12: 1, 13: 1, 14: 1,
+  28: 1, 30: 1, 31: 1, 32: 1, 33: 1, 34: 1,
 };
 const NUM_COLS = {
-  13: 1, 14: 1, 15: 1, 16: 1, 17: 1, 18: 1, 19: 1, 20: 1, 21: 1, 22: 1, 23: 1, 24: 1, 25: 1, 27: 1,
+  15: 1, 16: 1, 17: 1, 18: 1, 19: 1, 20: 1, 21: 1, 22: 1, 23: 1, 24: 1, 25: 1, 26: 1, 27: 1, 29: 1,
 };
 const TEAM_RANK = {};
 TEAMS.forEach((t, i) => { TEAM_RANK[t] = i; });
@@ -389,6 +389,8 @@ function sheetRow(j, all) {
     cellTeamMembers(all, j.date, lead) || '',
     j.client_name == null ? '' : String(j.client_name),
     j.mobile == null ? '' : String(j.mobile),
+    j.phone_cc == null ? '' : String(j.phone_cc),
+    j.phone_national == null ? '' : String(j.phone_national),
     j.address == null ? '' : String(j.address),
     j.address_line1 == null ? '' : String(j.address_line1),
     j.address_street == null ? '' : String(j.address_street),
@@ -465,7 +467,7 @@ function toSheet(headers, rows, spec) {
   const widthFor = spec && spec.widthFor ? spec.widthFor : function (c) {
     if (c === 0) return { wch: 18 };
     if (c === 1) return { wch: 12 };
-    if (c === 5 || c === 7 || c === 8 || c === 9 || c === 10 || c === 11 || c === 12 || c === 31 || c === 32) return { wch: 28 };
+    if (c === 5 || c === 9 || c === 10 || c === 11 || c === 12 || c === 13 || c === 14 || c === 33 || c === 34) return { wch: 28 };
     if (c === 4) return { wch: 18 };
     if (NUM_COLS[c]) return { wch: 8 };
     return { wch: 14 };
@@ -492,7 +494,7 @@ function toSheet(headers, rows, spec) {
 }
 
 const JSON_KEYS = [
-  'jobId', 'date', 'time', 'team', 'whosOn', 'client', 'mobile', 'address',
+  'jobId', 'date', 'time', 'team', 'whosOn', 'client', 'mobile', 'phoneCc', 'phoneNational', 'address',
   'addressLine1', 'addressStreet', 'addressPlace', 'addressExtra', 'acs',
   'S', 'W', 'WP', 'B', 'C', 'UC', 'TV', 'OU', 'SwG', 'EF', 'PAU', 'BEP',
   'units', 'return', 'amount', 'invoice', 'receipt', 'payment', 'notes1', 'notes2',

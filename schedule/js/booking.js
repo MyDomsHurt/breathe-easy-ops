@@ -12,6 +12,8 @@ let form = {
   job_id: '',
   client_name: '',
   mobile: '',
+  phone_cc: '',
+  phone_national: '',
   address: '',
   address_line1: '',
   address_street: '',
@@ -210,6 +212,8 @@ export function openBooking(prefill = {}) {
     job_id: prefill.job_id || '',
     client_name: prefill.client_name || '',
     mobile: prefill.mobile || '',
+    phone_cc: prefill.phone_cc || '',
+    phone_national: prefill.phone_national || '',
     address: prefill.address || '',
     address_line1: prefill.address_line1 || '',
     address_street: prefill.address_street || '',
@@ -584,6 +588,7 @@ function save(status = 'confirmed') {
   const notes = String(notesRaw || '').slice(0, NOTES1_MAX);
   const jobs = allJobs();
   const prev = form.job_id ? jobs.find((j) => j.job_id === form.job_id) : null;
+  const phone = parsePhone(form.mobile);
   const payload = {
     ...form,
     status: status === 'tentative' ? 'tentative' : 'confirmed',
@@ -593,7 +598,9 @@ function save(status = 'confirmed') {
     notes_long: form.notes_long,
     invoice: form.invoice || '',
     highlight: highlightOf({ highlight: form.highlight }),
-    mobile: parsePhone(form.mobile).full,
+    mobile: phone.full || '',
+    phone_cc: phone.full ? phone.country : '',
+    phone_national: phone.full ? phone.national : '',
     time: formatTime24(form.time) || String(form.time || '').trim(),
     payment: form.payment,
     payment_status: paymentStatusFromLabel(form.payment),
@@ -702,7 +709,7 @@ function addressCleanerFieldsHtml() {
 function seedPhoneCleaner() {
   phoneClean.raw = form.mobile || '';
   const parsed = parsePhone(phoneClean.raw);
-  phoneClean.country = parsed.country || '852';
+  phoneClean.country = parsed.country || '';
   phoneClean.national = parsed.national || '';
   phoneClean.full = parsed.full || '';
 }
@@ -798,11 +805,16 @@ function bindPhoneCleaner() {
   $('#phoneFull')?.addEventListener('input', (e) => { phoneClean.full = e.target.value; });
   $('#phoneApplyBtn')?.addEventListener('click', () => {
     const full = String($('#phoneFull')?.value || phoneClean.full || '').replace(/\s+/g, '');
-    phoneClean.full = full;
-    form.mobile = full;
+    const parsed = parsePhone(full || composePhone(phoneClean.country, phoneClean.national));
+    phoneClean.full = parsed.full || '';
+    phoneClean.country = parsed.country || '';
+    phoneClean.national = parsed.national || '';
+    form.mobile = parsed.full || '';
+    form.phone_cc = parsed.full ? parsed.country : '';
+    form.phone_national = parsed.full ? parsed.national : '';
     const input = $('#mobileInput');
     if (input) input.value = form.mobile;
-    toast(full ? 'Phone applied' : 'Phone cleared');
+    toast(form.mobile ? 'Phone applied' : 'Phone cleared');
     closeCleaner();
   });
 }

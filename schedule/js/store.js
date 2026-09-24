@@ -31,6 +31,10 @@ const HISTORY_LIMIT = 20;
 let undoStack = [];
 let redoStack = [];
 let recording = true;
+let holdEmit = 0;
+
+const PHONE_PATCH_URL = './data/phone-format-2026-09-24.json';
+const PHONE_PATCH_CHUNK = 25;
 
 export async function initStore(user) {
   if (ready && ops) return allJobs();
@@ -85,8 +89,16 @@ export function subscribe(fn) {
 }
 
 function emit() {
+  if (holdEmit) return;
   const jobs = allJobs();
   listeners.forEach((fn) => fn(jobs));
+}
+
+function nextFrame() {
+  return new Promise((resolve) => {
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => resolve());
+    else setTimeout(resolve, 0);
+  });
 }
 
 function snapshot(job) {
@@ -460,6 +472,67 @@ export function setTeamDayLunch(date, team, lunch, slot) {
     lunch_slot: lunch && Number.isFinite(slotN) ? slotN : null,
   }, prevNote));
   emit();
+}
+
+export async function applyPhonePatch() {
+  requireJeff('apply the phone patch');
+  const res = await fetch(PHONE_PATCH_URL);
+  if (!res.ok) throw new Error('Phone patch JSON missing');
+  const rows = await res.json();
+  if (!Array.isArray(rows)) throw new Error('Phone patch JSON invalid');
+
+  let updated = 0;
+  let matched = 0;
+  let missing = 0;
+  const pending = [];
+  for (const row of rows) {
+    const id = String((row && (row.job_id || row.jobId)) || '').trim();
+    if (!id) {
+      missing += 1;
+      continue;
+    }
+    const job = getJob(id);
+    if (!job) {
+      missing += 1;
+      continue;
+    }
+    if (isCrewNote(job)) continue;
+    const mobile = String(row.mobile || '').trim();
+    const cc = String(row.phoneCc || row.phone_cc || '').trim();
+    const nat = String(row.phoneNational || row.phone_national || '').trim();
+    if (
+      String(job.mobile || '').trim() === mobile
+      && String(job.phone_cc || '').trim() === cc
+      && String(job.phone_national || '').trim() === nat
+    ) {
+      matched += 1;
+      continue;
+    }
+    pending.push({ job, mobile, cc, nat });
+  }
+
+  holdEmit += 1;
+  recording = false;
+  try {
+    for (let i = 0; i < pending.length; i += PHONE_PATCH_CHUNK) {
+      const chunk = pending.slice(i, i + PHONE_PATCH_CHUNK);
+      for (const row of chunk) {
+        writeJob(toCanonical({
+          ...row.job,
+          mobile: row.mobile,
+          phone_cc: row.cc,
+          phone_national: row.nat,
+        }, row.job), 'saved');
+        updated += 1;
+      }
+      await nextFrame();
+    }
+  } finally {
+    recording = true;
+    holdEmit = Math.max(0, holdEmit - 1);
+    emit();
+  }
+  return { updated, matched, missing };
 }
 
 export function formatLiveJobPhones() {

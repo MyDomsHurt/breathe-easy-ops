@@ -1,7 +1,7 @@
 import { DISTRICTS, JOB_TYPES, TEAMS } from './config.js?v=3';
 import { findCrewNote, isCrewNote } from './team-day.js';
 import { addDays, formatDay, formatTime24, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, normalizeLunch, pad, parseISO, shortTime, weekDays, workWeekDays } from './utils.js';
-import { allJobs, attachLiveJobContacts, formatLiveJobPhones, getJob, importExistingJobs, placeJobInSlot, redo, removeJob, resetDemo, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js';
+import { allJobs, applyPhonePatch, attachLiveJobContacts, formatLiveJobPhones, getJob, importExistingJobs, placeJobInSlot, redo, removeJob, resetDemo, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js?v=1';
 import { startScheduleAuth } from './auth.js';
 import { daySlotsOf, firstEmptySlotIndex, hasTimeConflict, jobsForTeamDay, layoutSlots, slotIndex } from './capacity.js';
 import { pulseRemaining, renderDayBoard, renderWeekBoard } from './board.js?v=8';
@@ -1020,6 +1020,7 @@ function bindOwnerTools() {
   const box = $('ownerTools');
   const importBtn = $('importJobs');
   const exportBtn = $('exportRoster');
+  const applyPhonePatchBtn = $('applyPhonePatch');
   const formatPhonesBtn = $('formatPhones');
   const attachPhonesBtn = $('attachPhones');
   const outliersBtn = $('phoneOutliers');
@@ -1077,6 +1078,28 @@ function bindOwnerTools() {
         toast((err && err.message) || 'Export failed');
       } finally {
         exportBtn.disabled = false;
+      }
+    });
+  }
+  if (applyPhonePatchBtn) {
+    applyPhonePatchBtn.addEventListener('click', async () => {
+      if (!isOwnerUser(signedInEmail)) {
+        toast('Only Jeff can apply the phone patch');
+        return;
+      }
+      if (!usingFirestore()) {
+        toast('Sign in to patch live job phones');
+        return;
+      }
+      applyPhonePatchBtn.disabled = true;
+      try {
+        const result = await applyPhonePatch();
+        toast(`${result.updated} updated · ${result.matched} already matched · ${result.missing} missing job id`);
+      } catch (err) {
+        console.error(err);
+        toast((err && err.message) || 'Phone patch failed');
+      } finally {
+        applyPhonePatchBtn.disabled = false;
       }
     });
   }

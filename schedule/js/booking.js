@@ -6,7 +6,7 @@ import { uniqueClientsFrom } from './seed.js';
 import { displayNameForEmail } from '../../shared/firebase-config.js';
 import { highlightOf } from '../../shared/job.js';
 import { acsLabel, emptyUnits, formatDay, formatTime24, jobStatus, jobTypeOf, NOTES1_MAX, parseAcs, shortTime, storedUnits } from './utils.js?v=3';
-import { TERRITORIES, composeFullAddress, parseAddress } from './address-parse.js?v=4';
+import { TERRITORIES, composeFullAddress, hasStreetWord, parseAddress } from './address-parse.js?v=5';
 import { composePhone, matchHubspotIdByPhone, parsePhone } from '../../shared/phone-parse.js';
 
 let form = {
@@ -781,7 +781,9 @@ function paintAddrCleanColors() {
   if (apply) apply.hidden = false;
   const matchFull = sameClean(form.address, addrSnap.address);
   const matchLine1 = sameClean(form.address_line1, addrSnap.address_line1);
-  const matchStreet = sameClean(form.address_street, addrSnap.address_street);
+  const streetEmpty = !collapseAddr(form.address_street);
+  const unresolvedStreet = streetEmpty && hasStreetWord(addrSnap.address || form.address);
+  const matchStreet = sameClean(form.address_street, addrSnap.address_street) && !unresolvedStreet;
   const matchPlace = sameClean(form.address_place, addrSnap.address_place);
   const matchDist = sameClean(form.district, addrSnap.district);
   setCleanClass($('#addressInput'), matchFull);

@@ -1617,6 +1617,10 @@ button.day-col-head:hover { background: #e0f2fe; }
   flex-direction: column;
   z-index: 1;
 }
+.log-rail.clean-rail {
+  bottom: 0;
+  height: auto;
+}
 .log-rail[hidden] { display: none !important; }
 .log-rail-head {
   padding: 18px 22px 14px;
@@ -1752,6 +1756,7 @@ button.day-col-head:hover { background: #e0f2fe; }
   display: grid;
   grid-template-columns: 4.5ch minmax(0, 1fr);
   gap: 8px;
+  margin-top: 8px;
 }
 .phone-cc {
   min-width: 0;
@@ -1775,7 +1780,7 @@ button.day-col-head:hover { background: #e0f2fe; }
 p.hubspot-id-line {
   margin: 4px 0 0;
 }
-.addr-split { margin-top: 2px; }
+.addr-split { margin-top: 8px; }
 .addr-split .field label {
   font-size: 10px;
   color: #94a3b8;

@@ -360,23 +360,24 @@ function renderForm() {
         </section>
 
         <section class="form-block form-block-quiet">
-          <div class="field${fieldClass('mobile')}">
+          <div class="field${fieldClass('mobile')}" id="phoneBlock">
             <div class="split-head">
               <label>Phone ${holdChip('mobile', 'phone')}</label>
               <button type="button" class="ghost-btn split-clean" id="phoneCleanOpen">Clean</button>
             </div>
+            <input id="mobileInput" value="${escapeAttr(form.mobile)}" placeholder="+852…" aria-label="Full phone" />
             <div class="phone-split-row">
               <input id="formPhoneCc" class="phone-cc" value="${escapeAttr(form.phone_cc)}" placeholder="852" inputmode="numeric" aria-label="Country code" />
               <input id="formPhoneNational" class="phone-national" value="${escapeAttr(form.phone_national)}" placeholder="Number" inputmode="numeric" aria-label="National number" />
             </div>
-            <input id="mobileInput" class="split-full" value="${escapeAttr(form.mobile)}" placeholder="+852…" aria-label="Full phone" />
             ${form.hubspot_id ? `<p class="split-full hubspot-id-line">HubSpot ${escapeAttr(form.hubspot_id)}</p>` : ''}
           </div>
-          <div class="field${fieldClass('address')}" style="margin-top:12px">
+          <div class="field${fieldClass('address')}" id="addressBlock" style="margin-top:12px">
             <div class="split-head">
               <label>Address ${holdChip('address', 'address')}</label>
               <button type="button" class="ghost-btn split-clean" id="addrCleanOpen">Clean</button>
             </div>
+            <input id="addressInput" value="${escapeAttr(form.address)}" placeholder="Full Address 1" aria-label="Full Address 1" />
             <div class="grid-2 addr-split">
               <div class="field">
                 <label>Line 1</label>
@@ -398,7 +399,6 @@ function renderForm() {
                 </select>
               </div>
             </div>
-            <input id="addressInput" class="split-full" value="${escapeAttr(form.address)}" placeholder="Full Address 1" aria-label="Full Address 1" />
           </div>
         </section>
 
@@ -468,10 +468,16 @@ function renderForm() {
   `;
   bindForm();
   if (cleanerPanel) openCleaner(cleanerPanel);
+  const body = $('#bookingRoot')?.querySelector('.drawer-body');
+  if (body) body.addEventListener('scroll', alignCleanerRail, { passive: true });
 }
 
 function bindForm() {
   const root = $('#bookingRoot');
+  if (!window.__beAlignCleaner) {
+    window.__beAlignCleaner = true;
+    window.addEventListener('resize', alignCleanerRail);
+  }
   root.querySelectorAll('[data-close]').forEach((el) => {
     el.addEventListener('click', closeBooking);
   });
@@ -701,8 +707,25 @@ function closeLogPanel() {
 function closeCleaner() {
   cleanerPanel = '';
   const rail = $('#cleanerRail');
-  if (rail) rail.setAttribute('hidden', '');
+  if (rail) {
+    rail.setAttribute('hidden', '');
+    rail.style.top = '';
+    rail.style.height = '';
+  }
   $('#bookingRoot')?.classList.remove('clean-open');
+}
+
+function alignCleanerRail() {
+  const rail = $('#cleanerRail');
+  const root = $('#bookingRoot');
+  if (!rail || !root || rail.hasAttribute('hidden') || !cleanerPanel) return;
+  const block = cleanerPanel === 'phone' ? $('#phoneBlock') : $('#addressBlock');
+  if (!block) return;
+  const rootRect = root.getBoundingClientRect();
+  const blockRect = block.getBoundingClientRect();
+  const top = Math.max(0, Math.round(blockRect.top - rootRect.top));
+  rail.style.top = top + 'px';
+  rail.style.height = 'calc(100% - ' + top + 'px)';
 }
 
 function phoneCleanerFieldsHtml() {
@@ -810,6 +833,7 @@ function openCleaner(kind, rawOverride) {
   });
   if (kind === 'phone') bindPhoneCleaner();
   else bindAddressCleaner();
+  requestAnimationFrame(alignCleanerRail);
 }
 
 function bindAddressCleaner() {

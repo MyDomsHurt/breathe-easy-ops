@@ -1350,6 +1350,36 @@ button.day-col-head:hover { background: #e0f2fe; }
 .jobs-table tr { cursor: pointer; }
 .jobs-table tr:hover td { background: #f8fafc; }
 
+#appRoot[data-view="outliers"] .header-filters,
+#appRoot[data-view="outliers"] .week-nav,
+#appRoot[data-view="outliers"] #newBooking,
+#appRoot[data-view="outliers"] .header-search,
+#appRoot[data-view="outliers"] .board-legend { display: none; }
+.outliers-counts {
+  margin: 0 0 16px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.outliers-bucket { margin: 0 0 22px; }
+.outliers-bucket h2 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.outliers-bucket h2 span {
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 13px;
+}
+.outliers-empty {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.outliers-table tr { cursor: pointer; }
+
 #appRoot[data-view="contacts"] .header-filters,
 #appRoot[data-view="contacts"] .week-nav,
 #appRoot[data-view="contacts"] #newBooking,

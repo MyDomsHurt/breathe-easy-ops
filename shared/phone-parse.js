@@ -103,6 +103,24 @@ export function matchHubspotIdByPhone(jobMobile, contacts) {
   return { hubspot_id: '', status: 'unmatched' };
 }
 
+export function classifyJobPhone(job, contacts) {
+  const mobile = String(job && job.mobile || '').trim();
+  if (!mobile) return { bucket: 'empty', reason: 'No mobile' };
+  const parsed = parsePhone(mobile);
+  const cc = String(job && job.phone_cc || '').trim();
+  const isE164 = !!(parsed.resolved && parsed.full && parsed.full === mobile);
+  if (!cc || !isE164) {
+    const bits = [];
+    if (!cc) bits.push('No country code');
+    if (!isE164) bits.push('Not E.164');
+    return { bucket: 'unparsed', reason: bits.join(' · ') };
+  }
+  const hit = matchHubspotIdByPhone(mobile, contacts);
+  if (hit.status === 'ambiguous') return { bucket: 'ambiguous', reason: 'Two+ HK last-8 contacts' };
+  if (hit.status === 'one' && hit.hubspot_id) return { bucket: 'ok', reason: '' };
+  return { bucket: 'unmatched', reason: 'No contact' };
+}
+
 export function parsePhone(raw) {
   const original = String(raw == null ? '' : raw);
   if (!original.trim()) return emptyResult();

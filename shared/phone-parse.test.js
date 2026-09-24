@@ -1,4 +1,4 @@
-import { composePhone, FIXTURES, matchHubspotIdByPhone, parsePhone } from './phone-parse.js';
+import { classifyJobPhone, composePhone, FIXTURES, matchHubspotIdByPhone, parsePhone } from './phone-parse.js';
 
 const out = (typeof console !== 'undefined' && console.log)
   ? (...a) => console.log(...a)
@@ -52,6 +52,22 @@ expectMatch('61105262', '201', 'one');
 expectMatch('+85291234567', '', 'ambiguous');
 expectMatch('99998888', '', 'unmatched');
 expectMatch('', '', 'unmatched');
+
+function expectClass(job, want) {
+  const got = classifyJobPhone(job, contacts);
+  if (got.bucket !== want) {
+    fail(`classify ${JSON.stringify(job)}: expected ${want} got ${got.bucket} (${got.reason})`);
+  } else {
+    passed += 1;
+  }
+}
+expectClass({ mobile: '' }, 'empty');
+expectClass({ mobile: '9123 4567' }, 'unparsed');
+expectClass({ mobile: '+85291234567' }, 'unparsed');
+expectClass({ mobile: '+6598765432', phone_cc: '65' }, 'ok');
+expectClass({ mobile: '+85261105262', phone_cc: '852' }, 'ok');
+expectClass({ mobile: '+85299998888', phone_cc: '852' }, 'unmatched');
+expectClass({ mobile: '+85291234567', phone_cc: '852' }, 'ambiguous');
 
 if (typeof process === 'undefined' || !process.exitCode) {
   out(`ok ${FIXTURES.length} fixtures + matches, ${passed} assertions`);

@@ -11,6 +11,7 @@ import { exportMasterRoster } from './export-roster.js?v=20';
 import { allContacts, initContactsStore, subscribeContacts } from './contacts-store.js?v=1';
 import { fillContactFilterSelect, importHubspotFile, renderContacts } from './contacts.js?v=2';
 import { uniqueContactValues } from './contacts-query.js?v=1';
+import { renderPhoneOutliers } from './phone-outliers.js?v=1';
 
 function calendarToday() {
   const d = new Date();
@@ -128,6 +129,7 @@ function paint() {
   $('viewBoard').hidden = state.view !== 'board';
   $('viewJobs').hidden = state.view !== 'jobs';
   if ($('viewContacts')) $('viewContacts').hidden = state.view !== 'contacts';
+  if ($('viewOutliers')) $('viewOutliers').hidden = state.view !== 'outliers';
   const root = $('appRoot');
   if (root) root.dataset.view = state.view;
   document.querySelectorAll('[data-nav]').forEach((el) => {
@@ -159,6 +161,8 @@ function paint() {
       sort: state.contactSort,
     });
     if (picked && picked.hubspot_id) state.contactId = picked.hubspot_id;
+  } else if (state.view === 'outliers') {
+    renderPhoneOutliers($('outliersMount'), allJobs(), allContacts());
   }
   syncFilterUi();
   syncSundayUi();
@@ -848,6 +852,15 @@ function bindChrome() {
       if (job) openBooking(job);
     }
   });
+  const outliersMount = $('outliersMount');
+  if (outliersMount) {
+    outliersMount.addEventListener('click', (e) => {
+      const row = e.target.closest('[data-job]');
+      if (!row) return;
+      const job = getJob(row.dataset.job);
+      if (job) openBooking(job);
+    });
+  }
   const contactsMount = $('contactsMount');
   if (contactsMount) {
     contactsMount.addEventListener('click', (e) => {
@@ -1009,6 +1022,7 @@ function bindOwnerTools() {
   const exportBtn = $('exportRoster');
   const formatPhonesBtn = $('formatPhones');
   const attachPhonesBtn = $('attachPhones');
+  const outliersBtn = $('phoneOutliers');
   const resetBtn = $('resetDemo');
   if (!isOwnerUser(signedInEmail)) {
     if (box) {
@@ -1102,6 +1116,16 @@ function bindOwnerTools() {
       } finally {
         attachPhonesBtn.disabled = false;
       }
+    });
+  }
+  if (outliersBtn) {
+    outliersBtn.addEventListener('click', () => {
+      if (!isOwnerUser(signedInEmail)) {
+        toast('Only Jeff can list phone outliers');
+        return;
+      }
+      state.view = 'outliers';
+      paint();
     });
   }
   bindContactsImport();

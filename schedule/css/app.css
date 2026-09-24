@@ -1709,6 +1709,44 @@ button.day-col-head:hover { background: #e0f2fe; }
   letter-spacing: 0;
   text-transform: none;
 }
+.split-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.split-head label { margin-bottom: 0; }
+.split-clean { padding: 2px 8px; font-size: 11px; }
+.phone-split-row {
+  display: grid;
+  grid-template-columns: 4.5ch minmax(0, 1fr);
+  gap: 8px;
+}
+.phone-cc {
+  min-width: 0;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+.split-full {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  border: 0;
+  background: transparent;
+  padding: 2px 0;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: #7b8a99;
+}
+.addr-split { margin-top: 2px; }
+.addr-split .field label {
+  font-size: 10px;
+  color: #94a3b8;
+}
 .form-block > .field:last-child,
 .grid-2 > .field, .grid-3 > .field { margin-bottom: 0; }
 .field label {

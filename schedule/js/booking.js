@@ -247,6 +247,23 @@ export function openBooking(prefill = {}) {
     const ranked = suggestTeams(jobs, { date: form.date, district: form.district });
     form.team_lead = ranked[0]?.team || 'Josh';
   }
+  if (form.mobile && !form.phone_cc && !form.phone_national) {
+    const p = parsePhone(form.mobile);
+    if (p.full) {
+      form.phone_cc = p.country;
+      form.phone_national = p.national;
+      form.mobile = p.full;
+    }
+  }
+  if (form.address && !form.address_line1 && !form.address_street && !form.address_place) {
+    const parsed = parseAddress(form.address);
+    form.address_line1 = parsed.line1 || '';
+    form.address_street = parsed.street || '';
+    form.address_place = parsed.district || '';
+    if (parsed.code) form.district = parsed.code;
+    form.address_extra = form.address_extra || parsed.extra || '';
+    if (parsed.composed) form.address = parsed.composed;
+  }
   resetCleaner(form.address);
   resetPhoneCleaner(form.mobile);
   renderForm();
@@ -340,22 +357,44 @@ function renderForm() {
         </section>
 
         <section class="form-block form-block-quiet">
-          <div class="grid-2">
-            <div class="field${fieldClass('mobile')}">
+          <div class="field${fieldClass('mobile')}">
+            <div class="split-head">
               <label>Phone ${holdChip('mobile', 'phone')}</label>
-              <input id="mobileInput" value="${escapeAttr(form.mobile)}" />
+              <button type="button" class="ghost-btn split-clean" id="phoneCleanOpen">Clean</button>
             </div>
-            <div class="field${fieldClass('district')}">
-              <label>District ${holdChip('district', 'district')}</label>
-              <select id="districtInput">
-                <option value="">Select</option>
-                ${Object.entries(DISTRICTS).map(([k, v]) => `<option value="${k}" ${form.district === k ? 'selected' : ''}>${v.short} · ${v.label}</option>`).join('')}
-              </select>
+            <div class="phone-split-row">
+              <input id="formPhoneCc" class="phone-cc" value="${escapeAttr(form.phone_cc)}" placeholder="852" inputmode="numeric" aria-label="Country code" />
+              <input id="formPhoneNational" class="phone-national" value="${escapeAttr(form.phone_national)}" placeholder="Number" inputmode="numeric" aria-label="National number" />
             </div>
+            <input id="mobileInput" class="split-full" value="${escapeAttr(form.mobile)}" placeholder="+852…" aria-label="Full phone" />
           </div>
-          <div class="field${fieldClass('address')}">
-            <label>Address ${holdChip('address', 'address')}</label>
-            <input id="addressInput" value="${escapeAttr(form.address)}" />
+          <div class="field${fieldClass('address')}" style="margin-top:12px">
+            <div class="split-head">
+              <label>Address ${holdChip('address', 'address')}</label>
+              <button type="button" class="ghost-btn split-clean" id="addrCleanOpen">Clean</button>
+            </div>
+            <div class="grid-2 addr-split">
+              <div class="field">
+                <label>Line 1</label>
+                <input id="formAddrLine1" value="${escapeAttr(form.address_line1)}" />
+              </div>
+              <div class="field">
+                <label>Street</label>
+                <input id="formAddrStreet" value="${escapeAttr(form.address_street)}" />
+              </div>
+              <div class="field">
+                <label>District</label>
+                <input id="formAddrPlace" value="${escapeAttr(form.address_place)}" placeholder="Mid-Levels" />
+              </div>
+              <div class="field">
+                <label>Territory</label>
+                <select id="districtInput" aria-label="Territory">
+                  <option value="">Select</option>
+                  ${TERRITORIES.map((t) => `<option value="${t.code}" ${form.district === t.code ? 'selected' : ''}>${escapeAttr(t.label + ' (' + t.code + ')')}</option>`).join('')}
+                </select>
+              </div>
+            </div>
+            <input id="addressInput" class="split-full" value="${escapeAttr(form.address)}" placeholder="Full Address 1" aria-label="Full Address 1" />
           </div>
         </section>
 
@@ -461,21 +500,16 @@ function bindForm() {
     form.client_name = e.target.value;
     renderHits(e.target.value);
   });
-  $('#mobileInput').addEventListener('input', (e) => { form.mobile = e.target.value; });
-  $('#mobileInput').addEventListener('focus', () => {
-    if (cleanerPanel !== 'phone') openCleaner('phone');
+  bindFormPhone();
+  bindFormAddress();
+  $('#phoneCleanOpen')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    openCleaner('phone');
   });
-  $('#addressInput').addEventListener('input', (e) => {
-    form.address = e.target.value;
-    form.address_line1 = '';
-    form.address_street = '';
-    form.address_place = '';
-    form.address_extra = '';
+  $('#addrCleanOpen')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    openCleaner('address');
   });
-  $('#addressInput').addEventListener('focus', () => {
-    if (cleanerPanel !== 'address') openCleaner('address');
-  });
-  $('#districtInput').addEventListener('change', (e) => { form.district = e.target.value; renderForm(); });
   $('#dateInput').addEventListener('change', (e) => { form.date = e.target.value; renderForm(); });
   $('#timeInput').addEventListener('input', (e) => { form.time = e.target.value; });
   $('#timeInput').addEventListener('change', (e) => {
@@ -560,13 +594,25 @@ function renderHits(q) {
       if (!client) return;
       form.client_name = client.name;
       form.mobile = client.mobile;
-      phoneClean.raw = client.mobile || '';
+      const p = parsePhone(client.mobile);
+      form.phone_cc = client.phone_cc || p.country || '';
+      form.phone_national = client.phone_national || p.national || '';
+      if (p.full) form.mobile = p.full;
+      phoneClean.raw = form.mobile || '';
       form.address = client.address;
       form.district = client.district;
       form.address_line1 = client.address_line1 || '';
       form.address_street = client.address_street || '';
       form.address_place = client.address_place || '';
       form.address_extra = client.address_extra || '';
+      if (form.address && !form.address_line1 && !form.address_street) {
+        const parsed = parseAddress(form.address);
+        form.address_line1 = parsed.line1 || '';
+        form.address_street = parsed.street || '';
+        form.address_place = parsed.district || form.address_place;
+        if (parsed.code) form.district = parsed.code;
+        if (parsed.composed) form.address = parsed.composed;
+      }
       renderForm();
     });
   });
@@ -588,7 +634,8 @@ function save(status = 'confirmed') {
   const notes = String(notesRaw || '').slice(0, NOTES1_MAX);
   const jobs = allJobs();
   const prev = form.job_id ? jobs.find((j) => j.job_id === form.job_id) : null;
-  const phone = parsePhone(form.mobile);
+  const phone = phonePayload();
+  const addr = addressPayload();
   const payload = {
     ...form,
     status: status === 'tentative' ? 'tentative' : 'confirmed',
@@ -598,9 +645,15 @@ function save(status = 'confirmed') {
     notes_long: form.notes_long,
     invoice: form.invoice || '',
     highlight: highlightOf({ highlight: form.highlight }),
-    mobile: phone.full || '',
-    phone_cc: phone.full ? phone.country : '',
-    phone_national: phone.full ? phone.national : '',
+    mobile: phone.mobile,
+    phone_cc: phone.phone_cc,
+    phone_national: phone.phone_national,
+    address: addr.address,
+    address_line1: addr.address_line1,
+    address_street: addr.address_street,
+    address_place: addr.address_place,
+    address_extra: addr.address_extra,
+    district: addr.district,
     time: formatTime24(form.time) || String(form.time || '').trim(),
     payment: form.payment,
     payment_status: paymentStatusFromLabel(form.payment),
@@ -706,29 +759,33 @@ function addressCleanerFieldsHtml() {
     </div>`;
 }
 
-function seedPhoneCleaner() {
-  phoneClean.raw = form.mobile || '';
-  const parsed = parsePhone(phoneClean.raw);
-  phoneClean.country = parsed.country || '';
-  phoneClean.national = parsed.national || '';
-  phoneClean.full = parsed.full || '';
+function seedPhoneCleaner(rawOverride) {
+  const raw = rawOverride != null
+    ? rawOverride
+    : (form.mobile || composePhone(form.phone_cc, form.phone_national));
+  phoneClean.raw = raw;
+  const parsed = parsePhone(raw);
+  phoneClean.country = parsed.country || form.phone_cc || '';
+  phoneClean.national = parsed.national || form.phone_national || '';
+  phoneClean.full = parsed.full || composePhone(phoneClean.country, phoneClean.national);
 }
 
-function seedAddressCleaner() {
-  cleaner.raw = form.address || '';
-  const parsed = parseAddress(cleaner.raw);
-  cleaner.line1 = parsed.line1 || '';
-  cleaner.street = parsed.street || '';
-  cleaner.district = parsed.district || '';
-  cleaner.code = parsed.code || '';
-  cleaner.extra = parsed.extra || '';
-  cleaner.composed = parsed.composed || '';
+function seedAddressCleaner(rawOverride) {
+  const raw = rawOverride != null ? rawOverride : (form.address || '');
+  cleaner.raw = raw;
+  const parsed = parseAddress(raw);
+  cleaner.line1 = parsed.line1 || form.address_line1 || '';
+  cleaner.street = parsed.street || form.address_street || '';
+  cleaner.district = parsed.district || form.address_place || '';
+  cleaner.code = parsed.code || form.district || '';
+  cleaner.extra = parsed.extra || form.address_extra || '';
+  cleaner.composed = parsed.composed || form.address || '';
 }
 
-function openCleaner(kind) {
+function openCleaner(kind, rawOverride) {
   closeLogPanel();
-  if (kind === 'phone') seedPhoneCleaner();
-  else seedAddressCleaner();
+  if (kind === 'phone') seedPhoneCleaner(rawOverride);
+  else seedAddressCleaner(rawOverride);
   cleanerPanel = kind;
   const rail = $('#cleanerRail');
   const root = $('#bookingRoot');
@@ -784,6 +841,7 @@ function bindAddressCleaner() {
     if (dist && code) dist.value = code;
     toast('Address applied');
     closeCleaner();
+    renderForm();
   });
 }
 
@@ -816,7 +874,166 @@ function bindPhoneCleaner() {
     if (input) input.value = form.mobile;
     toast(form.mobile ? 'Phone applied' : 'Phone cleared');
     closeCleaner();
+    renderForm();
   });
+}
+
+function isMessyPhone(text) {
+  const t = String(text || '').trim();
+  if (!t) return false;
+  if (/[A-Za-z]/.test(t)) return true;
+  if (/[\s\-()[\]]/.test(t)) return true;
+  if (/^00/.test(t)) return true;
+  return false;
+}
+
+function isMessyAddress(text) {
+  const t = String(text || '').trim();
+  if (!t) return false;
+  if (/\n|\t/.test(t)) return true;
+  if ((t.match(/,/g) || []).length >= 2) return true;
+  return false;
+}
+
+function syncFormPhone() {
+  const full = composePhone(form.phone_cc, form.phone_national);
+  form.mobile = full;
+  const el = $('#mobileInput');
+  if (el) el.value = full;
+}
+
+function syncFormAddress() {
+  const composed = composeFullAddress({
+    line1: form.address_line1,
+    street: form.address_street,
+    district: form.address_place,
+    code: form.district,
+  });
+  form.address = composed;
+  const el = $('#addressInput');
+  if (el) el.value = composed;
+}
+
+function bindFormPhone() {
+  const cc = $('#formPhoneCc');
+  const nat = $('#formPhoneNational');
+  const full = $('#mobileInput');
+  if (cc) {
+    cc.addEventListener('input', (e) => {
+      form.phone_cc = String(e.target.value || '').replace(/\D/g, '');
+      syncFormPhone();
+    });
+  }
+  if (nat) {
+    nat.addEventListener('input', (e) => {
+      form.phone_national = String(e.target.value || '').replace(/\D/g, '');
+      syncFormPhone();
+    });
+    nat.addEventListener('paste', (e) => {
+      const text = (e.clipboardData || window.clipboardData).getData('text');
+      if (!isMessyPhone(text)) return;
+      e.preventDefault();
+      openCleaner('phone', text);
+    });
+  }
+  if (full) {
+    full.addEventListener('input', (e) => {
+      const v = e.target.value;
+      form.mobile = v;
+      if (!String(v).trim()) {
+        form.phone_cc = '';
+        form.phone_national = '';
+        if (cc) cc.value = '';
+        if (nat) nat.value = '';
+        return;
+      }
+      const p = parsePhone(v);
+      if (p.resolved && p.full) {
+        form.phone_cc = p.country;
+        form.phone_national = p.national;
+        form.mobile = p.full;
+        if (cc) cc.value = form.phone_cc;
+        if (nat) nat.value = form.phone_national;
+      }
+    });
+    full.addEventListener('paste', (e) => {
+      const text = (e.clipboardData || window.clipboardData).getData('text');
+      if (!isMessyPhone(text)) return;
+      e.preventDefault();
+      openCleaner('phone', text);
+    });
+  }
+}
+
+function bindFormAddress() {
+  const line1 = $('#formAddrLine1');
+  const street = $('#formAddrStreet');
+  const place = $('#formAddrPlace');
+  const terr = $('#districtInput');
+  const full = $('#addressInput');
+  if (line1) {
+    line1.addEventListener('input', (e) => { form.address_line1 = e.target.value; syncFormAddress(); });
+    line1.addEventListener('paste', (e) => {
+      const text = (e.clipboardData || window.clipboardData).getData('text');
+      if (!isMessyAddress(text)) return;
+      e.preventDefault();
+      openCleaner('address', text);
+    });
+  }
+  if (street) street.addEventListener('input', (e) => { form.address_street = e.target.value; syncFormAddress(); });
+  if (place) place.addEventListener('input', (e) => { form.address_place = e.target.value; syncFormAddress(); });
+  if (terr) {
+    terr.addEventListener('change', (e) => {
+      form.district = e.target.value;
+      syncFormAddress();
+    });
+  }
+  if (full) {
+    full.addEventListener('input', (e) => { form.address = e.target.value; });
+    full.addEventListener('paste', (e) => {
+      const text = (e.clipboardData || window.clipboardData).getData('text');
+      if (!isMessyAddress(text)) return;
+      e.preventDefault();
+      openCleaner('address', text);
+    });
+  }
+}
+
+function phonePayload() {
+  const cc = String(form.phone_cc || '').replace(/\D/g, '');
+  const nat = String(form.phone_national || '').replace(/\D/g, '');
+  const mobile = String(form.mobile || '').trim();
+  if (!cc && !nat && !mobile) return { mobile: '', phone_cc: '', phone_national: '' };
+  const parsed = parsePhone(composePhone(cc, nat) || mobile);
+  if (!parsed.full) return { mobile: '', phone_cc: '', phone_national: '' };
+  return { mobile: parsed.full, phone_cc: parsed.country, phone_national: parsed.national };
+}
+
+function addressPayload() {
+  const line1 = collapseAddr(form.address_line1);
+  const street = collapseAddr(form.address_street);
+  const place = collapseAddr(form.address_place);
+  const extra = collapseAddr(form.address_extra);
+  const code = form.district || '';
+  const composed = composeFullAddress({ line1, street, district: place, code }) || collapseAddr(form.address);
+  if (!line1 && !street && !place && !composed && !code) {
+    return {
+      address: '',
+      address_line1: '',
+      address_street: '',
+      address_place: '',
+      address_extra: '',
+      district: '',
+    };
+  }
+  return {
+    address: composed,
+    address_line1: line1,
+    address_street: street,
+    address_place: place,
+    address_extra: extra,
+    district: code,
+  };
 }
 
 function collapseAddr(s) {

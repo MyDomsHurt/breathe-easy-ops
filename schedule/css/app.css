@@ -1617,27 +1617,12 @@ button.day-col-head:hover { background: #e0f2fe; }
   flex-direction: column;
   z-index: 1;
 }
-.log-rail.clean-rail {
-  bottom: 0;
-  height: auto;
-}
 .log-rail[hidden] { display: none !important; }
 .log-rail-head {
   padding: 18px 22px 14px;
   border-bottom: 1px solid var(--line);
   background: #fff;
 }
-.clean-rail-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-.clean-fields {
-  padding: 12px 12px 24px;
-}
-.clean-fields .field { margin-bottom: 10px; }
-.clean-fields .field:last-child { margin-bottom: 0; }
 .log-rail-head h3 {
   margin: 0;
   font-size: 16px;
@@ -1751,6 +1736,11 @@ button.day-col-head:hover { background: #e0f2fe; }
   margin-bottom: 6px;
 }
 .split-head label { margin-bottom: 0; }
+.split-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 .split-clean { padding: 2px 8px; font-size: 11px; }
 .phone-split-row {
   display: grid;
@@ -1856,6 +1846,20 @@ p.hubspot-id-line {
 .field input:focus, .field select:focus, .field textarea:focus {
   outline: 2px solid #bae6fd;
   border-color: #38bdf8;
+}
+.field input.clean-match,
+.field select.clean-match,
+.field.is-hold input.clean-match,
+.field.is-hold select.clean-match {
+  background: #ecfdf5;
+  border-color: #6ee7b7;
+}
+.field input.clean-change,
+.field select.clean-change,
+.field.is-hold input.clean-change,
+.field.is-hold select.clean-change {
+  background: #fffbeb;
+  border-color: #fbbf24;
 }
 
 .field-primary input {

@@ -6,7 +6,7 @@ import { uniqueClientsFrom } from './seed.js';
 import { displayNameForEmail } from '../../shared/firebase-config.js';
 import { highlightOf } from '../../shared/job.js';
 import { acsLabel, emptyUnits, formatDay, formatTime24, jobStatus, jobTypeOf, NOTES1_MAX, parseAcs, shortTime, storedUnits } from './utils.js?v=3';
-import { TERRITORIES, codeFromTerritory, composeFullAddress, parseAddress, territoryLabel } from './address-parse.js?v=4';
+import { TERRITORIES, composeFullAddress, parseAddress } from './address-parse.js?v=4';
 import { composePhone, matchHubspotIdByPhone, parsePhone } from '../../shared/phone-parse.js';
 
 let form = {
@@ -41,58 +41,8 @@ let form = {
   stack_order: '',
 };
 
-let cleaner = {
-  raw: '',
-  line1: '',
-  street: '',
-  district: '',
-  code: '',
-  extra: '',
-  composed: '',
-};
-
-let phoneClean = {
-  raw: '',
-  country: '852',
-  national: '',
-  full: '',
-};
-
-let cleanerPanel = '';
-
-function resetCleaner(address) {
-  cleaner = {
-    raw: address || '',
-    line1: '',
-    street: '',
-    district: '',
-    code: '',
-    extra: '',
-    composed: '',
-  };
-}
-
-function resetPhoneCleaner(mobile) {
-  phoneClean = {
-    raw: mobile || '',
-    country: '852',
-    national: '',
-    full: '',
-  };
-}
-
-function refreshPhoneFull() {
-  phoneClean.full = composePhone(phoneClean.country, phoneClean.national);
-}
-
-function refreshComposed() {
-  cleaner.composed = composeFullAddress({
-    line1: cleaner.line1,
-    street: cleaner.street,
-    district: cleaner.district,
-    code: cleaner.code,
-  });
-}
+let phoneSnap = null;
+let addrSnap = null;
 
 function $(sel) {
   return document.querySelector(sel);
@@ -267,8 +217,8 @@ export function openBooking(prefill = {}) {
     form.address_extra = form.address_extra || parsed.extra || '';
     if (parsed.composed) form.address = parsed.composed;
   }
-  resetCleaner(form.address);
-  resetPhoneCleaner(form.mobile);
+  phoneSnap = null;
+  addrSnap = null;
   renderForm();
   const root = $('#bookingRoot');
   root.classList.add('open');
@@ -277,12 +227,13 @@ export function openBooking(prefill = {}) {
 }
 
 export function closeBooking() {
+  restorePhoneIfPending();
+  restoreAddrIfPending();
   const root = $('#bookingRoot');
-  root.classList.remove('open', 'log-open', 'clean-open');
+  root.classList.remove('open', 'log-open');
   root.setAttribute('aria-hidden', 'true');
   const logPanel = $('#changeLog');
   if (logPanel) logPanel.setAttribute('hidden', '');
-  cleanerPanel = '';
 }
 
 function others() {
@@ -308,7 +259,6 @@ function renderForm() {
   $('#bookingRoot').innerHTML = `
     <div class="drawer-bg" data-close="1"></div>
     ${editing ? changeRailHtml() : ''}
-    <aside class="log-rail clean-rail" id="cleanerRail" hidden></aside>
     <aside class="drawer" role="dialog" aria-label="${editing ? 'Edit booking' : 'New booking'}">
       <div class="drawer-head">
         <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start">
@@ -363,7 +313,10 @@ function renderForm() {
           <div class="field${fieldClass('mobile')}" id="phoneBlock">
             <div class="split-head">
               <label>Phone ${holdChip('mobile', 'phone')}</label>
-              <button type="button" class="ghost-btn split-clean" id="phoneCleanOpen">Clean</button>
+              <span class="split-actions">
+                <button type="button" class="ghost-btn split-clean" id="phoneCleanOpen">Clean</button>
+                <button type="button" class="primary-btn split-clean" id="phoneApplyBtn" hidden>Apply</button>
+              </span>
             </div>
             <input id="mobileInput" value="${escapeAttr(form.mobile)}" placeholder="+852…" aria-label="Full phone" />
             <div class="phone-split-row">
@@ -375,7 +328,10 @@ function renderForm() {
           <div class="field${fieldClass('address')}" id="addressBlock" style="margin-top:12px">
             <div class="split-head">
               <label>Address ${holdChip('address', 'address')}</label>
-              <button type="button" class="ghost-btn split-clean" id="addrCleanOpen">Clean</button>
+              <span class="split-actions">
+                <button type="button" class="ghost-btn split-clean" id="addrCleanOpen">Clean</button>
+                <button type="button" class="primary-btn split-clean" id="addrApplyBtn" hidden>Apply</button>
+              </span>
             </div>
             <input id="addressInput" value="${escapeAttr(form.address)}" placeholder="Full Address 1" aria-label="Full Address 1" />
             <div class="grid-2 addr-split">
@@ -467,17 +423,12 @@ function renderForm() {
     </aside>
   `;
   bindForm();
-  if (cleanerPanel) openCleaner(cleanerPanel);
-  const body = $('#bookingRoot')?.querySelector('.drawer-body');
-  if (body) body.addEventListener('scroll', alignCleanerRail, { passive: true });
+  paintPhoneCleanColors();
+  paintAddrCleanColors();
 }
 
 function bindForm() {
   const root = $('#bookingRoot');
-  if (!window.__beAlignCleaner) {
-    window.__beAlignCleaner = true;
-    window.addEventListener('resize', alignCleanerRail);
-  }
   root.querySelectorAll('[data-close]').forEach((el) => {
     el.addEventListener('click', closeBooking);
   });
@@ -489,7 +440,6 @@ function bindForm() {
       e.stopPropagation();
       const open = logPanel.hasAttribute('hidden');
       if (open) {
-        closeCleaner();
         logPanel.removeAttribute('hidden');
         root.classList.add('log-open');
       } else {
@@ -501,10 +451,11 @@ function bindForm() {
   }
   root.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
-    if (!cleanerPanel) return;
+    if (!phoneSnap && !addrSnap) return;
     e.preventDefault();
     e.stopPropagation();
-    closeCleaner();
+    restorePhoneIfPending();
+    restoreAddrIfPending();
   });
   $('#clientSearch').addEventListener('input', (e) => {
     form.client_name = e.target.value;
@@ -514,11 +465,19 @@ function bindForm() {
   bindFormAddress();
   $('#phoneCleanOpen')?.addEventListener('click', (e) => {
     e.preventDefault();
-    openCleaner('phone');
+    runPhoneClean();
+  });
+  $('#phoneApplyBtn')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    applyPhoneClean();
   });
   $('#addrCleanOpen')?.addEventListener('click', (e) => {
     e.preventDefault();
-    openCleaner('address');
+    runAddrClean();
+  });
+  $('#addrApplyBtn')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    applyAddrClean();
   });
   $('#dateInput').addEventListener('change', (e) => { form.date = e.target.value; renderForm(); });
   $('#timeInput').addEventListener('input', (e) => { form.time = e.target.value; });
@@ -608,7 +567,6 @@ function renderHits(q) {
       form.phone_cc = client.phone_cc || p.country || '';
       form.phone_national = client.phone_national || p.national || '';
       if (p.full) form.mobile = p.full;
-      phoneClean.raw = form.mobile || '';
       form.address = client.address;
       form.district = client.district;
       form.address_line1 = client.address_line1 || '';
@@ -696,215 +654,160 @@ function cancelJob() {
   window.dispatchEvent(new CustomEvent('be:changed'));
 }
 
-function closeLogPanel() {
-  const root = $('#bookingRoot');
-  const logPanel = $('#changeLog');
-  if (logPanel) logPanel.setAttribute('hidden', '');
-  $('#toggleLog')?.setAttribute('aria-expanded', 'false');
-  root?.classList.remove('log-open');
+function sameClean(a, b) {
+  return String(a || '') === String(b || '');
 }
 
-function closeCleaner() {
-  cleanerPanel = '';
-  const rail = $('#cleanerRail');
-  if (rail) {
-    rail.setAttribute('hidden', '');
-    rail.style.top = '';
-    rail.style.height = '';
+function setCleanClass(el, matched) {
+  if (!el) return;
+  el.classList.remove('clean-match', 'clean-change');
+  if (matched == null) return;
+  el.classList.add(matched ? 'clean-match' : 'clean-change');
+}
+
+function snapPhoneNow() {
+  return {
+    mobile: form.mobile || '',
+    phone_cc: form.phone_cc || '',
+    phone_national: form.phone_national || '',
+  };
+}
+
+function snapAddrNow() {
+  return {
+    address: form.address || '',
+    address_line1: form.address_line1 || '',
+    address_street: form.address_street || '',
+    address_place: form.address_place || '',
+    address_extra: form.address_extra || '',
+    district: form.district || '',
+  };
+}
+
+function writePhoneFields() {
+  const full = $('#mobileInput');
+  const cc = $('#formPhoneCc');
+  const nat = $('#formPhoneNational');
+  if (full) full.value = form.mobile || '';
+  if (cc) cc.value = form.phone_cc || '';
+  if (nat) nat.value = form.phone_national || '';
+}
+
+function writeAddrFields() {
+  const full = $('#addressInput');
+  const line1 = $('#formAddrLine1');
+  const street = $('#formAddrStreet');
+  const place = $('#formAddrPlace');
+  const terr = $('#districtInput');
+  if (full) full.value = form.address || '';
+  if (line1) line1.value = form.address_line1 || '';
+  if (street) street.value = form.address_street || '';
+  if (place) place.value = form.address_place || '';
+  if (terr) terr.value = form.district || '';
+}
+
+function paintPhoneCleanColors() {
+  const apply = $('#phoneApplyBtn');
+  if (!phoneSnap) {
+    setCleanClass($('#mobileInput'));
+    setCleanClass($('#formPhoneCc'));
+    setCleanClass($('#formPhoneNational'));
+    if (apply) apply.hidden = true;
+    return;
   }
-  $('#bookingRoot')?.classList.remove('clean-open');
+  if (apply) apply.hidden = false;
+  setCleanClass($('#mobileInput'), sameClean(form.mobile, phoneSnap.mobile));
+  setCleanClass($('#formPhoneCc'), sameClean(form.phone_cc, phoneSnap.phone_cc));
+  setCleanClass($('#formPhoneNational'), sameClean(form.phone_national, phoneSnap.phone_national));
 }
 
-function alignCleanerRail() {
-  const rail = $('#cleanerRail');
-  const root = $('#bookingRoot');
-  if (!rail || !root || rail.hasAttribute('hidden') || !cleanerPanel) return;
-  const block = cleanerPanel === 'phone' ? $('#phoneBlock') : $('#addressBlock');
-  if (!block) return;
-  const rootRect = root.getBoundingClientRect();
-  const blockRect = block.getBoundingClientRect();
-  const top = Math.max(0, Math.round(blockRect.top - rootRect.top));
-  rail.style.top = top + 'px';
-  rail.style.height = 'calc(100% - ' + top + 'px)';
+function paintAddrCleanColors() {
+  const apply = $('#addrApplyBtn');
+  if (!addrSnap) {
+    setCleanClass($('#addressInput'));
+    setCleanClass($('#formAddrLine1'));
+    setCleanClass($('#formAddrStreet'));
+    setCleanClass($('#formAddrPlace'));
+    setCleanClass($('#districtInput'));
+    if (apply) apply.hidden = true;
+    return;
+  }
+  if (apply) apply.hidden = false;
+  setCleanClass($('#addressInput'), sameClean(form.address, addrSnap.address));
+  setCleanClass($('#formAddrLine1'), sameClean(form.address_line1, addrSnap.address_line1));
+  setCleanClass($('#formAddrStreet'), sameClean(form.address_street, addrSnap.address_street));
+  setCleanClass($('#formAddrPlace'), sameClean(form.address_place, addrSnap.address_place));
+  setCleanClass($('#districtInput'), sameClean(form.district, addrSnap.district));
 }
 
-function phoneCleanerFieldsHtml() {
-  return `
-    <div class="clean-fields">
-      <div class="grid-2">
-        <div class="field">
-          <label>Country</label>
-          <input id="phoneCountry" value="${escapeAttr(phoneClean.country)}" placeholder="852" />
-        </div>
-        <div class="field">
-          <label>Number</label>
-          <input id="phoneNational" value="${escapeAttr(phoneClean.national)}" />
-        </div>
-      </div>
-      <div class="field">
-        <label>Full</label>
-        <input id="phoneFull" value="${escapeAttr(phoneClean.full)}" />
-      </div>
-      <div class="addr-clean-actions">
-        <button type="button" class="primary-btn" id="phoneApplyBtn">Apply</button>
-      </div>
-    </div>`;
+function restorePhoneIfPending() {
+  if (!phoneSnap) return;
+  form.mobile = phoneSnap.mobile;
+  form.phone_cc = phoneSnap.phone_cc;
+  form.phone_national = phoneSnap.phone_national;
+  phoneSnap = null;
+  writePhoneFields();
+  paintPhoneCleanColors();
 }
 
-function addressCleanerFieldsHtml() {
-  return `
-    <div class="clean-fields">
-      <div class="field">
-        <label>Line 1</label>
-        <input id="addrLine1" value="${escapeAttr(cleaner.line1)}" />
-      </div>
-      <div class="field">
-        <label>Street</label>
-        <input id="addrStreet" value="${escapeAttr(cleaner.street)}" />
-      </div>
-      <div class="field">
-        <label>District</label>
-        <input id="addrDistrict" value="${escapeAttr(cleaner.district)}" placeholder="Mid-Levels" />
-      </div>
-      <div class="field">
-        <label>Territory</label>
-        <select id="addrTerritory">
-          <option value="">Select</option>
-          ${TERRITORIES.map((t) => {
-            const val = `${t.label} (${t.code})`;
-            const selected = cleaner.code === t.code ? 'selected' : '';
-            return `<option value="${escapeAttr(val)}" ${selected}>${escapeAttr(val)}</option>`;
-          }).join('')}
-        </select>
-      </div>
-      <div class="field">
-        <label>Full</label>
-        <input id="addrComposed" value="${escapeAttr(cleaner.composed)}" />
-      </div>
-      <div class="addr-clean-actions">
-        <button type="button" class="primary-btn" id="addrApplyBtn">Apply</button>
-      </div>
-    </div>`;
+function restoreAddrIfPending() {
+  if (!addrSnap) return;
+  form.address = addrSnap.address;
+  form.address_line1 = addrSnap.address_line1;
+  form.address_street = addrSnap.address_street;
+  form.address_place = addrSnap.address_place;
+  form.address_extra = addrSnap.address_extra;
+  form.district = addrSnap.district;
+  addrSnap = null;
+  writeAddrFields();
+  paintAddrCleanColors();
 }
 
-function seedPhoneCleaner(rawOverride) {
+function applyPhoneClean() {
+  if (!phoneSnap) return;
+  phoneSnap = null;
+  paintPhoneCleanColors();
+}
+
+function applyAddrClean() {
+  if (!addrSnap) return;
+  addrSnap = null;
+  paintAddrCleanColors();
+}
+
+function runPhoneClean(rawOverride) {
+  if (phoneSnap && rawOverride == null) {
+    restorePhoneIfPending();
+    return;
+  }
+  if (!phoneSnap) phoneSnap = snapPhoneNow();
   const raw = rawOverride != null
     ? rawOverride
     : (form.mobile || composePhone(form.phone_cc, form.phone_national));
-  phoneClean.raw = raw;
   const parsed = parsePhone(raw);
-  phoneClean.country = parsed.country || form.phone_cc || '';
-  phoneClean.national = parsed.national || form.phone_national || '';
-  phoneClean.full = parsed.full || composePhone(phoneClean.country, phoneClean.national);
+  form.phone_cc = parsed.country || '';
+  form.phone_national = parsed.national || '';
+  form.mobile = parsed.full || composePhone(form.phone_cc, form.phone_national);
+  writePhoneFields();
+  paintPhoneCleanColors();
 }
 
-function seedAddressCleaner(rawOverride) {
+function runAddrClean(rawOverride) {
+  if (addrSnap && rawOverride == null) {
+    restoreAddrIfPending();
+    return;
+  }
+  if (!addrSnap) addrSnap = snapAddrNow();
   const raw = rawOverride != null ? rawOverride : (form.address || '');
-  cleaner.raw = raw;
   const parsed = parseAddress(raw);
-  cleaner.line1 = parsed.line1 || form.address_line1 || '';
-  cleaner.street = parsed.street || form.address_street || '';
-  cleaner.district = parsed.district || form.address_place || '';
-  cleaner.code = parsed.code || form.district || '';
-  cleaner.extra = parsed.extra || form.address_extra || '';
-  cleaner.composed = parsed.composed || form.address || '';
-}
-
-function openCleaner(kind, rawOverride) {
-  closeLogPanel();
-  if (kind === 'phone') seedPhoneCleaner(rawOverride);
-  else seedAddressCleaner(rawOverride);
-  cleanerPanel = kind;
-  const rail = $('#cleanerRail');
-  const root = $('#bookingRoot');
-  if (!rail || !root) return;
-  const title = kind === 'phone' ? 'Phone' : 'Address';
-  rail.innerHTML = `
-    <div class="log-rail-head clean-rail-head">
-      <h3>${title}</h3>
-      <button type="button" class="icon-btn" id="closeCleaner" aria-label="Close">✕</button>
-    </div>
-    <div class="log-rail-body">${kind === 'phone' ? phoneCleanerFieldsHtml() : addressCleanerFieldsHtml()}</div>`;
-  rail.removeAttribute('hidden');
-  root.classList.add('clean-open');
-  $('#closeCleaner')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    closeCleaner();
-  });
-  if (kind === 'phone') bindPhoneCleaner();
-  else bindAddressCleaner();
-  requestAnimationFrame(alignCleanerRail);
-}
-
-function bindAddressCleaner() {
-  if (!$('#addrApplyBtn')) return;
-  const syncComposed = () => {
-    refreshComposed();
-    const el = $('#addrComposed');
-    if (el) el.value = cleaner.composed;
-  };
-  $('#addrLine1')?.addEventListener('input', (e) => { cleaner.line1 = e.target.value; syncComposed(); });
-  $('#addrStreet')?.addEventListener('input', (e) => { cleaner.street = e.target.value; syncComposed(); });
-  $('#addrDistrict')?.addEventListener('input', (e) => { cleaner.district = e.target.value; syncComposed(); });
-  $('#addrTerritory')?.addEventListener('change', (e) => {
-    cleaner.code = codeFromTerritory(e.target.value);
-    syncComposed();
-  });
-  $('#addrComposed')?.addEventListener('input', (e) => { cleaner.composed = e.target.value; });
-  $('#addrApplyBtn')?.addEventListener('click', () => {
-    const line = collapseAddr(cleaner.composed || $('#addrComposed')?.value || '');
-    const code = cleaner.code || codeFromTerritory($('#addrTerritory')?.value || '');
-    if (!line) {
-      toast('Clean an address first');
-      return;
-    }
-    form.address = line;
-    if (code) form.district = code;
-    form.address_line1 = collapseAddr(cleaner.line1);
-    form.address_street = collapseAddr(cleaner.street);
-    form.address_place = collapseAddr(cleaner.district);
-    form.address_extra = collapseAddr(cleaner.extra);
-    const addr = $('#addressInput');
-    if (addr) addr.value = form.address;
-    const dist = $('#districtInput');
-    if (dist && code) dist.value = code;
-    toast('Address applied');
-    closeCleaner();
-    renderForm();
-  });
-}
-
-function bindPhoneCleaner() {
-  if (!$('#phoneApplyBtn')) return;
-  const paintFull = () => {
-    refreshPhoneFull();
-    const el = $('#phoneFull');
-    if (el) el.value = phoneClean.full;
-  };
-  $('#phoneCountry')?.addEventListener('input', (e) => {
-    phoneClean.country = e.target.value;
-    paintFull();
-  });
-  $('#phoneNational')?.addEventListener('input', (e) => {
-    phoneClean.national = e.target.value;
-    paintFull();
-  });
-  $('#phoneFull')?.addEventListener('input', (e) => { phoneClean.full = e.target.value; });
-  $('#phoneApplyBtn')?.addEventListener('click', () => {
-    const full = String($('#phoneFull')?.value || phoneClean.full || '').replace(/\s+/g, '');
-    const parsed = parsePhone(full || composePhone(phoneClean.country, phoneClean.national));
-    phoneClean.full = parsed.full || '';
-    phoneClean.country = parsed.country || '';
-    phoneClean.national = parsed.national || '';
-    form.mobile = parsed.full || '';
-    form.phone_cc = parsed.full ? parsed.country : '';
-    form.phone_national = parsed.full ? parsed.national : '';
-    const input = $('#mobileInput');
-    if (input) input.value = form.mobile;
-    toast(form.mobile ? 'Phone applied' : 'Phone cleared');
-    closeCleaner();
-    renderForm();
-  });
+  form.address_line1 = parsed.line1 || '';
+  form.address_street = parsed.street || '';
+  form.address_place = parsed.district || '';
+  form.district = parsed.code || '';
+  form.address_extra = parsed.extra || form.address_extra || '';
+  form.address = parsed.composed || '';
+  writeAddrFields();
+  paintAddrCleanColors();
 }
 
 function isMessyPhone(text) {
@@ -951,18 +854,20 @@ function bindFormPhone() {
     cc.addEventListener('input', (e) => {
       form.phone_cc = String(e.target.value || '').replace(/\D/g, '');
       syncFormPhone();
+      paintPhoneCleanColors();
     });
   }
   if (nat) {
     nat.addEventListener('input', (e) => {
       form.phone_national = String(e.target.value || '').replace(/\D/g, '');
       syncFormPhone();
+      paintPhoneCleanColors();
     });
     nat.addEventListener('paste', (e) => {
       const text = (e.clipboardData || window.clipboardData).getData('text');
       if (!isMessyPhone(text)) return;
       e.preventDefault();
-      openCleaner('phone', text);
+      runPhoneClean(text);
     });
   }
   if (full) {
@@ -974,6 +879,7 @@ function bindFormPhone() {
         form.phone_national = '';
         if (cc) cc.value = '';
         if (nat) nat.value = '';
+        paintPhoneCleanColors();
         return;
       }
       const p = parsePhone(v);
@@ -984,12 +890,13 @@ function bindFormPhone() {
         if (cc) cc.value = form.phone_cc;
         if (nat) nat.value = form.phone_national;
       }
+      paintPhoneCleanColors();
     });
     full.addEventListener('paste', (e) => {
       const text = (e.clipboardData || window.clipboardData).getData('text');
       if (!isMessyPhone(text)) return;
       e.preventDefault();
-      openCleaner('phone', text);
+      runPhoneClean(text);
     });
   }
 }
@@ -1001,29 +908,49 @@ function bindFormAddress() {
   const terr = $('#districtInput');
   const full = $('#addressInput');
   if (line1) {
-    line1.addEventListener('input', (e) => { form.address_line1 = e.target.value; syncFormAddress(); });
+    line1.addEventListener('input', (e) => {
+      form.address_line1 = e.target.value;
+      syncFormAddress();
+      paintAddrCleanColors();
+    });
     line1.addEventListener('paste', (e) => {
       const text = (e.clipboardData || window.clipboardData).getData('text');
       if (!isMessyAddress(text)) return;
       e.preventDefault();
-      openCleaner('address', text);
+      runAddrClean(text);
     });
   }
-  if (street) street.addEventListener('input', (e) => { form.address_street = e.target.value; syncFormAddress(); });
-  if (place) place.addEventListener('input', (e) => { form.address_place = e.target.value; syncFormAddress(); });
+  if (street) {
+    street.addEventListener('input', (e) => {
+      form.address_street = e.target.value;
+      syncFormAddress();
+      paintAddrCleanColors();
+    });
+  }
+  if (place) {
+    place.addEventListener('input', (e) => {
+      form.address_place = e.target.value;
+      syncFormAddress();
+      paintAddrCleanColors();
+    });
+  }
   if (terr) {
     terr.addEventListener('change', (e) => {
       form.district = e.target.value;
       syncFormAddress();
+      paintAddrCleanColors();
     });
   }
   if (full) {
-    full.addEventListener('input', (e) => { form.address = e.target.value; });
+    full.addEventListener('input', (e) => {
+      form.address = e.target.value;
+      paintAddrCleanColors();
+    });
     full.addEventListener('paste', (e) => {
       const text = (e.clipboardData || window.clipboardData).getData('text');
       if (!isMessyAddress(text)) return;
       e.preventDefault();
-      openCleaner('address', text);
+      runAddrClean(text);
     });
   }
 }

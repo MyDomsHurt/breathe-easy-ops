@@ -5,6 +5,7 @@ import { allJobs, getJob, placeJobInSlot, redo, removeJob, setTeamDayFull, setTe
 import { startScheduleAuth } from './auth.js';
 import { daySlotsOf, firstEmptySlotIndex, hasTimeConflict, jobsForTeamDay, layoutSlots, slotIndex } from './capacity.js?v=4';
 import { clientCardName, pulseRemaining, renderDayBoard, renderWeekBoard, weekDragSlotsHtml } from './board.js?v=11';
+import { applyJobDrop, armClickSuppress, beginDrag, capturedDragId, clearCapturedDrag, consumeClickSuppress, resolveDropId } from './board-drag.js?v=1';
 import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=22';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js?v=2';
 import { exportMasterRoster } from './export-roster.js?v=22';
@@ -317,8 +318,7 @@ function startLunchEdit(btn) {
 
 function bindBoardClicks() {
   $('boardMount').addEventListener('click', (e) => {
-    if (suppressClick) {
-      suppressClick = false;
+    if (consumeClickSuppress()) {
       e.preventDefault();
       e.stopPropagation();
       return;
@@ -425,8 +425,8 @@ function bindBoardClicks() {
 let dragJobId = '';
 let dragKind = '';
 let dragLunchFrom = null;
-let suppressClick = false;
 let dropHint = null;
+let clearCaptureTimer = 0;
 
 function hideWeekDropSlots() {
   document.querySelectorAll('#boardMount [data-week-drop-stack]').forEach((el) => el.remove());
@@ -516,7 +516,7 @@ function bindBoardDrag() {
   if (blank) {
     blank.addEventListener('dragstart', (e) => {
       dragKind = 'job';
-      dragJobId = 'new-appointment';
+      dragJobId = beginDrag('new-appointment');
       dragLunchFrom = null;
       blank.classList.add('is-dragging');
       e.dataTransfer.setData('text/plain', 'new-appointment');
@@ -524,11 +524,10 @@ function bindBoardDrag() {
       showWeekDropSlots();
     });
     blank.addEventListener('dragend', () => {
-      dragJobId = '';
-      dragKind = '';
-      dragLunchFrom = null;
+      armClickSuppress(300);
       blank.classList.remove('is-dragging');
       clearDropTargets();
+      scheduleClearCapture();
     });
   }
   mount.addEventListener('dragstart', (e) => {
@@ -536,7 +535,7 @@ function bindBoardDrag() {
     if (lunch) {
       const cell = lunch.closest('[data-date][data-team]');
       dragKind = 'lunch';
-      dragJobId = 'lunch';
+      dragJobId = beginDrag('lunch');
       dragLunchFrom = cell ? { date: cell.dataset.date, team: cell.dataset.team } : null;
       lunch.classList.add('is-dragging');
       e.dataTransfer.setData('text/plain', 'lunch');
@@ -550,7 +549,7 @@ function bindBoardDrag() {
       return;
     }
     dragKind = 'job';
-    dragJobId = chip.dataset.job;
+    dragJobId = beginDrag(chip.dataset.job);
     dragLunchFrom = null;
     chip.classList.add('is-dragging');
     e.dataTransfer.setData('text/plain', dragJobId);
@@ -558,10 +557,9 @@ function bindBoardDrag() {
     showWeekDropSlots();
   });
   mount.addEventListener('dragend', () => {
-    dragJobId = '';
-    dragKind = '';
-    dragLunchFrom = null;
+    armClickSuppress(300);
     clearDropTargets();
+    scheduleClearCapture();
   });
   mount.addEventListener('dragover', (e) => {
     const cell = e.target.closest('[data-date][data-team]');
@@ -587,24 +585,24 @@ function bindBoardDrag() {
   });
   mount.addEventListener('drop', (e) => {
     const cell = e.target.closest('[data-date][data-team]');
-    const id = e.dataTransfer.getData('text/plain') || dragJobId;
-    const kind = dragKind;
+    const id = resolveDropId(e.dataTransfer && e.dataTransfer.getData('text/plain'), capturedDragId() || dragJobId);
+    const kind = dragKind || (id === 'lunch' ? 'lunch' : 'job');
     const hint = dropHint;
+    armClickSuppress(300);
     clearDropTargets();
-    dragJobId = '';
-    dragKind = '';
     $('blankAppt')?.classList.remove('is-dragging');
-    if (!cell || !id) {
-      dragLunchFrom = null;
-      return;
-    }
     e.preventDefault();
     e.stopPropagation();
-    suppressClick = true;
+    if (!cell || !id) {
+      dragLunchFrom = null;
+      finishDropCapture();
+      return;
+    }
     const date = cell.dataset.date;
     const team = cell.dataset.team;
     if (!date || !team) {
       dragLunchFrom = null;
+      finishDropCapture();
       return;
     }
     if (kind === 'lunch' || id === 'lunch') {
@@ -619,31 +617,63 @@ function bindBoardDrag() {
         placeLunch(date, team, time, Number.isFinite(slot) ? slot : null);
       }
       dragLunchFrom = null;
+      finishDropCapture();
       return;
     }
     dragLunchFrom = null;
     const existing = id === 'new-appointment' ? null : getJob(id);
-    if (!canPlaceJobOnTeamDay(allJobs(), date, team, existing)) return;
+    if (!canPlaceJobOnTeamDay(allJobs(), date, team, existing)) {
+      finishDropCapture();
+      return;
+    }
     const slot = hint && Number.isFinite(hint.slot)
       ? hint.slot
       : firstEmptySlotIndex(allJobs(), date, team, id === 'new-appointment' ? null : id);
-    if (id === 'new-appointment') {
-      openBooking({ date, team_lead: team, time: '', stack_order: slot });
-      return;
+    const result = applyJobDrop(id, {
+      date,
+      team,
+      slot,
+      placeJobInSlot,
+      openBooking,
+      getJob,
+      toast(msg) { toast(msg); },
+    });
+    if (result === 'move') {
+      state.monday = mondayOf(date);
+      state.day = date;
+      state.focusJobId = id;
+      const moved = getJob(id);
+      if (moved && hasTimeConflict(moved, allJobs())) {
+        toast(`Moved — time conflict at ${shortTime(moved)}`);
+      } else if (moved) {
+        toast(`Moved to ${moved.team_lead} · ${formatDay(moved.date)}`);
+      } else {
+        toast('Moved');
+      }
     }
-    const job = existing;
-    if (!job) return;
-    state.monday = mondayOf(date);
-    state.day = date;
-    state.focusJobId = id;
-    const moved = placeJobInSlot(id, date, team, slot);
-    if (!moved) return;
-    if (hasTimeConflict(moved, allJobs())) {
-      toast(`Moved — time conflict at ${shortTime(moved)}`);
-    } else {
-      toast(`Moved to ${moved.team_lead} · ${formatDay(moved.date)}`);
-    }
+    finishDropCapture();
   });
+}
+
+function scheduleClearCapture() {
+  if (clearCaptureTimer) clearTimeout(clearCaptureTimer);
+  clearCaptureTimer = setTimeout(() => {
+    dragJobId = '';
+    dragKind = '';
+    dragLunchFrom = null;
+    clearCapturedDrag();
+    clearCaptureTimer = 0;
+  }, 400);
+}
+
+function finishDropCapture() {
+  if (clearCaptureTimer) {
+    clearTimeout(clearCaptureTimer);
+    clearCaptureTimer = 0;
+  }
+  dragJobId = '';
+  dragKind = '';
+  clearCapturedDrag();
 }
 
 function closeFilterMenus(except) {

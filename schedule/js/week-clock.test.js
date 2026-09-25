@@ -140,4 +140,24 @@ assert(htmlM.indexOf('compact-addr is-hold') !== -1, 'address hold');
 assert(htmlM.indexOf('compact-notes is-hold') !== -1, 'notes hold');
 print('ok field-mark is-hold');
 
+assert(html1.indexOf('Service') === -1, 'cleaning prints Service');
+assert(html1.indexOf('compact-type') === -1, 'cleaning type tag');
+assert(html1.indexOf('compact-pay is-unpaid') !== -1, 'default unpaid pill');
+const ret = [Object.assign(job('ret', '09:00'), { job_type: 'return' })];
+const htmlRet = rosterCellHtml(ret, ret, date, team, 'week', ret, date);
+assert(htmlRet.indexOf('compact-type is-return') !== -1, 'return type tag');
+assert(htmlRet.indexOf('>Return<') !== -1, 'Return label');
+const collab = [Object.assign(job('col', '09:00'), { job_type: 'influencer' })];
+const htmlCol = rosterCellHtml(collab, collab, date, team, 'week', collab, date);
+assert(htmlCol.indexOf('compact-type is-collab') !== -1, 'collab type tag');
+assert(htmlCol.indexOf('>Collab<') !== -1, 'Collab label');
+const paid = [Object.assign(job('p', '09:00'), { payment_status: 'PAID', receipt: 'r1' })];
+const htmlPaid = rosterCellHtml(paid, paid, date, team, 'week', paid, date);
+assert(htmlPaid.indexOf('compact-pay is-paid') !== -1, 'paid pill');
+const free = [Object.assign(job('f', '09:00'), { payment: 'free' })];
+const htmlFree = rosterCellHtml(free, free, date, team, 'week', free, date);
+assert(htmlFree.indexOf('compact-pay is-free') !== -1, 'free pill');
+assert(htmlFree.indexOf('>Free<') !== -1, 'Free label');
+print('ok type and pay tags');
+
 print('ok week-clock cases');

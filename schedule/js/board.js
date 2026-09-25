@@ -74,11 +74,11 @@ function liveAcsBadges(acs, extraCls) {
 
 function compactTypeMark(job) {
   const t = jobTypeOf(job);
-  if (t === 'return') return 'Return';
-  if (t === 'influencer') return 'Collab';
-  if (t === 'inspection') return 'Inspection';
-  if (t === 'other') return 'Other';
-  return 'Service';
+  if (t === 'return') return { label: 'Return', kind: 'return' };
+  if (t === 'influencer') return { label: 'Collab', kind: 'collab' };
+  if (t === 'inspection') return { label: 'Inspection', kind: 'inspection' };
+  if (t === 'other') return { label: 'Other', kind: 'other' };
+  return null;
 }
 
 function jobIsPaid(j) {
@@ -90,8 +90,9 @@ function jobIsPaid(j) {
 
 function compactPayMark(j) {
   const pay = String(j && j.payment || '').trim().toLowerCase();
-  if (pay === 'free') return 'Free';
-  return jobIsPaid(j) ? 'Paid' : 'Unpaid';
+  if (pay === 'free') return { label: 'Free', kind: 'free' };
+  if (jobIsPaid(j)) return { label: 'Paid', kind: 'paid' };
+  return { label: 'Unpaid', kind: 'unpaid' };
 }
 
 function weekAddressLine(job) {
@@ -112,7 +113,12 @@ function boardCardHtml(job, conflict, week) {
   const addr = week ? weekAddressLine(job) : String(job.address || '').trim();
   const notes1 = String(job.notes || '').trim();
   const notes2 = week ? '' : String(job.notes_long || '').trim();
-  const payWord = compactPayMark(job);
+  const typeMark = compactTypeMark(job);
+  const payMark = compactPayMark(job);
+  const typeBit = typeMark
+    ? `<span class="compact-type is-${typeMark.kind}">${esc(typeMark.label)}</span>`
+    : '';
+  const payBit = `<span class="compact-pay is-${payMark.kind}">${esc(payMark.label)}</span>`;
   const pulse = pulseRemaining(job) ? ' is-pulse' : '';
   const timeCls = [conflict ? 'time-conflict' : '', isHi(hi.time) ? 'is-hold' : ''].filter(Boolean).join(' ');
   const name = clientCardName(job.client_name);
@@ -130,8 +136,8 @@ function boardCardHtml(job, conflict, week) {
         ${notes2 ? `<p class="detailed-notes2">${esc(notes2)}</p>` : ''}
       </div>
       <div class="compact-col compact-col-meta">
-        <span class="compact-type">${compactTypeMark(job)}</span>
-        <span class="compact-pay${payWord === 'Unpaid' ? ' is-unpaid' : ''}">${payWord}</span>
+        ${typeBit}
+        ${payBit}
       </div>
     </div>
   </button>`;

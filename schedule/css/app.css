@@ -849,6 +849,35 @@ button.day-col-head:hover { background: #e0f2fe; }
 }
 
 .job-chips { display: flex; flex-direction: column; gap: 5px; }
+.week-cell .job-chips {
+  flex: 1 1 auto;
+  min-height: 48px;
+  gap: 4px;
+}
+.week-hole {
+  display: block;
+  flex: 0 0 auto;
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+.week-open-area {
+  display: block;
+  width: 100%;
+  min-height: 72px;
+  flex: 1 1 auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
 
 .job-chip {
   display: flex;

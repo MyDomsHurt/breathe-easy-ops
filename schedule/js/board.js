@@ -147,6 +147,56 @@ function emptySlotHtml(date, team, index, slim) {
   return `<button type="button" class="${cls}" data-book-date="${esc(date)}" data-book-team="${esc(team)}" data-empty-slot="1" data-slot="${index}" aria-label="Add booking"></button>`;
 }
 
+export const WEEK_HOLE_MINUTES = 120;
+
+export function weekClockJobs(jobs) {
+  return (jobs || []).slice().sort((a, b) => {
+    const ta = startMinutes(a);
+    const tb = startMinutes(b);
+    if (ta == null && tb == null) return String(a.job_id || '').localeCompare(String(b.job_id || ''));
+    if (ta == null) return -1;
+    if (tb == null) return 1;
+    if (ta !== tb) return ta - tb;
+    return String(a.job_id || '').localeCompare(String(b.job_id || ''));
+  });
+}
+
+function weekHoleHtml(date, team) {
+  return `<button type="button" class="week-hole" data-book-date="${esc(date)}" data-book-team="${esc(team)}" data-week-hole="1" aria-label="Open time"></button>`;
+}
+
+function weekOpenAreaHtml(date, team) {
+  return `<button type="button" class="week-open-area" data-book-date="${esc(date)}" data-book-team="${esc(team)}" data-week-open="1" aria-label="Add booking"></button>`;
+}
+
+function renderWeekStack(jobs, lunchTime, conflicts, date, team, full) {
+  const ordered = weekClockJobs(jobs);
+  const lunch = normalizeLunch(lunchTime);
+  const lunchMins = lunch ? startMinutes({ time: lunch }) : null;
+  const out = [];
+  let lunchPlaced = lunchMins == null;
+  let prevTimed = null;
+
+  function placeLunch() {
+    if (lunchPlaced || !lunch) return;
+    out.push(lunchCardHtml(lunch, date, team));
+    lunchPlaced = true;
+  }
+
+  for (const j of ordered) {
+    const m = startMinutes(j);
+    if (!lunchPlaced && lunchMins != null && m != null && lunchMins <= m) placeLunch();
+    if (!full && prevTimed != null && m != null && (m - prevTimed) >= WEEK_HOLE_MINUTES) {
+      out.push(weekHoleHtml(date, team));
+    }
+    out.push(boardCardHtml(j, conflicts.has(j.job_id), true));
+    if (m != null) prevTimed = m;
+  }
+  if (!lunchPlaced && lunch) placeLunch();
+  if (!ordered.length && !full) out.push(weekOpenAreaHtml(date, team));
+  return out.join('');
+}
+
 function renderSlotStack(slots, lunchTime, conflicts, mode, full, date, team, lunchSlot) {
   const time = normalizeLunch(lunchTime);
   const lunchMins = time ? startMinutes({ time }) : null;
@@ -179,16 +229,7 @@ function renderSlotStack(slots, lunchTime, conflicts, mode, full, date, team, lu
 }
 
 export function weekDragSlotsHtml(allJobs, date, team) {
-  const list = jobsForTeamDay(allJobs, date, team);
-  const note = findCrewNote(allJobs, date, team);
-  const full = !!(note && (note.day_full === true || note.day_full === 'true'));
-  if (full) return '';
-  const laid = layoutSlots(list, daySlotsOf(note));
-  const bits = [];
-  for (let i = 0; i < laid.length; i += 1) {
-    if (!laid[i]) bits.push(emptySlotHtml(date, team, i, true));
-  }
-  return bits.join('');
+  return '';
 }
 
 export function weekLockBit(empty, full, count) {
@@ -219,11 +260,13 @@ function cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs, today) {
   const laid = layoutSlots(shown, slots);
   const lunchSlotRaw = Number(note && note.lunch_slot);
   const lunchSlot = Number.isFinite(lunchSlotRaw) ? lunchSlotRaw : null;
-  const body = renderSlotStack(laid, lunch, conflicts, mode, full, date, team, lunchSlot);
+  const week = mode === 'week';
+  const body = week
+    ? renderWeekStack(shown, lunch, conflicts, date, team, full)
+    : renderSlotStack(laid, lunch, conflicts, mode, full, date, team, lunchSlot);
   const van = cellTeamMembers(lookup, date, team);
   const vanHi = isHi(note && note.highlight_members);
   const vanLabel = van || "Who's on";
-  const week = mode === 'week';
   const lockBit = weekLockBit(empty, full, list.length);
   const dow = parseISO(date).toLocaleDateString('en-HK', { weekday: 'short' });
   const dayNum = Number(date.slice(8));
@@ -237,7 +280,7 @@ function cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs, today) {
     ? `<button type="button" class="cell-van${van ? '' : ' is-empty'}${vanHi ? ' hi' : ''}" data-mark-van="${esc(date)}" data-mark-van-team="${esc(team)}" aria-pressed="${vanHi ? 'true' : 'false'}" title="Mark who's on">${esc(vanLabel)}</button>`
     : `<button type="button" class="cell-van${van ? '' : ' is-empty'}${vanHi ? ' hi' : ''}" data-edit-van="${esc(date)}" data-edit-van-team="${esc(team)}" data-van-value="${esc(van)}" title="${esc(van ? van : 'Set who is on the van')}">${esc(vanLabel)}</button>
       <button type="button" class="hold-chip${vanHi ? ' on' : ''}" data-mark-van="${esc(date)}" data-mark-van-team="${esc(team)}" aria-pressed="${vanHi ? 'true' : 'false'}" title="Mark who's on">Mark</button>`;
-  const lunchRow = (week && !lunch)
+  const lunchRow = week
     ? ''
     : `<div class="cell-lunch-row">
       <button type="button" class="cell-lunch${lunch ? '' : ' is-empty'}" data-edit-lunch="${esc(date)}" data-edit-lunch-team="${esc(team)}" data-lunch-value="${esc(lunch)}" title="Set lunch start">${lunch ? `Lunch ${esc(lunch)}` : 'Lunch'}</button>

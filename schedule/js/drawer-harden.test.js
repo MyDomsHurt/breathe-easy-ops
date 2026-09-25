@@ -106,9 +106,9 @@ bookingRoot.querySelectorAll = (sel) => document.querySelectorAll(sel);
 
 const ids = [
   'clientSearch', 'clientHits',
-  'mobileInput', 'formPhoneCc', 'formPhoneNational', 'phoneCleanOpen', 'phoneApplyBtn',
-  'addressInput', 'formAddrLine1', 'formAddrStreet', 'formAddrPlace', 'districtInput',
-  'addrCleanOpen', 'addrApplyBtn',
+  'mobileInput', 'formPhoneCc', 'formPhoneNational', 'phoneApplyBtn',
+  'addressInput', 'formAddrStreet', 'formAddrPlace', 'districtInput',
+  'addrApplyBtn',
   'dateInput', 'timeInput', 'teamInput', 'typeInput', 'payInput', 'amountInput',
   'notesInput', 'notesLongInput', 'invoiceInput',
   'saveTentative', 'saveBooking', 'deleteBooking',
@@ -275,14 +275,11 @@ need('name', byId.clientSearch);
 need('phone full', byId.mobileInput);
 need('phone cc', byId.formPhoneCc);
 need('phone national', byId.formPhoneNational);
-need('phone Clean', byId.phoneCleanOpen);
 need('phone Apply', byId.phoneApplyBtn);
 need('address full', byId.addressInput);
-need('address line1', byId.formAddrLine1);
 need('address street', byId.formAddrStreet);
 need('address place', byId.formAddrPlace);
 need('address territory', byId.districtInput);
-need('address Clean', byId.addrCleanOpen);
 need('address Apply', byId.addrApplyBtn);
 need('ACS tiles', unitBtns[0]);
 need('date', byId.dateInput);

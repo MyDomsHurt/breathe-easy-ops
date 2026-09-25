@@ -7,7 +7,7 @@ import { uniqueClientsFrom } from './seed.js';
 import { displayNameForEmail } from '../../shared/firebase-config.js';
 import { highlightOf } from '../../shared/job.js';
 import { acsLabel, emptyUnits, formatDay, formatTime24, jobStatus, jobTypeOf, NOTES1_MAX, parseAcs, shortTime, storedUnits } from './utils.js?v=3';
-import { TERRITORIES, composeFullAddress, hasStreetWord, parseAddress } from './address-parse.js?v=5';
+import { TERRITORIES, composeFullAddress, parseAddress } from './address-parse.js?v=5';
 import { composePhone, matchHubspotIdByPhone, parsePhone } from '../../shared/phone-parse.js';
 
 let form = {
@@ -292,8 +292,8 @@ export function openBooking(prefill = {}) {
     form.address_extra = form.address_extra || parsed.extra || '';
     if (parsed.composed) form.address = parsed.composed;
   }
-  phoneSnap = null;
-  addrSnap = null;
+  phoneSnap = snapPhoneNow();
+  addrSnap = snapAddrNow();
   renderForm();
   const root = $('#bookingRoot');
   root.classList.add('open');
@@ -380,9 +380,6 @@ export function renderForm() {
           <div class="field${fieldClass('mobile')}" id="phoneBlock">
             <div class="split-head">
               <label>Phone ${holdChip('mobile', 'phone')}</label>
-              <span class="split-actions">
-                <button type="button" class="ghost-btn split-clean" id="phoneCleanOpen">Clean</button>
-              </span>
             </div>
             <textarea id="mobileInput" class="full-phone" rows="1" placeholder="+852…" aria-label="Full phone">${escapeAttr(form.mobile)}</textarea>
             <p class="clean-was" id="wasMobile" hidden></p>
@@ -404,31 +401,23 @@ export function renderForm() {
           <div class="field${fieldClass('address')}" id="addressBlock" style="margin-top:12px">
             <div class="split-head">
               <label>Address ${holdChip('address', 'address')}</label>
-              <span class="split-actions">
-                <button type="button" class="ghost-btn split-clean" id="addrCleanOpen">Clean</button>
-              </span>
             </div>
             <textarea id="addressInput" class="full-address" rows="2" placeholder="Full Address 1" aria-label="Full Address 1">${escapeAttr(form.address)}</textarea>
             <p class="clean-was" id="wasAddress" hidden></p>
             <div class="field">
-              <label>Line 1</label>
-              <input id="formAddrLine1" value="${escapeAttr(form.address_line1)}" />
-              <p class="clean-was" id="wasAddrLine1" hidden></p>
-            </div>
-            <div class="field">
-              <label>Street</label>
-              <input id="formAddrStreet" value="${escapeAttr(form.address_street)}" />
+              <label>Billing Street</label>
+              <input id="formAddrStreet" value="${escapeAttr(billingStreetOf(form))}" />
               <p class="clean-was" id="wasAddrStreet" hidden></p>
             </div>
             <div class="rail-row">
               <div class="field">
-                <label>District</label>
+                <label>Billing City</label>
                 <input id="formAddrPlace" value="${escapeAttr(form.address_place)}" placeholder="Mid-Levels" />
                 <p class="clean-was" id="wasAddrPlace" hidden></p>
               </div>
               <div class="field">
-                <label>Territory</label>
-                <select id="districtInput" aria-label="Territory">
+                <label>Billing State</label>
+                <select id="districtInput" aria-label="Billing State">
                   <option value="">Select</option>
                   ${TERRITORIES.map((t) => `<option value="${t.code}" ${form.district === t.code ? 'selected' : ''}>${escapeAttr(t.label + ' (' + t.code + ')')}</option>`).join('')}
                 </select>
@@ -535,7 +524,7 @@ export function bindForm() {
   }
   root.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
-    if (!phoneSnap && !addrSnap) return;
+    if (!phoneDirty() && !addrDirty()) return;
     e.preventDefault();
     e.stopPropagation();
     restorePhoneIfPending();
@@ -547,17 +536,9 @@ export function bindForm() {
   });
   bindFormPhone();
   bindFormAddress();
-  $('#phoneCleanOpen')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    runPhoneClean();
-  });
   $('#phoneApplyBtn')?.addEventListener('click', (e) => {
     e.preventDefault();
     applyPhoneClean();
-  });
-  $('#addrCleanOpen')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    runAddrClean();
   });
   $('#addrApplyBtn')?.addEventListener('click', (e) => {
     e.preventDefault();
@@ -769,11 +750,29 @@ function sameClean(a, b) {
   return String(a || '') === String(b || '');
 }
 
-function setCleanClass(el, matched) {
+function setCleanClass(el, same) {
   if (!el) return;
   el.classList.remove('clean-match', 'clean-change');
-  if (matched == null) return;
-  el.classList.add(matched ? 'clean-match' : 'clean-change');
+  if (same === false) el.classList.add('clean-change');
+}
+
+function billingStreetOf(src) {
+  return [collapseAddr(src && src.address_line1), collapseAddr(src && src.address_street)].filter(Boolean).join(', ');
+}
+
+function phoneDirty() {
+  if (!phoneSnap) return false;
+  return !sameClean(form.mobile, phoneSnap.mobile)
+    || !sameClean(form.phone_cc, phoneSnap.phone_cc)
+    || !sameClean(form.phone_national, phoneSnap.phone_national);
+}
+
+function addrDirty() {
+  if (!addrSnap) return false;
+  return !sameClean(form.address, addrSnap.address)
+    || !sameClean(billingStreetOf(form), billingStreetOf(addrSnap))
+    || !sameClean(form.address_place, addrSnap.address_place)
+    || !sameClean(form.district, addrSnap.district);
 }
 
 function districtWasLabel(code) {
@@ -827,13 +826,11 @@ function writePhoneFields() {
 
 function writeAddrFields() {
   const full = $('#addressInput');
-  const line1 = $('#formAddrLine1');
   const street = $('#formAddrStreet');
   const place = $('#formAddrPlace');
   const terr = $('#districtInput');
   if (full) full.value = form.address || '';
-  if (line1) line1.value = form.address_line1 || '';
-  if (street) street.value = form.address_street || '';
+  if (street) street.value = billingStreetOf(form);
   if (place) place.value = form.address_place || '';
   if (terr) terr.value = form.district || '';
   sizeFullBox(full, 2, 4);
@@ -841,62 +838,33 @@ function writeAddrFields() {
 
 function paintPhoneCleanColors() {
   const apply = $('#phoneApplyBtn');
-  if (!phoneSnap) {
-    setCleanClass($('#mobileInput'));
-    setCleanClass($('#formPhoneCc'));
-    setCleanClass($('#formPhoneNational'));
-    paintWas('wasMobile', null);
-    paintWas('wasPhoneCc', null);
-    paintWas('wasPhoneNational', null);
-    if (apply) apply.hidden = true;
-    return;
-  }
-  if (apply) apply.hidden = false;
-  const matchFull = sameClean(form.mobile, phoneSnap.mobile);
-  const matchCc = sameClean(form.phone_cc, phoneSnap.phone_cc);
-  const matchNat = sameClean(form.phone_national, phoneSnap.phone_national);
+  const matchFull = phoneSnap ? sameClean(form.mobile, phoneSnap.mobile) : true;
+  const matchCc = phoneSnap ? sameClean(form.phone_cc, phoneSnap.phone_cc) : true;
+  const matchNat = phoneSnap ? sameClean(form.phone_national, phoneSnap.phone_national) : true;
   setCleanClass($('#mobileInput'), matchFull);
   setCleanClass($('#formPhoneCc'), matchCc);
   setCleanClass($('#formPhoneNational'), matchNat);
-  paintWas('wasMobile', matchFull, phoneSnap.mobile);
-  paintWas('wasPhoneCc', matchCc, phoneSnap.phone_cc);
-  paintWas('wasPhoneNational', matchNat, phoneSnap.phone_national);
+  paintWas('wasMobile', matchFull, phoneSnap && phoneSnap.mobile);
+  paintWas('wasPhoneCc', matchCc, phoneSnap && phoneSnap.phone_cc);
+  paintWas('wasPhoneNational', matchNat, phoneSnap && phoneSnap.phone_national);
+  if (apply) apply.hidden = matchFull && matchCc && matchNat;
 }
 
 function paintAddrCleanColors() {
   const apply = $('#addrApplyBtn');
-  if (!addrSnap) {
-    setCleanClass($('#addressInput'));
-    setCleanClass($('#formAddrLine1'));
-    setCleanClass($('#formAddrStreet'));
-    setCleanClass($('#formAddrPlace'));
-    setCleanClass($('#districtInput'));
-    paintWas('wasAddress', null);
-    paintWas('wasAddrLine1', null);
-    paintWas('wasAddrStreet', null);
-    paintWas('wasAddrPlace', null);
-    paintWas('wasAddrDistrict', null);
-    if (apply) apply.hidden = true;
-    return;
-  }
-  if (apply) apply.hidden = false;
-  const matchFull = sameClean(form.address, addrSnap.address);
-  const matchLine1 = sameClean(form.address_line1, addrSnap.address_line1);
-  const streetEmpty = !collapseAddr(form.address_street);
-  const unresolvedStreet = streetEmpty && hasStreetWord(addrSnap.address || form.address);
-  const matchStreet = sameClean(form.address_street, addrSnap.address_street) && !unresolvedStreet;
-  const matchPlace = sameClean(form.address_place, addrSnap.address_place);
-  const matchDist = sameClean(form.district, addrSnap.district);
+  const matchFull = addrSnap ? sameClean(form.address, addrSnap.address) : true;
+  const matchStreet = addrSnap ? sameClean(billingStreetOf(form), billingStreetOf(addrSnap)) : true;
+  const matchPlace = addrSnap ? sameClean(form.address_place, addrSnap.address_place) : true;
+  const matchDist = addrSnap ? sameClean(form.district, addrSnap.district) : true;
   setCleanClass($('#addressInput'), matchFull);
-  setCleanClass($('#formAddrLine1'), matchLine1);
   setCleanClass($('#formAddrStreet'), matchStreet);
   setCleanClass($('#formAddrPlace'), matchPlace);
   setCleanClass($('#districtInput'), matchDist);
-  paintWas('wasAddress', matchFull, addrSnap.address);
-  paintWas('wasAddrLine1', matchLine1, addrSnap.address_line1);
-  paintWas('wasAddrStreet', matchStreet, addrSnap.address_street);
-  paintWas('wasAddrPlace', matchPlace, addrSnap.address_place);
-  paintWas('wasAddrDistrict', matchDist, districtWasLabel(addrSnap.district));
+  paintWas('wasAddress', matchFull, addrSnap && addrSnap.address);
+  paintWas('wasAddrStreet', matchStreet, addrSnap && billingStreetOf(addrSnap));
+  paintWas('wasAddrPlace', matchPlace, addrSnap && addrSnap.address_place);
+  paintWas('wasAddrDistrict', matchDist, addrSnap && districtWasLabel(addrSnap.district));
+  if (apply) apply.hidden = matchFull && matchStreet && matchPlace && matchDist;
 }
 
 function restorePhoneIfPending() {
@@ -904,7 +872,6 @@ function restorePhoneIfPending() {
   form.mobile = phoneSnap.mobile;
   form.phone_cc = phoneSnap.phone_cc;
   form.phone_national = phoneSnap.phone_national;
-  phoneSnap = null;
   writePhoneFields();
   paintPhoneCleanColors();
 }
@@ -917,28 +884,21 @@ function restoreAddrIfPending() {
   form.address_place = addrSnap.address_place;
   form.address_extra = addrSnap.address_extra;
   form.district = addrSnap.district;
-  addrSnap = null;
   writeAddrFields();
   paintAddrCleanColors();
 }
 
 export function applyPhoneClean() {
-  if (!phoneSnap) return;
-  phoneSnap = null;
+  phoneSnap = snapPhoneNow();
   paintPhoneCleanColors();
 }
 
 export function applyAddrClean() {
-  if (!addrSnap) return;
-  addrSnap = null;
+  addrSnap = snapAddrNow();
   paintAddrCleanColors();
 }
 
 export function runPhoneClean(rawOverride) {
-  if (phoneSnap && rawOverride == null) {
-    restorePhoneIfPending();
-    return;
-  }
   if (!phoneSnap) phoneSnap = snapPhoneNow();
   const raw = rawOverride != null
     ? rawOverride
@@ -952,10 +912,6 @@ export function runPhoneClean(rawOverride) {
 }
 
 export function runAddrClean(rawOverride) {
-  if (addrSnap && rawOverride == null) {
-    restoreAddrIfPending();
-    return;
-  }
   if (!addrSnap) addrSnap = snapAddrNow();
   const raw = rawOverride != null ? rawOverride : (form.address || '');
   const parsed = parseAddress(raw);
@@ -1070,27 +1026,14 @@ function bindFormPhone() {
 }
 
 function bindFormAddress() {
-  const line1 = $('#formAddrLine1');
   const street = $('#formAddrStreet');
   const place = $('#formAddrPlace');
   const terr = $('#districtInput');
   const full = $('#addressInput');
-  if (line1) {
-    line1.addEventListener('input', (e) => {
-      form.address_line1 = e.target.value;
-      syncFormAddress();
-      paintAddrCleanColors();
-    });
-    line1.addEventListener('paste', (e) => {
-      const text = (e.clipboardData || window.clipboardData).getData('text');
-      if (!isMessyAddress(text)) return;
-      e.preventDefault();
-      runAddrClean(text);
-    });
-  }
   if (street) {
     street.addEventListener('input', (e) => {
       form.address_street = e.target.value;
+      form.address_line1 = '';
       syncFormAddress();
       paintAddrCleanColors();
     });

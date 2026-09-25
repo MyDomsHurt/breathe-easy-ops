@@ -204,15 +204,21 @@ function sizeFullBox(el, minRows, maxRows) {
   const min = minRows || 1;
   const max = maxRows || min;
   el.rows = min;
+  el.style.overflow = 'hidden';
   try {
     el.style.height = 'auto';
     const cs = window.getComputedStyle ? window.getComputedStyle(el) : null;
-    const lh = cs ? (parseFloat(cs.lineHeight) || 20) : 20;
+    let lh = cs ? parseFloat(cs.lineHeight) : NaN;
+    if (!Number.isFinite(lh) || lh <= 0) {
+      const fs = cs ? parseFloat(cs.fontSize) : 14;
+      lh = (Number.isFinite(fs) && fs > 0 ? fs : 14) * 1.35;
+    }
     const pad = cs ? ((parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0)) : 16;
-    const maxH = lh * max + pad;
-    const minH = lh * min + pad;
-    const next = Math.min(Math.max(el.scrollHeight || minH, minH), maxH);
-    el.style.height = next + 'px';
+    const border = cs ? ((parseFloat(cs.borderTopWidth) || 0) + (parseFloat(cs.borderBottomWidth) || 0)) : 0;
+    const minH = lh * min + pad + border;
+    const maxH = lh * max + pad + border;
+    const sh = el.scrollHeight || (lh * min + pad);
+    el.style.height = Math.min(Math.max(sh + border, minH), maxH) + 'px';
   } catch (err) {
     el.rows = min;
   }
@@ -376,56 +382,58 @@ export function renderForm() {
           </div>
         </section>
 
-        <section class="form-block form-block-quiet">
-          <div class="field${fieldClass('mobile')}" id="phoneBlock">
+        <section class="form-block" id="phoneBlock">
+          <div class="field${fieldClass('mobile')}">
             <div class="split-head">
               <label>Phone ${holdChip('mobile', 'phone')}</label>
             </div>
             <textarea id="mobileInput" class="full-phone" rows="1" placeholder="+852…" aria-label="Full phone">${escapeAttr(form.mobile)}</textarea>
             <p class="clean-was" id="wasMobile" hidden></p>
-            <div class="rail-row">
-              <div class="field rail-cc">
-                <label>Country</label>
-                <input id="formPhoneCc" class="phone-cc" value="${escapeAttr(form.phone_cc)}" placeholder="852" inputmode="numeric" aria-label="Country code" />
-                <p class="clean-was" id="wasPhoneCc" hidden></p>
-              </div>
-              <div class="field rail-num">
-                <label>Number</label>
-                <input id="formPhoneNational" class="phone-national" value="${escapeAttr(form.phone_national)}" placeholder="Number" inputmode="numeric" aria-label="National number" />
-                <p class="clean-was" id="wasPhoneNational" hidden></p>
-              </div>
-            </div>
-            <button type="button" class="primary-btn split-clean split-apply" id="phoneApplyBtn" hidden>Apply</button>
-            ${form.hubspot_id ? `<p class="split-full hubspot-id-line">HubSpot ${escapeAttr(form.hubspot_id)}</p>` : ''}
           </div>
-          <div class="field${fieldClass('address')}" id="addressBlock" style="margin-top:12px">
+          <div class="rail-row">
+            <div class="field rail-cc">
+              <label>Country</label>
+              <input id="formPhoneCc" class="phone-cc" value="${escapeAttr(form.phone_cc)}" placeholder="852" inputmode="numeric" aria-label="Country code" />
+              <p class="clean-was" id="wasPhoneCc" hidden></p>
+            </div>
+            <div class="field rail-num">
+              <label>Number</label>
+              <input id="formPhoneNational" class="phone-national" value="${escapeAttr(form.phone_national)}" placeholder="Number" inputmode="numeric" aria-label="National number" />
+              <p class="clean-was" id="wasPhoneNational" hidden></p>
+            </div>
+          </div>
+          <button type="button" class="primary-btn split-clean split-apply" id="phoneApplyBtn" hidden>Apply</button>
+        </section>
+
+        <section class="form-block" id="addressBlock">
+          <div class="field${fieldClass('address')}">
             <div class="split-head">
               <label>Address ${holdChip('address', 'address')}</label>
             </div>
             <textarea id="addressInput" class="full-address" rows="1" placeholder="Full Address 1" aria-label="Full Address 1">${escapeAttr(form.address)}</textarea>
             <p class="clean-was" id="wasAddress" hidden></p>
-            <div class="field">
-              <label>Billing Street</label>
-              <input id="formAddrStreet" value="${escapeAttr(billingStreetOf(form))}" />
-              <p class="clean-was" id="wasAddrStreet" hidden></p>
-            </div>
-            <div class="rail-row">
-              <div class="field">
-                <label>Billing City</label>
-                <input id="formAddrPlace" value="${escapeAttr(form.address_place)}" placeholder="Mid-Levels" />
-                <p class="clean-was" id="wasAddrPlace" hidden></p>
-              </div>
-              <div class="field">
-                <label>Billing State</label>
-                <select id="districtInput" aria-label="Billing State">
-                  <option value="">Select</option>
-                  ${TERRITORIES.map((t) => `<option value="${t.code}" ${form.district === t.code ? 'selected' : ''}>${escapeAttr(t.label + ' (' + t.code + ')')}</option>`).join('')}
-                </select>
-                <p class="clean-was" id="wasAddrDistrict" hidden></p>
-              </div>
-            </div>
-            <button type="button" class="primary-btn split-clean split-apply" id="addrApplyBtn" hidden>Apply</button>
           </div>
+          <div class="field">
+            <label>Billing Street</label>
+            <input id="formAddrStreet" value="${escapeAttr(billingStreetOf(form))}" />
+            <p class="clean-was" id="wasAddrStreet" hidden></p>
+          </div>
+          <div class="rail-row">
+            <div class="field">
+              <label>Billing City</label>
+              <input id="formAddrPlace" value="${escapeAttr(form.address_place)}" placeholder="Mid-Levels" />
+              <p class="clean-was" id="wasAddrPlace" hidden></p>
+            </div>
+            <div class="field">
+              <label>Billing State</label>
+              <select id="districtInput" aria-label="Billing State">
+                <option value="">Select</option>
+                ${TERRITORIES.map((t) => `<option value="${t.code}" ${form.district === t.code ? 'selected' : ''}>${escapeAttr(t.label + ' (' + t.code + ')')}</option>`).join('')}
+              </select>
+              <p class="clean-was" id="wasAddrDistrict" hidden></p>
+            </div>
+          </div>
+          <button type="button" class="primary-btn split-clean split-apply" id="addrApplyBtn" hidden>Apply</button>
         </section>
 
         <section class="form-block">
@@ -444,6 +452,9 @@ export function renderForm() {
             </div>
             <p class="acs-preview">${escapeAttr(acsLabel(form.units)) || '—'}</p>
           </div>
+        </section>
+
+        <section class="form-block">
           <div class="field${fieldClass('notes')}">
             <label>Notes 1 ${holdChip('notes', 'notes')} <span id="notes1Count" class="notes-count">${String(form.notes || '').length}/${NOTES1_MAX}</span></label>
             <textarea id="notesInput" rows="3" maxlength="${NOTES1_MAX}" placeholder="Shown on the board">${escapeAttr(form.notes)}</textarea>
@@ -452,9 +463,6 @@ export function renderForm() {
             <label>Notes 2 ${holdChip('notes_long', 'notes 2')}</label>
             <textarea id="notesLongInput" class="notes-long" rows="5" placeholder="Extra detail — drawer only">${escapeAttr(form.notes_long)}</textarea>
           </div>
-        </section>
-
-        <section class="form-block form-block-meta">
           <div class="grid-3">
             <div class="field${fieldClass('type')}">
               <label>Type ${holdChip('type', 'type')}</label>
@@ -473,14 +481,20 @@ export function renderForm() {
               <input id="amountInput" type="number" min="0" step="10" value="${form.amount === '' || form.amount == null ? '' : form.amount}" placeholder="HKD" />
             </div>
           </div>
-          <div class="field${fieldClass('invoice')}" style="margin-top:10px">
+          <div class="field${fieldClass('invoice')}">
             <label>Invoice ${holdChip('invoice', 'invoice')}</label>
             <input id="invoiceInput" value="${escapeAttr(form.invoice || '')}" placeholder="Inv" />
           </div>
         </section>
       </div>
       <div class="drawer-foot">
-        ${editing ? `<p class="foot-audit">Created by ${escapeAttr(displayNameForEmail(form.created_by))} · Last edit ${escapeAttr(displayNameForEmail(form.updated_by))}</p>` : ''}
+        ${(() => {
+          const bits = [];
+          if (editing) bits.push(`Created by ${escapeAttr(displayNameForEmail(form.created_by))}`);
+          if (editing) bits.push(`Last edit ${escapeAttr(displayNameForEmail(form.updated_by))}`);
+          if (form.hubspot_id) bits.push(`HubSpot ${escapeAttr(form.hubspot_id)}`);
+          return bits.length ? `<p class="foot-audit">${bits.join(' · ')}</p>` : '';
+        })()}
         <div class="foot-row">
           ${editing ? '<button class="ghost-btn danger-btn" id="deleteBooking" type="button">Cancel job</button>' : '<span class="foot-spacer"></span>'}
           <div class="foot-actions">

@@ -40,6 +40,16 @@ export function findCrewNote(jobs, date, team) {
   return found;
 }
 
+export function isTeamDayFull(jobs, date, team) {
+  const note = findCrewNote(jobs, date, team);
+  return !!(note && (note.day_full === true || note.day_full === 'true'));
+}
+
+export function canPlaceJobOnTeamDay(jobs, date, team, existing) {
+  if (existing && String(existing.date) === String(date) && String(existing.team_lead) === String(team)) return true;
+  return !isTeamDayFull(jobs, date, team);
+}
+
 /** Most common non-empty team_members among real jobs that team-day. */
 export function consensusTeamMembers(jobs, date, team) {
   const counts = new Map();
@@ -75,6 +85,8 @@ const api = {
   isCrewNote,
   realJobs,
   findCrewNote,
+  isTeamDayFull,
+  canPlaceJobOnTeamDay,
   consensusTeamMembers,
   cellTeamMembers,
 };

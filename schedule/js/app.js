@@ -1,11 +1,11 @@
 import { DISTRICTS, JOB_TYPES, TEAMS } from './config.js?v=3';
-import { findCrewNote, isCrewNote } from './team-day.js';
+import { canPlaceJobOnTeamDay, findCrewNote, isCrewNote, isTeamDayFull } from './team-day.js?v=1';
 import { addDays, formatDay, formatTime24, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, normalizeLunch, pad, parseISO, shortTime, weekDays, workWeekDays } from './utils.js';
 import { allJobs, getJob, placeJobInSlot, redo, removeJob, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js?v=2';
 import { startScheduleAuth } from './auth.js';
-import { daySlotsOf, firstEmptySlotIndex, hasTimeConflict, jobsForTeamDay, layoutSlots, slotIndex } from './capacity.js';
-import { clientCardName, pulseRemaining, renderDayBoard, renderWeekBoard } from './board.js?v=9';
-import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=18';
+import { daySlotsOf, firstEmptySlotIndex, hasTimeConflict, jobsForTeamDay, layoutSlots, slotIndex } from './capacity.js?v=4';
+import { clientCardName, pulseRemaining, renderDayBoard, renderWeekBoard } from './board.js?v=10';
+import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=19';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js?v=2';
 import { exportMasterRoster } from './export-roster.js?v=20';
 import { allContacts, initContactsStore, subscribeContacts } from './contacts-store.js?v=1';
@@ -357,6 +357,7 @@ function bindBoardClicks() {
       if (emptySlot.classList.contains('is-locked')) return;
       const date = emptySlot.dataset.bookDate;
       const team = emptySlot.dataset.bookTeam;
+      if (date && team && isTeamDayFull(allJobs(), date, team)) return;
       const slot = Number(emptySlot.dataset.slot);
       if (date && team) openBooking({ date, team_lead: team, stack_order: Number.isFinite(slot) ? slot : undefined });
       return;
@@ -389,11 +390,17 @@ function bindBoardClicks() {
       paint();
       return;
     }
+    if (e.target.closest('.cell-status') && !e.target.closest('[data-day-full]')) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
     const add = e.target.closest('[data-book-date][data-book-team]');
     const cell = e.target.closest('[data-date][data-team]');
     const date = add?.dataset.bookDate || cell?.dataset.date;
     const team = add?.dataset.bookTeam || cell?.dataset.team;
     if (!date || !team) return;
+    if (isTeamDayFull(allJobs(), date, team)) return;
     const slotRaw = add && add.dataset.slot;
     const slot = Number(slotRaw);
     openBooking({
@@ -582,6 +589,8 @@ function bindBoardDrag() {
       return;
     }
     dragLunchFrom = null;
+    const existing = id === 'new-appointment' ? null : getJob(id);
+    if (!canPlaceJobOnTeamDay(allJobs(), date, team, existing)) return;
     const slot = hint && Number.isFinite(hint.slot)
       ? hint.slot
       : firstEmptySlotIndex(allJobs(), date, team, id === 'new-appointment' ? null : id);
@@ -589,7 +598,7 @@ function bindBoardDrag() {
       openBooking({ date, team_lead: team, time: '', stack_order: slot });
       return;
     }
-    const job = getJob(id);
+    const job = existing;
     if (!job) return;
     state.monday = mondayOf(date);
     state.day = date;

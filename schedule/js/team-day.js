@@ -4,6 +4,8 @@ export {
   isCrewNote,
   realJobs,
   findCrewNote,
+  isTeamDayFull,
+  canPlaceJobOnTeamDay,
   consensusTeamMembers,
   cellTeamMembers,
-} from '../../shared/team-day.js';
+} from '../../shared/team-day.js?v=1';

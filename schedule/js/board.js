@@ -1,6 +1,6 @@
 import { DISTRICTS, TEAM_META } from './config.js?v=3';
 import { conflictingJobIds, daySlotsOf, districtsForTeamOnDay, firstEmptySlotIndex, jobsForTeamDay, layoutSlots, slotFloor } from './capacity.js';
-import { cellTeamMembers, findCrewNote } from './team-day.js';
+import { cellTeamMembers, findCrewNote } from './team-day.js?v=1';
 import { acsLabel, districtChipsHtml, esc, formatDay, isToday, isWeekend, jobStatus, jobTypeOf, normalizeLunch, parseAcs, parseISO, shortTime, startMinutes } from './utils.js';
 
 function teamColor(name) {
@@ -173,11 +173,18 @@ function renderSlotStack(slots, lunchTime, conflicts, mode, full, date, team, lu
   return out.join('');
 }
 
-function weekCellTitle(date, empty, full, count) {
+export function weekLockBit(empty, full, count) {
+  return full ? 'Full' : (empty ? 'Open' : String(count));
+}
+
+export function weekCellTitle(date, empty, full, count) {
   const dow = parseISO(date).toLocaleDateString('en-HK', { weekday: 'short' });
   const day = Number(date.slice(8));
-  const bit = full ? 'Full' : (empty ? 'Open' : String(count));
-  return `${dow} ${day} · ${bit}`;
+  return `${dow} ${day} · ${weekLockBit(empty, full, count)}`;
+}
+
+export function rosterCellHtml(allJobs, displayJobs, date, team, mode, lookupJobs) {
+  return cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs);
 }
 
 function cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs) {
@@ -198,30 +205,44 @@ function cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs) {
   const van = cellTeamMembers(lookup, date, team);
   const vanHi = isHi(note && note.highlight_members);
   const vanLabel = van || "Who's on";
-  const status = mode === 'week'
-    ? weekCellTitle(date, empty, full, list.length)
-    : (full ? 'Full' : (empty ? 'Open' : list.length + ' job' + (list.length === 1 ? '' : 's')));
+  const week = mode === 'week';
+  const lockBit = weekLockBit(empty, full, list.length);
+  const dow = parseISO(date).toLocaleDateString('en-HK', { weekday: 'short' });
+  const dayNum = Number(date.slice(8));
+  const status = week
+    ? `${esc(dow)} ${dayNum} · <button type="button" class="cell-lock" data-day-full="${esc(date)}" data-day-full-team="${esc(team)}" aria-pressed="${full ? 'true' : 'false'}">${esc(lockBit)}</button>`
+    : esc(full ? 'Full' : (empty ? 'Open' : list.length + ' job' + (list.length === 1 ? '' : 's')));
+  const addBtn = full
+    ? ''
+    : `<button class="cell-add" data-book-date="${date}" data-book-team="${team}" data-slot="${firstEmptySlotIndex(list, date, team, null, slots)}" type="button" aria-label="Add booking">+</button>`;
+  const vanBtn = week
+    ? `<button type="button" class="cell-van${van ? '' : ' is-empty'}${vanHi ? ' hi' : ''}" data-mark-van="${esc(date)}" data-mark-van-team="${esc(team)}" aria-pressed="${vanHi ? 'true' : 'false'}" title="Mark who's on">${esc(vanLabel)}</button>`
+    : `<button type="button" class="cell-van${van ? '' : ' is-empty'}${vanHi ? ' hi' : ''}" data-edit-van="${esc(date)}" data-edit-van-team="${esc(team)}" data-van-value="${esc(van)}" title="${esc(van ? van : 'Set who is on the van')}">${esc(vanLabel)}</button>
+      <button type="button" class="hold-chip${vanHi ? ' on' : ''}" data-mark-van="${esc(date)}" data-mark-van-team="${esc(team)}" aria-pressed="${vanHi ? 'true' : 'false'}" title="Mark who's on">Mark</button>`;
+  const lunchRow = (week && !lunch)
+    ? ''
+    : `<div class="cell-lunch-row">
+      <button type="button" class="cell-lunch${lunch ? '' : ' is-empty'}" data-edit-lunch="${esc(date)}" data-edit-lunch-team="${esc(team)}" data-lunch-value="${esc(lunch)}" title="Set lunch start">${lunch ? `Lunch ${esc(lunch)}` : 'Lunch'}</button>
+    </div>`;
   const floor = slotFloor(list, date, team);
-  return `<div class="roster-cell ${empty ? 'empty' : 'has-jobs'}${full ? ' is-full' : ''} ${mode === 'day' ? 'day-cell' : 'week-cell'}" data-date="${date}" data-team="${team}">
+  const dayTools = week ? '' : `<div class="cell-day-tools">
+      <button type="button" class="day-full-btn${full ? ' on' : ''}" data-day-full="${esc(date)}" data-day-full-team="${esc(team)}" aria-pressed="${full ? 'true' : 'false'}">Day full</button>
+      <button type="button" class="add-slot-btn" data-add-slot="${esc(date)}" data-add-slot-team="${esc(team)}" data-add-slot-count="${slots}" title="Add a slot">+ slot</button>
+      <button type="button" class="add-slot-btn" data-remove-slot="${esc(date)}" data-remove-slot-team="${esc(team)}" data-remove-slot-count="${slots}" data-remove-slot-floor="${floor}" title="Remove an empty slot"${slots <= floor ? ' disabled' : ''}>− slot</button>
+    </div>`;
+  return `<div class="roster-cell ${empty ? 'empty' : 'has-jobs'}${full ? ' is-full' : ''} ${week ? 'week-cell' : 'day-cell'}" data-date="${date}" data-team="${team}">
     <div class="cell-top">
       <div class="cell-head-left">
         <span class="cell-status">${status}</span>
-        <button class="cell-add" data-book-date="${date}" data-book-team="${team}" data-slot="${firstEmptySlotIndex(list, date, team, null, slots)}" type="button" aria-label="Add booking">+</button>
+        ${addBtn}
       </div>
       ${districtChipsHtml(districts)}
     </div>
     <div class="cell-van-row">
-      <button type="button" class="cell-van${van ? '' : ' is-empty'}${vanHi ? ' hi' : ''}" data-edit-van="${esc(date)}" data-edit-van-team="${esc(team)}" data-van-value="${esc(van)}" title="${esc(van ? van : 'Set who is on the van')}">${esc(vanLabel)}</button>
-      <button type="button" class="hold-chip${vanHi ? ' on' : ''}" data-mark-van="${esc(date)}" data-mark-van-team="${esc(team)}" aria-pressed="${vanHi ? 'true' : 'false'}" title="Mark who's on">Mark</button>
+      ${vanBtn}
     </div>
-    <div class="cell-lunch-row">
-      <button type="button" class="cell-lunch${lunch ? '' : ' is-empty'}" data-edit-lunch="${esc(date)}" data-edit-lunch-team="${esc(team)}" data-lunch-value="${esc(lunch)}" title="Set lunch start">${lunch ? `Lunch ${esc(lunch)}` : 'Lunch'}</button>
-    </div>
-    <div class="cell-day-tools">
-      <button type="button" class="day-full-btn${full ? ' on' : ''}" data-day-full="${esc(date)}" data-day-full-team="${esc(team)}" aria-pressed="${full ? 'true' : 'false'}">Day full</button>
-      <button type="button" class="add-slot-btn" data-add-slot="${esc(date)}" data-add-slot-team="${esc(team)}" data-add-slot-count="${slots}" title="Add a slot">+ slot</button>
-      <button type="button" class="add-slot-btn" data-remove-slot="${esc(date)}" data-remove-slot-team="${esc(team)}" data-remove-slot-count="${slots}" data-remove-slot-floor="${floor}" title="Remove an empty slot"${slots <= floor ? ' disabled' : ''}>− slot</button>
-    </div>
+    ${lunchRow}
+    ${dayTools}
     <div class="job-chips">${body}</div>
   </div>`;
 }

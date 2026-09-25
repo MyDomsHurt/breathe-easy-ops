@@ -22,6 +22,7 @@ eq('3S', 135);
 eq('1C', 50);
 eq('1B', 45);
 eq('4S', 180);
+eq('11B', 495);
 
 assert(jobOnSiteMinutes({ job_type: 'return' }) === 45, 'return');
 assert(jobOnSiteMinutes({ job_type: 'return', acs: '' }) === 45, 'return blank ACS');

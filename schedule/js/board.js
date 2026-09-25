@@ -115,7 +115,7 @@ function boardCardHtml(job, conflict, week) {
   const pulse = pulseRemaining(job) ? ' is-pulse' : '';
   const timeCls = conflict ? ' time-conflict' : '';
   const name = clientCardName(job.client_name);
-  const jobMin = week ? Math.max(44, Math.round(jobOnSiteMinutes(job) * 0.7)) : null;
+  const jobMin = week ? Math.min(168, Math.max(44, Math.round(jobOnSiteMinutes(job) * 0.7))) : null;
   const cardStyle = jobMin != null
     ? `border-left:4px solid ${left};--job-min:${jobMin}px`
     : `border-left:4px solid ${left}`;
@@ -165,7 +165,7 @@ export function weekClockJobs(jobs) {
 }
 
 function weekHoleHtml(date, team, leftover) {
-  const h = Math.max(28, Math.round(leftover * 0.7));
+  const h = Math.min(120, Math.max(28, Math.round(leftover * 0.7)));
   return `<button type="button" class="week-hole" style="--hole-min:${h}px" data-book-date="${esc(date)}" data-book-team="${esc(team)}" data-week-hole="1" aria-label="Open time"></button>`;
 }
 

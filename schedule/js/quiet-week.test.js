@@ -83,4 +83,17 @@ const cell21 = html.slice(html.lastIndexOf('<div class="roster-cell', i21), i21)
 assert(cell21.indexOf('today') === -1, '5 other cell has today: ' + cell21.slice(0, 80));
 print('ok 5 today class on head and today cells');
 
-print('ok 5 quiet-week cases');
+// 6. Week with no lunch has a header Lunch control; no lunch-card.
+assert(openHtml.indexOf('data-edit-lunch') !== -1, '6 missing lunch add');
+assert(openHtml.indexOf('>Lunch<') !== -1, '6 Lunch label');
+assert(openHtml.indexOf('lunch-card') === -1, '6 lunch-card without lunch');
+print('ok 6 week no-lunch has header Lunch');
+
+// 7. Week with lunch keeps the yellow card and has no second header Lunch.
+const withLunch = [job('a'), crew({ lunch: '13:00' })];
+const lunchHtml = rosterCellHtml(withLunch, withLunch, date, team, 'week', withLunch, date);
+assert(lunchHtml.indexOf('lunch-card') !== -1, '7 missing lunch-card');
+assert(lunchHtml.indexOf('cell-lunch is-empty') === -1, '7 second header Lunch');
+print('ok 7 week with lunch has card only');
+
+print('ok quiet-week cases');

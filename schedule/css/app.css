@@ -499,7 +499,7 @@ button.day-col-head:hover { background: #e0f2fe; }
 .day-col-head .dom { font-size: 18px; font-weight: 800; letter-spacing: -0.03em; }
 .day-col-head.today {
   background: #f0fdf4;
-  box-shadow: inset 0 0 0 2px #86efac;
+  box-shadow: inset 0 0 0 1px #bbf7d0;
 }
 .day-col-head.today .dom { color: #166534; }
 .day-col-head.weekend { background: #f8fafc; }
@@ -532,11 +532,6 @@ button.day-col-head:hover { background: #e0f2fe; }
 
 .roster-cell.empty { background: white; }
 .roster-cell.is-full { background: #f3eee6; }
-.roster-cell.today {
-  box-shadow: inset 0 0 0 2px #86efac;
-  background: #f0fdf4;
-}
-.roster-cell.today.is-full { background: #f3eee6; }
 .roster-cell:hover { outline: 2px solid #7dd3fc; outline-offset: -2px; z-index: 1; }
 .roster-cell.drop-ok {
   outline: 2px solid #0284c7;
@@ -710,6 +705,17 @@ button.day-col-head:hover { background: #e0f2fe; }
 }
 .cell-lunch.is-empty { font-weight: 500; opacity: 0.55; }
 .cell-lunch:hover { color: var(--brand-ink); }
+.week-cell .cell-head-left .cell-lunch {
+  display: inline;
+  width: auto;
+  margin: 0;
+  flex: 0 0 auto;
+}
+.week-cell .cell-head-left .cell-lunch-input {
+  width: 6.5ch;
+  margin: 0;
+  flex: 0 0 auto;
+}
 .cell-lunch-input {
   display: block;
   width: 100%;

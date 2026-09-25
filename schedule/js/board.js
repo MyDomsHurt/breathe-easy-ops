@@ -286,6 +286,9 @@ function cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs, today) {
     ? `<button type="button" class="cell-van${van ? '' : ' is-empty'}${vanHi ? ' hi' : ''}" data-mark-van="${esc(date)}" data-mark-van-team="${esc(team)}" aria-pressed="${vanHi ? 'true' : 'false'}" title="Mark who's on">${esc(vanLabel)}</button>`
     : `<button type="button" class="cell-van${van ? '' : ' is-empty'}${vanHi ? ' hi' : ''}" data-edit-van="${esc(date)}" data-edit-van-team="${esc(team)}" data-van-value="${esc(van)}" title="${esc(van ? van : 'Set who is on the van')}">${esc(vanLabel)}</button>
       <button type="button" class="hold-chip${vanHi ? ' on' : ''}" data-mark-van="${esc(date)}" data-mark-van-team="${esc(team)}" aria-pressed="${vanHi ? 'true' : 'false'}" title="Mark who's on">Mark</button>`;
+  const weekLunchAdd = (week && !lunch)
+    ? `<button type="button" class="cell-lunch is-empty" data-edit-lunch="${esc(date)}" data-edit-lunch-team="${esc(team)}" data-lunch-value="" title="Set lunch start">Lunch</button>`
+    : '';
   const lunchRow = week
     ? ''
     : `<div class="cell-lunch-row">
@@ -304,6 +307,7 @@ function cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs, today) {
       <div class="cell-head-left">
         <span class="cell-status">${status}</span>
         ${addBtn}
+        ${weekLunchAdd}
       </div>
       ${districtChipsHtml(districts)}
     </div>

@@ -1,7 +1,7 @@
 import { DISTRICTS, JOB_TYPES, PAYMENTS, TEAMS, TEAM_META, UNIT_TYPES } from './config.js?v=3';
 import { overlapWarning, stackOrderOnSave, suggestTeams, teamMembersOnDay } from './capacity.js';
 import { canPlaceJobOnTeamDay } from './team-day.js?v=1';
-import { addJob, allJobs, removeJob, updateJob } from './store.js';
+import { addJob, allJobs, isStoreReady, removeJob, updateJob } from './store.js?v=3';
 import { allContacts } from './contacts-store.js?v=1';
 import { uniqueClientsFrom } from './seed.js';
 import { displayNameForEmail } from '../../shared/firebase-config.js';
@@ -664,6 +664,9 @@ export function commitBooking(formState, status = 'confirmed', io = {}) {
     const addFn = io.addJob || addJob;
     const updateFn = io.updateJob || updateJob;
     const contactsFn = io.allContacts || allContacts;
+    if (!io.addJob && !io.updateJob && !isStoreReady()) {
+      return { error: 'Store not ready' };
+    }
     const jobs = listFn();
     const prev = formState.job_id ? jobs.find((j) => j.job_id === formState.job_id) : null;
     if (!canPlaceJobOnTeamDay(jobs, formState.date, formState.team_lead, prev)) {

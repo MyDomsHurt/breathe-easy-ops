@@ -71,6 +71,10 @@ export function usingFirestore() {
   return storeAdapterName() === 'firestore' || shouldUseFirestore();
 }
 
+export function isStoreReady() {
+  return !!(ops && typeof ops.upsertJob === 'function');
+}
+
 export function allJobs() {
   if (!ops) return [];
   return ops.listJobs();
@@ -274,7 +278,8 @@ function stampAudit(job, prev, action) {
   return next;
 }
 
-function writeJob(job, action) {
+export function writeJob(job, action) {
+  if (!ops || typeof ops.upsertJob !== 'function') return null;
   const id = job && job.job_id;
   const prev = id ? getJob(id) : null;
   const stamped = stampAudit({ ...job, deleted: false }, prev, action);
@@ -284,6 +289,7 @@ function writeJob(job, action) {
 }
 
 function writeJobRemote(job, action) {
+  if (!ops || typeof ops.upsertJob !== 'function') return Promise.resolve(null);
   const id = job && job.job_id;
   const prev = id ? getJob(id) : null;
   const stamped = stampAudit({ ...job, deleted: false }, prev, action);
@@ -308,7 +314,9 @@ function expandSlotsIfNeeded(date, team, stackOrder) {
 }
 
 export function addJob(input) {
+  if (!ops) return null;
   const job = writeJob(toCanonical(input), 'created');
+  if (!job) return null;
   pushHistory({ type: 'add', job: snapshot(job) });
   expandSlotsIfNeeded(job.date, job.team_lead, job.stack_order);
   emit();
@@ -644,6 +652,7 @@ export function updateJob(id, input) {
   if (kind === 'move') action = 'moved';
   else if (next.status === 'tentative') action = 'tentative';
   const job = writeJob(next, action);
+  if (!job) return null;
   pushHistory({
     type: 'update',
     kind: updateKind(prev, job),

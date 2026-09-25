@@ -1805,30 +1805,38 @@ button.day-col-head:hover { background: #e0f2fe; }
 }
 
 .log-rail-body[hidden] { display: none !important; }
-.clean-rail {
-  height: auto;
-  max-height: 100%;
-  width: 300px;
-  min-width: 260px;
-}
-.clean-rail .log-rail-body {
-  flex: 0 0 auto;
-  padding: 12px 14px;
-}
-.clean-rail .field { margin-bottom: 8px; }
-.clean-rail .field:last-of-type { margin-bottom: 8px; }
-.clean-rail .primary-btn { margin-top: 0; }
 .rail-row {
   display: flex;
   gap: 8px;
   align-items: flex-start;
-  margin-bottom: 8px;
+  margin-top: 8px;
 }
 .rail-row .field { margin-bottom: 0; flex: 1; min-width: 0; }
 .rail-row .rail-cc { flex: 0 0 auto; }
-.clean-rail .phone-cc {
+.phone-cc {
   width: 5.5ch;
   max-width: 5.5ch;
+}
+.split-apply { margin-top: 8px; }
+.field textarea.full-phone,
+.field textarea.full-address {
+  height: auto;
+  resize: none;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  white-space: pre-wrap;
+  overflow-x: hidden;
+  overflow-y: auto;
+  line-height: 1.35;
+  text-overflow: clip;
+}
+.field textarea.full-phone {
+  min-height: 36px;
+  max-height: calc(1.35em * 2 + 16px);
+}
+.field textarea.full-address {
+  min-height: calc(1.35em * 2 + 16px);
+  max-height: calc(1.35em * 4 + 16px);
 }
 
 @media (max-width: 900px) {

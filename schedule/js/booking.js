@@ -402,7 +402,7 @@ export function renderForm() {
             <div class="split-head">
               <label>Address ${holdChip('address', 'address')}</label>
             </div>
-            <textarea id="addressInput" class="full-address" rows="2" placeholder="Full Address 1" aria-label="Full Address 1">${escapeAttr(form.address)}</textarea>
+            <textarea id="addressInput" class="full-address" rows="1" placeholder="Full Address 1" aria-label="Full Address 1">${escapeAttr(form.address)}</textarea>
             <p class="clean-was" id="wasAddress" hidden></p>
             <div class="field">
               <label>Billing Street</label>
@@ -495,7 +495,7 @@ export function renderForm() {
   paintPhoneCleanColors();
   paintAddrCleanColors();
   sizeFullBox($('#mobileInput'), 1, 2);
-  sizeFullBox($('#addressInput'), 2, 4);
+  sizeFullBox($('#addressInput'), 1, 4);
   restoreDrawerScroll(scrollY);
 }
 
@@ -833,7 +833,7 @@ function writeAddrFields() {
   if (street) street.value = billingStreetOf(form);
   if (place) place.value = form.address_place || '';
   if (terr) terr.value = form.district || '';
-  sizeFullBox(full, 2, 4);
+  sizeFullBox(full, 1, 4);
 }
 
 function paintPhoneCleanColors() {
@@ -960,7 +960,7 @@ function syncFormAddress() {
   form.address = composed;
   const el = $('#addressInput');
   if (el) el.value = composed;
-  sizeFullBox(el, 2, 4);
+  sizeFullBox(el, 1, 4);
 }
 
 function bindFormPhone() {
@@ -1055,7 +1055,7 @@ function bindFormAddress() {
   if (full) {
     full.addEventListener('input', (e) => {
       form.address = e.target.value;
-      sizeFullBox(full, 2, 4);
+      sizeFullBox(full, 1, 4);
       paintAddrCleanColors();
     });
     full.addEventListener('paste', (e) => {

@@ -1812,7 +1812,6 @@ button.day-col-head:hover { background: #e0f2fe; }
   margin-top: 8px;
 }
 .rail-row .field { margin-bottom: 0; flex: 1; min-width: 0; }
-.rail-row .rail-cc { flex: 0 0 auto; }
 .phone-cc {
   width: 5.5ch;
   max-width: 5.5ch;
@@ -1829,14 +1828,53 @@ button.day-col-head:hover { background: #e0f2fe; }
   overflow-y: auto;
   line-height: 1.35;
   text-overflow: clip;
+  min-height: 36px;
 }
 .field textarea.full-phone {
-  min-height: 36px;
   max-height: calc(1.35em * 2 + 16px);
 }
 .field textarea.full-address {
-  min-height: calc(1.35em * 2 + 16px);
   max-height: calc(1.35em * 4 + 16px);
+}
+#phoneBlock,
+#addressBlock {
+  padding: 0;
+}
+#phoneBlock label,
+#addressBlock label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: #64748b;
+  margin: 0 0 6px;
+  padding: 0;
+}
+#phoneBlock .split-head,
+#addressBlock .split-head {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  margin: 0 0 6px;
+  padding: 0;
+}
+#phoneBlock .split-head label,
+#addressBlock .split-head label {
+  margin: 0;
+}
+#phoneBlock > .field,
+#addressBlock > .field {
+  margin: 8px 0 0;
+  padding: 0;
+}
+#phoneBlock .rail-row .field,
+#addressBlock .rail-row .field {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
 }
 
 @media (max-width: 900px) {

@@ -45,6 +45,7 @@ let form = {
 let phoneSnap = null;
 let addrSnap = null;
 let lastTeamLead = '';
+let cleanRailKind = '';
 
 export function storedClientName(name) {
   return String(name == null ? '' : name).trim();
@@ -199,6 +200,109 @@ function changeRailHtml() {
     </aside>`;
 }
 
+function cleanRailHtml() {
+  return `
+    <aside class="log-rail clean-rail" id="cleanRail" hidden>
+      <div class="log-rail-head">
+        <h3 id="cleanRailTitle">Phone</h3>
+        <button type="button" class="icon-btn" id="cleanRailClose" aria-label="Close">✕</button>
+      </div>
+      <div class="log-rail-body" id="cleanRailPhone">
+        <div class="field">
+          <label>Country</label>
+          <input id="formPhoneCc" class="phone-cc" value="${escapeAttr(form.phone_cc)}" placeholder="852" inputmode="numeric" aria-label="Country code" />
+          <p class="clean-was" id="wasPhoneCc" hidden></p>
+        </div>
+        <div class="field">
+          <label>Number</label>
+          <input id="formPhoneNational" class="phone-national" value="${escapeAttr(form.phone_national)}" placeholder="Number" inputmode="numeric" aria-label="National number" />
+          <p class="clean-was" id="wasPhoneNational" hidden></p>
+        </div>
+        <div class="field">
+          <label>Full</label>
+          <input id="railMobileInput" value="${escapeAttr(form.mobile)}" placeholder="+852…" aria-label="Full phone" />
+          <p class="clean-was" id="wasRailMobile" hidden></p>
+        </div>
+        <button type="button" class="primary-btn split-clean" id="phoneApplyBtn" hidden>Apply</button>
+      </div>
+      <div class="log-rail-body" id="cleanRailAddr" hidden>
+        <div class="field">
+          <label>Line 1</label>
+          <input id="formAddrLine1" value="${escapeAttr(form.address_line1)}" />
+          <p class="clean-was" id="wasAddrLine1" hidden></p>
+        </div>
+        <div class="field">
+          <label>Street</label>
+          <input id="formAddrStreet" value="${escapeAttr(form.address_street)}" />
+          <p class="clean-was" id="wasAddrStreet" hidden></p>
+        </div>
+        <div class="field">
+          <label>District</label>
+          <input id="formAddrPlace" value="${escapeAttr(form.address_place)}" placeholder="Mid-Levels" />
+          <p class="clean-was" id="wasAddrPlace" hidden></p>
+        </div>
+        <div class="field">
+          <label>Territory</label>
+          <select id="districtInput" aria-label="Territory">
+            <option value="">Select</option>
+            ${TERRITORIES.map((t) => `<option value="${t.code}" ${form.district === t.code ? 'selected' : ''}>${escapeAttr(t.label + ' (' + t.code + ')')}</option>`).join('')}
+          </select>
+          <p class="clean-was" id="wasAddrDistrict" hidden></p>
+        </div>
+        <div class="field">
+          <label>Full</label>
+          <input id="railAddressInput" value="${escapeAttr(form.address)}" placeholder="Full Address 1" aria-label="Full Address 1" />
+          <p class="clean-was" id="wasRailAddress" hidden></p>
+        </div>
+        <button type="button" class="primary-btn split-clean" id="addrApplyBtn" hidden>Apply</button>
+      </div>
+    </aside>`;
+}
+
+function closeLogRail() {
+  const root = $('#bookingRoot');
+  const logPanel = $('#changeLog');
+  const logBtn = $('#toggleLog');
+  if (logPanel) logPanel.setAttribute('hidden', '');
+  if (logBtn) logBtn.setAttribute('aria-expanded', 'false');
+  if (root) root.classList.remove('log-open');
+}
+
+function showCleanRail(kind) {
+  const root = $('#bookingRoot');
+  const rail = $('#cleanRail');
+  const phone = $('#cleanRailPhone');
+  const addr = $('#cleanRailAddr');
+  const title = $('#cleanRailTitle');
+  if (!kind) {
+    cleanRailKind = '';
+    if (rail) rail.setAttribute('hidden', '');
+    if (root) root.classList.remove('clean-open');
+    return;
+  }
+  closeLogRail();
+  cleanRailKind = kind;
+  if (rail) rail.removeAttribute('hidden');
+  if (phone) phone.hidden = kind !== 'phone';
+  if (addr) addr.hidden = kind !== 'address';
+  if (title) title.textContent = kind === 'phone' ? 'Phone' : 'Address';
+  if (root) root.classList.add('clean-open');
+}
+
+function openCleanRail(kind) {
+  if (kind !== 'phone') restorePhoneIfPending();
+  if (kind !== 'address') restoreAddrIfPending();
+  showCleanRail(kind);
+}
+
+function closeCleanRail(restore) {
+  if (restore) {
+    restorePhoneIfPending();
+    restoreAddrIfPending();
+  }
+  showCleanRail('');
+}
+
 function logButtonHtml() {
   return `
     <button type="button" class="icon-btn log-btn" id="toggleLog" aria-expanded="false" title="History" aria-label="History">
@@ -285,11 +389,14 @@ export function openBooking(prefill = {}) {
 export function closeBooking() {
   restorePhoneIfPending();
   restoreAddrIfPending();
+  cleanRailKind = '';
   const root = $('#bookingRoot');
-  root.classList.remove('open', 'log-open');
+  root.classList.remove('open', 'log-open', 'clean-open');
   root.setAttribute('aria-hidden', 'true');
   const logPanel = $('#changeLog');
   if (logPanel) logPanel.setAttribute('hidden', '');
+  const cleanRail = $('#cleanRail');
+  if (cleanRail) cleanRail.setAttribute('hidden', '');
 }
 
 function others() {
@@ -316,6 +423,7 @@ export function renderForm() {
   $('#bookingRoot').innerHTML = `
     <div class="drawer-bg" data-close="1"></div>
     ${editing ? changeRailHtml() : ''}
+    ${cleanRailHtml()}
     <aside class="drawer" role="dialog" aria-label="${editing ? 'Edit booking' : 'New booking'}">
       <div class="drawer-head">
         <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start">
@@ -361,7 +469,6 @@ export function renderForm() {
             <div class="field${fieldClass('time')}">
               <label>Time ${holdChip('time', 'time')}</label>
               <input id="timeInput" value="${escapeAttr(form.time)}" placeholder="13:00" autocomplete="off" />
-              <p class="field-hint">24-hour · HH:MM (13:00). 9am and 1pm convert on save.</p>
             </div>
           </div>
         </section>
@@ -372,21 +479,10 @@ export function renderForm() {
               <label>Phone ${holdChip('mobile', 'phone')}</label>
               <span class="split-actions">
                 <button type="button" class="ghost-btn split-clean" id="phoneCleanOpen">Clean</button>
-                <button type="button" class="primary-btn split-clean" id="phoneApplyBtn" hidden>Apply</button>
               </span>
             </div>
             <input id="mobileInput" value="${escapeAttr(form.mobile)}" placeholder="+852…" aria-label="Full phone" />
             <p class="clean-was" id="wasMobile" hidden></p>
-            <div class="phone-split-row">
-              <div>
-                <input id="formPhoneCc" class="phone-cc" value="${escapeAttr(form.phone_cc)}" placeholder="852" inputmode="numeric" aria-label="Country code" />
-                <p class="clean-was" id="wasPhoneCc" hidden></p>
-              </div>
-              <div>
-                <input id="formPhoneNational" class="phone-national" value="${escapeAttr(form.phone_national)}" placeholder="Number" inputmode="numeric" aria-label="National number" />
-                <p class="clean-was" id="wasPhoneNational" hidden></p>
-              </div>
-            </div>
             ${form.hubspot_id ? `<p class="split-full hubspot-id-line">HubSpot ${escapeAttr(form.hubspot_id)}</p>` : ''}
           </div>
           <div class="field${fieldClass('address')}" id="addressBlock" style="margin-top:12px">
@@ -394,36 +490,10 @@ export function renderForm() {
               <label>Address ${holdChip('address', 'address')}</label>
               <span class="split-actions">
                 <button type="button" class="ghost-btn split-clean" id="addrCleanOpen">Clean</button>
-                <button type="button" class="primary-btn split-clean" id="addrApplyBtn" hidden>Apply</button>
               </span>
             </div>
             <input id="addressInput" value="${escapeAttr(form.address)}" placeholder="Full Address 1" aria-label="Full Address 1" />
             <p class="clean-was" id="wasAddress" hidden></p>
-            <div class="grid-2 addr-split">
-              <div class="field">
-                <label>Line 1</label>
-                <input id="formAddrLine1" value="${escapeAttr(form.address_line1)}" />
-                <p class="clean-was" id="wasAddrLine1" hidden></p>
-              </div>
-              <div class="field">
-                <label>Street</label>
-                <input id="formAddrStreet" value="${escapeAttr(form.address_street)}" />
-                <p class="clean-was" id="wasAddrStreet" hidden></p>
-              </div>
-              <div class="field">
-                <label>District</label>
-                <input id="formAddrPlace" value="${escapeAttr(form.address_place)}" placeholder="Mid-Levels" />
-                <p class="clean-was" id="wasAddrPlace" hidden></p>
-              </div>
-              <div class="field">
-                <label>Territory</label>
-                <select id="districtInput" aria-label="Territory">
-                  <option value="">Select</option>
-                  ${TERRITORIES.map((t) => `<option value="${t.code}" ${form.district === t.code ? 'selected' : ''}>${escapeAttr(t.label + ' (' + t.code + ')')}</option>`).join('')}
-                </select>
-                <p class="clean-was" id="wasAddrDistrict" hidden></p>
-              </div>
-            </div>
           </div>
         </section>
 
@@ -432,9 +502,8 @@ export function renderForm() {
             <label>ACs ${holdChip('acs', 'ACs')}</label>
             <div class="unit-strip">
               ${UNIT_TYPES.map((u) => `
-                <div class="unit ${(form.units[u.id] || 0) ? 'on' : ''}">
+                <div class="unit ${(form.units[u.id] || 0) ? 'on' : ''}" title="${escapeAttr(u.label || u.id)}">
                   <span class="unit-code">${u.code || u.id}</span>
-                  ${u.label ? `<span class="unit-name">${u.label}</span>` : ''}
                   <b>${form.units[u.id] || 0}</b>
                   <div class="unit-ctrl">
                     <button type="button" data-unit="${u.id}" data-delta="-1" aria-label="Fewer ${u.code || u.id}">−</button>
@@ -494,6 +563,7 @@ export function renderForm() {
   bindForm();
   paintPhoneCleanColors();
   paintAddrCleanColors();
+  if (cleanRailKind) showCleanRail(cleanRailKind);
   restoreDrawerScroll(scrollY);
 }
 
@@ -511,6 +581,7 @@ export function bindForm() {
       e.stopPropagation();
       const open = logPanel.hasAttribute('hidden');
       if (open) {
+        closeCleanRail(true);
         logPanel.removeAttribute('hidden');
         root.classList.add('log-open');
       } else {
@@ -520,13 +591,16 @@ export function bindForm() {
       logBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
     });
   }
+  $('#cleanRailClose')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    closeCleanRail(true);
+  });
   root.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
-    if (!phoneSnap && !addrSnap) return;
+    if (!phoneSnap && !addrSnap && !cleanRailKind) return;
     e.preventDefault();
     e.stopPropagation();
-    restorePhoneIfPending();
-    restoreAddrIfPending();
+    closeCleanRail(true);
   });
   $('#clientSearch')?.addEventListener('input', (e) => {
     form.client_name = e.target.value;
@@ -536,6 +610,7 @@ export function bindForm() {
   bindFormAddress();
   $('#phoneCleanOpen')?.addEventListener('click', (e) => {
     e.preventDefault();
+    openCleanRail('phone');
     runPhoneClean();
   });
   $('#phoneApplyBtn')?.addEventListener('click', (e) => {
@@ -544,12 +619,15 @@ export function bindForm() {
   });
   $('#addrCleanOpen')?.addEventListener('click', (e) => {
     e.preventDefault();
+    openCleanRail('address');
     runAddrClean();
   });
   $('#addrApplyBtn')?.addEventListener('click', (e) => {
     e.preventDefault();
     applyAddrClean();
   });
+  $('#mobileInput')?.addEventListener('focus', () => openCleanRail('phone'));
+  $('#addressInput')?.addEventListener('focus', () => openCleanRail('address'));
   $('#dateInput')?.addEventListener('change', (e) => { form.date = e.target.value; renderForm(); });
   $('#timeInput')?.addEventListener('input', (e) => { form.time = e.target.value; });
   $('#timeInput')?.addEventListener('change', (e) => {
@@ -803,20 +881,24 @@ function snapAddrNow() {
 
 function writePhoneFields() {
   const full = $('#mobileInput');
+  const rail = $('#railMobileInput');
   const cc = $('#formPhoneCc');
   const nat = $('#formPhoneNational');
   if (full) full.value = form.mobile || '';
+  if (rail) rail.value = form.mobile || '';
   if (cc) cc.value = form.phone_cc || '';
   if (nat) nat.value = form.phone_national || '';
 }
 
 function writeAddrFields() {
   const full = $('#addressInput');
+  const rail = $('#railAddressInput');
   const line1 = $('#formAddrLine1');
   const street = $('#formAddrStreet');
   const place = $('#formAddrPlace');
   const terr = $('#districtInput');
   if (full) full.value = form.address || '';
+  if (rail) rail.value = form.address || '';
   if (line1) line1.value = form.address_line1 || '';
   if (street) street.value = form.address_street || '';
   if (place) place.value = form.address_place || '';
@@ -827,9 +909,11 @@ function paintPhoneCleanColors() {
   const apply = $('#phoneApplyBtn');
   if (!phoneSnap) {
     setCleanClass($('#mobileInput'));
+    setCleanClass($('#railMobileInput'));
     setCleanClass($('#formPhoneCc'));
     setCleanClass($('#formPhoneNational'));
     paintWas('wasMobile', null);
+    paintWas('wasRailMobile', null);
     paintWas('wasPhoneCc', null);
     paintWas('wasPhoneNational', null);
     if (apply) apply.hidden = true;
@@ -840,9 +924,11 @@ function paintPhoneCleanColors() {
   const matchCc = sameClean(form.phone_cc, phoneSnap.phone_cc);
   const matchNat = sameClean(form.phone_national, phoneSnap.phone_national);
   setCleanClass($('#mobileInput'), matchFull);
+  setCleanClass($('#railMobileInput'), matchFull);
   setCleanClass($('#formPhoneCc'), matchCc);
   setCleanClass($('#formPhoneNational'), matchNat);
   paintWas('wasMobile', matchFull, phoneSnap.mobile);
+  paintWas('wasRailMobile', matchFull, phoneSnap.mobile);
   paintWas('wasPhoneCc', matchCc, phoneSnap.phone_cc);
   paintWas('wasPhoneNational', matchNat, phoneSnap.phone_national);
 }
@@ -851,11 +937,13 @@ function paintAddrCleanColors() {
   const apply = $('#addrApplyBtn');
   if (!addrSnap) {
     setCleanClass($('#addressInput'));
+    setCleanClass($('#railAddressInput'));
     setCleanClass($('#formAddrLine1'));
     setCleanClass($('#formAddrStreet'));
     setCleanClass($('#formAddrPlace'));
     setCleanClass($('#districtInput'));
     paintWas('wasAddress', null);
+    paintWas('wasRailAddress', null);
     paintWas('wasAddrLine1', null);
     paintWas('wasAddrStreet', null);
     paintWas('wasAddrPlace', null);
@@ -872,11 +960,13 @@ function paintAddrCleanColors() {
   const matchPlace = sameClean(form.address_place, addrSnap.address_place);
   const matchDist = sameClean(form.district, addrSnap.district);
   setCleanClass($('#addressInput'), matchFull);
+  setCleanClass($('#railAddressInput'), matchFull);
   setCleanClass($('#formAddrLine1'), matchLine1);
   setCleanClass($('#formAddrStreet'), matchStreet);
   setCleanClass($('#formAddrPlace'), matchPlace);
   setCleanClass($('#districtInput'), matchDist);
   paintWas('wasAddress', matchFull, addrSnap.address);
+  paintWas('wasRailAddress', matchFull, addrSnap.address);
   paintWas('wasAddrLine1', matchLine1, addrSnap.address_line1);
   paintWas('wasAddrStreet', matchStreet, addrSnap.address_street);
   paintWas('wasAddrPlace', matchPlace, addrSnap.address_place);
@@ -910,12 +1000,14 @@ export function applyPhoneClean() {
   if (!phoneSnap) return;
   phoneSnap = null;
   paintPhoneCleanColors();
+  showCleanRail('');
 }
 
 export function applyAddrClean() {
   if (!addrSnap) return;
   addrSnap = null;
   paintAddrCleanColors();
+  showCleanRail('');
 }
 
 export function runPhoneClean(rawOverride) {
@@ -975,6 +1067,8 @@ function syncFormPhone() {
   form.mobile = full;
   const el = $('#mobileInput');
   if (el) el.value = full;
+  const rail = $('#railMobileInput');
+  if (rail) rail.value = full;
 }
 
 function syncFormAddress() {
@@ -987,12 +1081,15 @@ function syncFormAddress() {
   form.address = composed;
   const el = $('#addressInput');
   if (el) el.value = composed;
+  const rail = $('#railAddressInput');
+  if (rail) rail.value = composed;
 }
 
 function bindFormPhone() {
   const cc = $('#formPhoneCc');
   const nat = $('#formPhoneNational');
   const full = $('#mobileInput');
+  const rail = $('#railMobileInput');
   if (cc) {
     cc.addEventListener('input', (e) => {
       form.phone_cc = String(e.target.value || '').replace(/\D/g, '');
@@ -1010,13 +1107,17 @@ function bindFormPhone() {
       const text = (e.clipboardData || window.clipboardData).getData('text');
       if (!isMessyPhone(text)) return;
       e.preventDefault();
+      openCleanRail('phone');
       runPhoneClean(text);
     });
   }
-  if (full) {
-    full.addEventListener('input', (e) => {
+  function bindPhoneFull(el) {
+    if (!el) return;
+    el.addEventListener('input', (e) => {
       const v = e.target.value;
       form.mobile = v;
+      if (full && full !== el) full.value = v;
+      if (rail && rail !== el) rail.value = v;
       if (!String(v).trim()) {
         form.phone_cc = '';
         form.phone_national = '';
@@ -1032,16 +1133,21 @@ function bindFormPhone() {
         form.mobile = p.full;
         if (cc) cc.value = form.phone_cc;
         if (nat) nat.value = form.phone_national;
+        if (full) full.value = form.mobile;
+        if (rail) rail.value = form.mobile;
       }
       paintPhoneCleanColors();
     });
-    full.addEventListener('paste', (e) => {
+    el.addEventListener('paste', (e) => {
       const text = (e.clipboardData || window.clipboardData).getData('text');
       if (!isMessyPhone(text)) return;
       e.preventDefault();
+      openCleanRail('phone');
       runPhoneClean(text);
     });
   }
+  bindPhoneFull(full);
+  bindPhoneFull(rail);
 }
 
 function bindFormAddress() {
@@ -1050,6 +1156,7 @@ function bindFormAddress() {
   const place = $('#formAddrPlace');
   const terr = $('#districtInput');
   const full = $('#addressInput');
+  const rail = $('#railAddressInput');
   if (line1) {
     line1.addEventListener('input', (e) => {
       form.address_line1 = e.target.value;
@@ -1060,6 +1167,7 @@ function bindFormAddress() {
       const text = (e.clipboardData || window.clipboardData).getData('text');
       if (!isMessyAddress(text)) return;
       e.preventDefault();
+      openCleanRail('address');
       runAddrClean(text);
     });
   }
@@ -1084,18 +1192,24 @@ function bindFormAddress() {
       paintAddrCleanColors();
     });
   }
-  if (full) {
-    full.addEventListener('input', (e) => {
+  function bindAddrFull(el) {
+    if (!el) return;
+    el.addEventListener('input', (e) => {
       form.address = e.target.value;
+      if (full && full !== el) full.value = form.address;
+      if (rail && rail !== el) rail.value = form.address;
       paintAddrCleanColors();
     });
-    full.addEventListener('paste', (e) => {
+    el.addEventListener('paste', (e) => {
       const text = (e.clipboardData || window.clipboardData).getData('text');
       if (!isMessyAddress(text)) return;
       e.preventDefault();
+      openCleanRail('address');
       runAddrClean(text);
     });
   }
+  bindAddrFull(full);
+  bindAddrFull(rail);
 }
 
 function phonePayload(src = form) {

@@ -112,12 +112,39 @@ function filteredJobs() {
   });
 }
 
+function paintBoard() {
+  const mount = $('boardMount');
+  if (!mount) return;
+  const jobs = filteredJobs();
+  const rosterJobs = teamJobs();
+  if (state.mode === 'week') {
+    renderWeekBoard(mount, { jobs: rosterJobs, chipJobs: jobs, days: boardDays(), teams: state.teams, lookupJobs: allJobs() });
+  } else {
+    renderDayBoard(mount, { jobs: rosterJobs, chipJobs: jobs, date: state.day, teams: state.teams, lookupJobs: allJobs() });
+  }
+}
+
+function paintContacts() {
+  if (state.view !== 'contacts') return;
+  syncContactFilters();
+  const picked = renderContacts($('contactsMount'), {
+    query: state.contactQuery,
+    selectedId: state.contactId,
+    all: state.contactAll,
+    stream: state.contactStream,
+    tag: state.contactTag,
+    language: state.contactLanguage,
+    hasAddress: state.contactHasAddress,
+    sort: state.contactSort,
+  });
+  if (picked && picked.hubspot_id) state.contactId = picked.hubspot_id;
+}
+
 function paint() {
   const label = $('weekLabel');
   const mount = $('boardMount');
   if (!label || !mount) return;
   const jobs = filteredJobs();
-  const days = boardDays();
   label.textContent = state.mode === 'day'
     ? formatDay(state.day, { weekday: 'short', year: 'numeric' })
     : formatWeekLabel(state.monday, state.showSunday);
@@ -138,27 +165,11 @@ function paint() {
   });
 
   if (state.view === 'board') {
-    const rosterJobs = teamJobs();
-    if (state.mode === 'week') {
-      renderWeekBoard($('boardMount'), { jobs: rosterJobs, chipJobs: jobs, days, teams: state.teams, lookupJobs: allJobs() });
-    } else {
-      renderDayBoard($('boardMount'), { jobs: rosterJobs, chipJobs: jobs, date: state.day, teams: state.teams, lookupJobs: allJobs() });
-    }
+    paintBoard();
   } else if (state.view === 'jobs') {
     renderJobsList($('jobsMount'), jobs, state.query);
   } else if (state.view === 'contacts') {
-    syncContactFilters();
-    const picked = renderContacts($('contactsMount'), {
-      query: state.contactQuery,
-      selectedId: state.contactId,
-      all: state.contactAll,
-      stream: state.contactStream,
-      tag: state.contactTag,
-      language: state.contactLanguage,
-      hasAddress: state.contactHasAddress,
-      sort: state.contactSort,
-    });
-    if (picked && picked.hubspot_id) state.contactId = picked.hubspot_id;
+    paintContacts();
   }
   syncFilterUi();
   syncSundayUi();
@@ -1093,15 +1104,16 @@ bindChrome();
 bindBoardClicks();
 bindBoardDrag();
 subscribe(paint);
-subscribeContacts(paint);
+subscribeContacts(paintContacts);
 
 startScheduleAuth()
-  .then((user) => {
+  .then(async (user) => {
     signedInEmail = (user && user.email) || '';
     bindOwnerTools();
-    return Promise.all([initStore(user), initContactsStore()]);
+    await initStore(user);
+    paint();
+    initContactsStore();
   })
-  .then(() => paint())
   .catch((err) => {
     console.error(err);
     const el = document.getElementById('boardMount');

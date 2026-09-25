@@ -61,14 +61,15 @@ function badgeKind(token) {
   return 'x';
 }
 
-function liveAcsBadges(acs) {
+function liveAcsBadges(acs, extraCls) {
+  const hold = extraCls ? ` ${extraCls}` : '';
   const raw = String(acs || '').trim();
   const label = acsLabel(parseAcs(raw));
-  if (!label) return raw ? `<span class="compact-units">${esc(raw)}</span>` : '';
+  if (!label) return raw ? `<span class="compact-units${hold}">${esc(raw)}</span>` : '';
   const bits = label.split(/\s+/).filter(Boolean).map((tok) => (
     `<span class="live-u live-u-${badgeKind(tok)}">${esc(tok)}</span>`
   ));
-  return `<span class="live-units">${bits.join('')}</span>`;
+  return `<span class="live-units${hold}">${bits.join('')}</span>`;
 }
 
 function compactTypeMark(job) {
@@ -104,32 +105,28 @@ function boardCardHtml(job, conflict, week) {
   const hold = jobStatus(job) === 'tentative';
   const dist = DISTRICTS[job.district] || DISTRICT_FALLBACK;
   const left = hold ? '#ca8a04' : dist.border;
-  const unitsBit = liveAcsBadges(job.acs) || (job.acs
-    ? `<span class="compact-units">${esc(job.acs)}</span>`
-    : '');
+  const hi = job && job.highlight || {};
+  const acsHold = isHi(hi.acs) ? 'is-hold' : '';
+  const unitsBit = liveAcsBadges(job.acs, acsHold);
   const mobile = week ? '' : formatMobile(job.mobile);
   const addr = week ? weekAddressLine(job) : String(job.address || '').trim();
   const notes1 = String(job.notes || '').trim();
   const notes2 = week ? '' : String(job.notes_long || '').trim();
   const payWord = compactPayMark(job);
   const pulse = pulseRemaining(job) ? ' is-pulse' : '';
-  const timeCls = conflict ? ' time-conflict' : '';
+  const timeCls = [conflict ? 'time-conflict' : '', isHi(hi.time) ? 'is-hold' : ''].filter(Boolean).join(' ');
   const name = clientCardName(job.client_name);
-  const jobMin = week ? Math.min(168, Math.max(44, Math.round(jobOnSiteMinutes(job) * 0.7))) : null;
-  const cardStyle = jobMin != null
-    ? `border-left:4px solid ${left};--job-min:${jobMin}px`
-    : `border-left:4px solid ${left}`;
-  return `<button type="button" class="job-card job-card-detailed${hold ? ' is-tentative' : ''}${pulse}" data-job="${esc(job.job_id)}" style="${cardStyle}" title="${esc(hoverTitle(job))}">
+  return `<button type="button" class="job-card job-card-detailed${hold ? ' is-tentative' : ''}${pulse}" data-job="${esc(job.job_id)}" style="border-left:4px solid ${left}" title="${esc(hoverTitle(job))}">
     <div class="compact-row">
       <div class="compact-col compact-col-time">
-        <span class="compact-time${timeCls}">${esc(shortTime(job))}</span>
+        <span class="compact-time${timeCls ? ` ${timeCls}` : ''}">${esc(shortTime(job))}</span>
         ${unitsBit}
       </div>
       <div class="compact-col compact-col-main">
-        <span class="compact-name">${esc(name)}</span>
+        <span class="compact-name${isHi(hi.client) ? ' is-hold' : ''}">${esc(name)}</span>
         ${mobile ? `<p class="detailed-phone">${esc(mobile)}</p>` : ''}
-        ${addr ? `<p class="compact-addr">${esc(addr)}</p>` : ''}
-        ${notes1 ? `<p class="compact-notes">${esc(notes1)}</p>` : ''}
+        ${addr ? `<p class="compact-addr${isHi(hi.address) ? ' is-hold' : ''}">${esc(addr)}</p>` : ''}
+        ${notes1 ? `<p class="compact-notes${isHi(hi.notes) ? ' is-hold' : ''}">${esc(notes1)}</p>` : ''}
         ${notes2 ? `<p class="detailed-notes2">${esc(notes2)}</p>` : ''}
       </div>
       <div class="compact-col compact-col-meta">

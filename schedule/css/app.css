@@ -1277,10 +1277,26 @@ button.day-col-head:hover { background: #e0f2fe; }
 .job-card-detailed .compact-pay.is-unpaid { color: #d97706; }
 .week-cell .job-card.job-card-detailed {
   height: auto;
-  min-height: var(--job-min, 44px);
-  max-height: 168px;
+  min-height: 0;
+  max-height: none;
   flex: 0 0 auto;
   overflow: visible;
+}
+.week-cell .job-card.job-card-detailed.is-tentative {
+  background: #fef9c3;
+  border-color: #eab308;
+}
+.week-cell .job-card.job-card-detailed.is-tentative:hover {
+  background: #fef08a;
+}
+.week-cell .job-card-detailed .compact-name.is-hold,
+.week-cell .job-card-detailed .compact-time.is-hold,
+.week-cell .job-card-detailed .live-units.is-hold,
+.week-cell .job-card-detailed .compact-units.is-hold,
+.week-cell .job-card-detailed .compact-addr.is-hold,
+.week-cell .job-card-detailed .compact-notes.is-hold {
+  background: #fef9c3;
+  border-radius: 3px;
 }
 .week-cell .job-card-detailed .compact-row {
   padding: 8px;

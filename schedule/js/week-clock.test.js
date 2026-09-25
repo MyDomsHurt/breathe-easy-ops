@@ -38,15 +38,6 @@ function cssVars(html, name) {
   return out;
 }
 
-function jobMinOf(html, id) {
-  const i = html.indexOf('data-job="' + id + '"');
-  assert(i !== -1, 'missing job ' + id);
-  const slice = html.slice(i, i + 220);
-  const m = slice.match(/--job-min:(\d+)px/);
-  assert(m, 'missing --job-min for ' + id + ' in ' + slice.slice(0, 120));
-  return Number(m[1]);
-}
-
 // 1. 09:00 and 16:00 with no ACS (45 min work) still have one hole.
 const latePair = [job('am', '09:00'), job('pm', '16:00')];
 const html1 = rosterCellHtml(latePair, latePair, date, team, 'week', latePair, date);
@@ -120,18 +111,33 @@ print('ok 8 09:00 2W and 12:00 have one hole');
 const fat = [job('b11', '09:00', '11B'), job('late2', '16:30')];
 const html9 = rosterCellHtml(fat, fat, date, team, 'week', fat, date);
 assert(countClass(html9, 'week-hole') === 0, '9 unexpected hole');
-assert(jobMinOf(html9, 'b11') === 168, '9 fat card cap ' + jobMinOf(html9, 'b11'));
+assert(html9.indexOf('--job-min') === -1, '9 card sized from minutes');
+assert(html8.indexOf('--job-min') === -1, '8 card sized from minutes');
 print('ok 9 09:00 11B and 16:30 have no hole');
 
-assert(jobMinOf(html8, 'w2') < jobMinOf(html7, 'c2'), '2W shorter than 2C');
-
 const allWeek = [html1, html2, html4, html6, html7, html8, html9].join('');
-cssVars(allWeek, 'job-min').forEach((n) => {
-  assert(n <= 168, '--job-min ' + n);
-});
+assert(allWeek.indexOf('--job-min') === -1, 'week card --job-min');
 cssVars(allWeek, 'hole-min').forEach((n) => {
   assert(n <= 120, '--hole-min ' + n);
 });
-print('ok caps --job-min 168 --hole-min 120');
+print('ok uniform cards; hole cap 120');
+
+const tent = [Object.assign(job('t', '09:00'), { status: 'tentative' })];
+const htmlT = rosterCellHtml(tent, tent, date, team, 'week', tent, date);
+assert(htmlT.indexOf('is-tentative') !== -1, 'tentative class');
+print('ok tentative class');
+
+const marked = [Object.assign(job('m', '09:00', '2S'), {
+  highlight: { client: true, time: true, acs: true, address: true, notes: true },
+  address: '1 Road',
+  notes: 'gate',
+})];
+const htmlM = rosterCellHtml(marked, marked, date, team, 'week', marked, date);
+assert(htmlM.indexOf('compact-name is-hold') !== -1, 'client hold');
+assert(htmlM.indexOf('compact-time is-hold') !== -1, 'time hold');
+assert(htmlM.indexOf('live-units is-hold') !== -1 || htmlM.indexOf('compact-units is-hold') !== -1, 'acs hold');
+assert(htmlM.indexOf('compact-addr is-hold') !== -1, 'address hold');
+assert(htmlM.indexOf('compact-notes is-hold') !== -1, 'notes hold');
+print('ok field-mark is-hold');
 
 print('ok week-clock cases');

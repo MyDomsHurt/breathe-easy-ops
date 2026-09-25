@@ -1,11 +1,7 @@
 import {
   applyJobDrop,
-  armClickSuppress,
-  beginDrag,
-  capturedDragId,
-  consumeClickSuppress,
   handleCellClick,
-  resolveDropId,
+  pointerJobUp,
 } from './board-drag.js';
 
 function fail(msg) {
@@ -18,7 +14,7 @@ function assert(cond, msg) {
 }
 
 function spies() {
-  const s = { placed: [], opened: [], toasts: [] };
+  const s = { placed: [], opened: [] };
   s.deps = {
     date: '2026-09-22',
     team: 'Josh',
@@ -29,51 +25,85 @@ function spies() {
     openBooking(payload) {
       s.opened.push(payload);
     },
+    getJob(id) {
+      return { job_id: id, client_name: 'Ada' };
+    },
   };
   return s;
 }
 
-// 1. Drop with a real job_id calls placeJobInSlot, not openBooking.
-beginDrag('job-abc');
-const id1 = resolveDropId('', capturedDragId());
-assert(id1 === 'job-abc', '1 resolve empty getData ' + id1);
+// 1. Pointer-up on a cell with a captured job id → placeJobInSlot, not openBooking.
 const s1 = spies();
-const r1 = applyJobDrop(id1, s1.deps);
+const r1 = pointerJobUp({
+  moved: true,
+  capturedId: 'job-abc',
+  overDate: '2026-09-23',
+  overTeam: 'Matthew',
+  slot: 1,
+  placeJobInSlot: s1.deps.placeJobInSlot,
+  openBooking: s1.deps.openBooking,
+  getJob: s1.deps.getJob,
+});
 assert(r1 === 'move', '1 kind ' + r1);
 assert(s1.placed.length === 1 && s1.placed[0].id === 'job-abc', '1 placeJobInSlot');
+assert(s1.placed[0].date === '2026-09-23' && s1.placed[0].team === 'Matthew', '1 target');
 assert(s1.opened.length === 0, '1 opened drawer');
-print('ok 1 real job drop moves');
+print('ok 1 pointer-up with job id moves');
 
-// 2. Drop with new-appointment still openBooking.
+// 2. Pointer-up with no move on a job → open that job.
 const s2 = spies();
-const r2 = applyJobDrop('new-appointment', s2.deps);
-assert(r2 === 'open', '2 kind ' + r2);
-assert(s2.opened.length === 1, '2 openBooking');
-assert(s2.placed.length === 0, '2 placed');
-assert(s2.opened[0].team_lead === 'Josh', '2 team');
-print('ok 2 new-appointment opens drawer');
-
-// 3. After a job drop, the next click on that cell is ignored.
-beginDrag('job-abc');
-const s3 = spies();
-applyJobDrop(resolveDropId('', capturedDragId()), s3.deps);
-armClickSuppress(300);
-const click3 = handleCellClick((payload) => { s3.opened.push(payload); }, {
-  date: '2026-09-22',
-  team_lead: 'Josh',
+const r2 = pointerJobUp({
+  moved: false,
+  capturedId: 'job-abc',
+  overJobId: 'job-abc',
+  overDate: '2026-09-22',
+  overTeam: 'Josh',
+  placeJobInSlot: s2.deps.placeJobInSlot,
+  openBooking: s2.deps.openBooking,
+  getJob: s2.deps.getJob,
 });
-assert(click3 === 'suppressed', '3 ' + click3);
-assert(s3.opened.length === 0, '3 click opened');
-print('ok 3 suppressClick after drop');
+assert(r2 === 'open-job', '2 kind ' + r2);
+assert(s2.opened.length === 1 && s2.opened[0].job_id === 'job-abc', '2 open job');
+assert(s2.placed.length === 0, '2 placed');
+print('ok 2 no-move on job opens that job');
 
-// 4. A plain click on an Open cell (no drag) still openBooking.
+// 3. Pointer-up with no move on empty paper → openBooking New.
+const s3 = spies();
+const r3 = pointerJobUp({
+  moved: false,
+  capturedId: '',
+  overDate: '2026-09-22',
+  overTeam: 'Josh',
+  slot: 0,
+  placeJobInSlot: s3.deps.placeJobInSlot,
+  openBooking: s3.deps.openBooking,
+  getJob: s3.deps.getJob,
+});
+assert(r3 === 'open-new', '3 kind ' + r3);
+assert(s3.opened.length === 1, '3 openBooking');
+assert(!s3.opened[0].job_id, '3 opened existing job');
+assert(s3.opened[0].team_lead === 'Josh', '3 team');
+assert(s3.placed.length === 0, '3 placed');
+print('ok 3 no-move on empty paper opens New');
+
+// 4. After a move, the next click is ignored.
 const s4 = spies();
+pointerJobUp({
+  moved: true,
+  capturedId: 'job-abc',
+  overDate: '2026-09-22',
+  overTeam: 'Josh',
+  slot: 2,
+  placeJobInSlot: s4.deps.placeJobInSlot,
+  openBooking: s4.deps.openBooking,
+  getJob: s4.deps.getJob,
+});
 const click4 = handleCellClick((payload) => { s4.opened.push(payload); }, {
   date: '2026-09-22',
   team_lead: 'Josh',
 });
-assert(click4 === 'open', '4 ' + click4);
-assert(s4.opened.length === 1, '4 did not open');
-print('ok 4 plain click opens New booking');
+assert(click4 === 'suppressed', '4 ' + click4);
+assert(s4.opened.length === 0, '4 leftover click opened');
+print('ok 4 leftover click ignored after move');
 
-print('ok 4 board-drop cases');
+print('ok 4 pointer-job cases');

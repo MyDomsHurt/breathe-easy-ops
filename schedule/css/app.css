@@ -1076,6 +1076,7 @@ button.day-col-head:hover { background: #e0f2fe; }
   font: inherit;
   cursor: grab;
   position: relative;
+  touch-action: none;
 }
 .job-card:hover { background: #f8fafc; }
 .job-card .when { font-size: 13px; }

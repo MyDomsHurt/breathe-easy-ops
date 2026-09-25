@@ -114,7 +114,7 @@ function boardCardHtml(job, conflict, week) {
   const pulse = pulseRemaining(job) ? ' is-pulse' : '';
   const timeCls = conflict ? ' time-conflict' : '';
   const name = clientCardName(job.client_name);
-  return `<button type="button" class="job-card job-card-detailed${hold ? ' is-tentative' : ''}${pulse}" draggable="true" data-job="${esc(job.job_id)}" style="border-left:4px solid ${left}" title="${esc(hoverTitle(job))}">
+  return `<button type="button" class="job-card job-card-detailed${hold ? ' is-tentative' : ''}${pulse}" data-job="${esc(job.job_id)}" style="border-left:4px solid ${left}" title="${esc(hoverTitle(job))}">
     <div class="compact-row">
       <div class="compact-col compact-col-time">
         <span class="compact-time${timeCls}">${esc(shortTime(job))}</span>

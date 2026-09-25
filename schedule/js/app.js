@@ -4,8 +4,8 @@ import { addDays, formatDay, formatTime24, formatWeekLabel, jobTypeOf, mondayOf,
 import { allJobs, getJob, placeJobInSlot, redo, removeJob, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js?v=4';
 import { startScheduleAuth } from './auth.js';
 import { daySlotsOf, firstEmptySlotIndex, hasTimeConflict, jobsForTeamDay, layoutSlots, slotIndex } from './capacity.js?v=4';
-import { clientCardName, pulseRemaining, renderDayBoard, renderWeekBoard, weekDragSlotsHtml } from './board.js?v=11';
-import { applyJobDrop, armClickSuppress, beginDrag, capturedDragId, clearCapturedDrag, consumeClickSuppress, resolveDropId } from './board-drag.js?v=1';
+import { clientCardName, pulseRemaining, renderDayBoard, renderWeekBoard, weekDragSlotsHtml } from './board.js?v=12';
+import { applyJobDrop, armClickSuppress, beginDrag, capturedDragId, clearCapturedDrag, consumeClickSuppress, jobDropKind, pointerJobUp, pointerMoved, resolveDropId } from './board-drag.js?v=2';
 import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=22';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js?v=2';
 import { exportMasterRoster } from './export-roster.js?v=22';
@@ -543,18 +543,11 @@ function bindBoardDrag() {
       showWeekDropSlots();
       return;
     }
-    const chip = e.target.closest('[data-job]');
-    if (!chip) {
+    if (e.target.closest('[data-job]')) {
       e.preventDefault();
       return;
     }
-    dragKind = 'job';
-    dragJobId = beginDrag(chip.dataset.job);
-    dragLunchFrom = null;
-    chip.classList.add('is-dragging');
-    e.dataTransfer.setData('text/plain', dragJobId);
-    e.dataTransfer.effectAllowed = 'move';
-    showWeekDropSlots();
+    e.preventDefault();
   });
   mount.addEventListener('dragend', () => {
     armClickSuppress(300);
@@ -652,6 +645,134 @@ function bindBoardDrag() {
       }
     }
     finishDropCapture();
+  });
+}
+
+function bindBoardPointer() {
+  const mount = $('boardMount');
+  if (!mount) return;
+  let ptrEl = null;
+  let startX = 0;
+  let startY = 0;
+  let dragging = false;
+
+  function underPoint(e) {
+    if (typeof document.elementFromPoint !== 'function') return e.target;
+    return document.elementFromPoint(e.clientX, e.clientY) || e.target;
+  }
+
+  function resetPtr() {
+    ptrEl = null;
+    dragging = false;
+    startX = 0;
+    startY = 0;
+  }
+
+  mount.addEventListener('pointerdown', (e) => {
+    if (e.button != null && e.button !== 0) return;
+    if (e.target.closest('[data-lunch-card]')) return;
+    const chip = e.target.closest('[data-job]');
+    if (!chip || !chip.dataset.job) return;
+    beginDrag(chip.dataset.job);
+    dragKind = 'job';
+    dragJobId = chip.dataset.job;
+    dragLunchFrom = null;
+    ptrEl = chip;
+    startX = e.clientX;
+    startY = e.clientY;
+    dragging = false;
+    if (typeof chip.setPointerCapture === 'function') chip.setPointerCapture(e.pointerId);
+  });
+
+  mount.addEventListener('pointermove', (e) => {
+    const id = capturedDragId();
+    if (!id || jobDropKind(id) !== 'job') return;
+    if (!dragging) {
+      if (!pointerMoved(e.clientX - startX, e.clientY - startY)) return;
+      dragging = true;
+      if (ptrEl) ptrEl.classList.add('is-dragging');
+      showWeekDropSlots();
+    }
+    e.preventDefault();
+    const under = underPoint(e);
+    const cell = under && under.closest && under.closest('[data-date][data-team]');
+    if (!cell) {
+      highlightDropTarget(null);
+      return;
+    }
+    const fake = { target: under };
+    highlightDropTarget(pointerDropEl(fake));
+    const job = getJob(id);
+    const sameStack = job && job.date === cell.dataset.date && job.team_lead === cell.dataset.team;
+    dropHint = { slot: slotFromPoint(fake, cell.dataset.date, cell.dataset.team, sameStack ? id : null) };
+  });
+
+  function finishPointer(e) {
+    const id = capturedDragId();
+    if (!id || jobDropKind(id) !== 'job') {
+      resetPtr();
+      return;
+    }
+    const moved = dragging;
+    const under = underPoint(e);
+    const cell = under && under.closest && under.closest('[data-date][data-team]');
+    const overJob = under && under.closest && under.closest('[data-job]');
+    const date = cell && cell.dataset.date;
+    const team = cell && cell.dataset.team;
+    const fake = { target: under || e.target };
+    const job = getJob(id);
+    const sameStack = job && date && team && job.date === date && job.team_lead === team;
+    const slot = date && team
+      ? (dropHint && Number.isFinite(dropHint.slot)
+        ? dropHint.slot
+        : slotFromPoint(fake, date, team, sameStack ? id : null))
+      : undefined;
+    if (ptrEl) ptrEl.classList.remove('is-dragging');
+    clearDropTargets();
+    if (moved && date && team) {
+      const existing = getJob(id);
+      if (!canPlaceJobOnTeamDay(allJobs(), date, team, existing)) {
+        armClickSuppress(300);
+        finishDropCapture();
+        resetPtr();
+        return;
+      }
+    }
+    const result = pointerJobUp({
+      moved,
+      capturedId: id,
+      overJobId: overJob && overJob.dataset.job,
+      overDate: date,
+      overTeam: team,
+      slot,
+      placeJobInSlot,
+      openBooking,
+      getJob,
+    });
+    if (result === 'move') {
+      state.monday = mondayOf(date);
+      state.day = date;
+      state.focusJobId = id;
+      const movedJob = getJob(id);
+      if (movedJob && hasTimeConflict(movedJob, allJobs())) {
+        toast(`Moved — time conflict at ${shortTime(movedJob)}`);
+      } else if (movedJob) {
+        toast(`Moved to ${movedJob.team_lead} · ${formatDay(movedJob.date)}`);
+      } else {
+        toast('Moved');
+      }
+    }
+    if (result === 'move' || result === 'open-job') armClickSuppress(300);
+    finishDropCapture();
+    resetPtr();
+  }
+
+  mount.addEventListener('pointerup', finishPointer);
+  mount.addEventListener('pointercancel', () => {
+    if (ptrEl) ptrEl.classList.remove('is-dragging');
+    clearDropTargets();
+    finishDropCapture();
+    resetPtr();
   });
 }
 
@@ -1155,6 +1276,7 @@ bindFilters();
 bindChrome();
 bindBoardClicks();
 bindBoardDrag();
+bindBoardPointer();
 subscribe(paint);
 subscribeContacts(paintContacts);
 

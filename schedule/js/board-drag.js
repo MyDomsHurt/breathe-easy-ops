@@ -59,3 +59,43 @@ export function handleCellClick(openBooking, payload, now = Date.now()) {
   openBooking(payload);
   return 'open';
 }
+
+export function pointerMoved(dx, dy, threshold = 8) {
+  return Math.hypot(Number(dx) || 0, Number(dy) || 0) >= threshold;
+}
+
+export function pointerJobUp(opts) {
+  const moved = !!opts.moved;
+  const capturedId = String(opts.capturedId || '');
+  const date = opts.overDate || '';
+  const team = opts.overTeam || '';
+  const slot = opts.slot;
+  const deps = {
+    date,
+    team,
+    slot,
+    placeJobInSlot: opts.placeJobInSlot,
+    openBooking: opts.openBooking,
+  };
+  const kind = jobDropKind(capturedId);
+
+  if (moved && kind === 'job' && date && team) {
+    applyJobDrop(capturedId, deps);
+    armClickSuppress(300, opts.now || Date.now());
+    return 'move';
+  }
+  if (!moved && kind === 'job') {
+    const job = opts.getJob ? opts.getJob(capturedId) : { job_id: capturedId };
+    if (job) opts.openBooking(job);
+    return 'open-job';
+  }
+  if (!moved && date && team) {
+    opts.openBooking({
+      date,
+      team_lead: team,
+      stack_order: slot,
+    });
+    return 'open-new';
+  }
+  return 'none';
+}

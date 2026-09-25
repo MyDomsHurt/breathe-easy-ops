@@ -5,7 +5,7 @@ import { allJobs, getJob, placeJobInSlot, redo, removeJob, setTeamDayFull, setTe
 import { startScheduleAuth } from './auth.js';
 import { daySlotsOf, firstEmptySlotIndex, hasTimeConflict, jobsForTeamDay, layoutSlots, slotIndex } from './capacity.js?v=4';
 import { clientCardName, pulseRemaining, renderDayBoard, renderWeekBoard } from './board.js?v=10';
-import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=19';
+import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=20';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js?v=2';
 import { exportMasterRoster } from './export-roster.js?v=20';
 import { allContacts, initContactsStore, subscribeContacts } from './contacts-store.js?v=1';

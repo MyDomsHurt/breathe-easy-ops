@@ -62,6 +62,48 @@ function $(sel) {
   return document.querySelector(sel);
 }
 
+function captureDrawerScroll() {
+  const el = document.querySelector('.drawer-body');
+  return el ? Number(el.scrollTop) || 0 : 0;
+}
+
+function restoreDrawerScroll(y) {
+  const el = document.querySelector('.drawer-body');
+  if (el) el.scrollTop = y;
+}
+
+export function getBookingForm() {
+  return form;
+}
+
+export function mintJobId(formState) {
+  const date = String((formState && formState.date) || 'undated');
+  const team = String((formState && formState.team_lead) || 'team').toLowerCase().replace(/\s+/g, '-');
+  const rand = Math.random().toString(36).slice(2, 7);
+  return `${date}-${team}-${Date.now().toString(36)}-${rand}`;
+}
+
+export function paintAcsPad() {
+  UNIT_TYPES.forEach((u) => {
+    const n = form.units[u.id] || 0;
+    const btn = document.querySelector('[data-unit="' + u.id + '"]');
+    const tile = btn && typeof btn.closest === 'function' ? btn.closest('.unit') : null;
+    if (tile) {
+      const b = tile.querySelector('b');
+      if (b) b.textContent = String(n);
+      if (tile.classList && typeof tile.classList.toggle === 'function') tile.classList.toggle('on', n > 0);
+    }
+  });
+  const preview = document.querySelector('.acs-preview');
+  if (preview) preview.textContent = acsLabel(form.units) || '—';
+}
+
+export function applyUnitDelta(id, delta) {
+  form.units[id] = Math.max(0, (form.units[id] || 0) + Number(delta || 0));
+  paintAcsPad();
+  return form.units[id] || 0;
+}
+
 const PAYMENT_ALIASES = {
   unpaid: 'Unpaid',
   free: 'Free',
@@ -254,7 +296,8 @@ function others() {
   return allJobs().filter((j) => j.job_id !== form.job_id);
 }
 
-function renderForm() {
+export function renderForm() {
+  const scrollY = captureDrawerScroll();
   const jobs = others();
   const ranked = suggestTeams(jobs, { date: form.date, district: form.district });
   if (form.team_lead && !ranked.find((r) => r.team === form.team_lead)) {
@@ -451,10 +494,12 @@ function renderForm() {
   bindForm();
   paintPhoneCleanColors();
   paintAddrCleanColors();
+  restoreDrawerScroll(scrollY);
 }
 
-function bindForm() {
+export function bindForm() {
   const root = $('#bookingRoot');
+  if (!root) return;
   root.querySelectorAll('[data-close]').forEach((el) => {
     el.addEventListener('click', closeBooking);
   });
@@ -483,7 +528,7 @@ function bindForm() {
     restorePhoneIfPending();
     restoreAddrIfPending();
   });
-  $('#clientSearch').addEventListener('input', (e) => {
+  $('#clientSearch')?.addEventListener('input', (e) => {
     form.client_name = e.target.value;
     renderHits(e.target.value);
   });
@@ -505,27 +550,27 @@ function bindForm() {
     e.preventDefault();
     applyAddrClean();
   });
-  $('#dateInput').addEventListener('change', (e) => { form.date = e.target.value; renderForm(); });
-  $('#timeInput').addEventListener('input', (e) => { form.time = e.target.value; });
-  $('#timeInput').addEventListener('change', (e) => {
+  $('#dateInput')?.addEventListener('change', (e) => { form.date = e.target.value; renderForm(); });
+  $('#timeInput')?.addEventListener('input', (e) => { form.time = e.target.value; });
+  $('#timeInput')?.addEventListener('change', (e) => {
     const converted = formatTime24(e.target.value);
     form.time = converted || e.target.value;
     if (converted) e.target.value = converted;
     renderForm();
   });
-  $('#typeInput').addEventListener('change', (e) => { form.job_type = e.target.value; renderForm(); });
-  $('#payInput').addEventListener('change', (e) => { form.payment = e.target.value; });
-  $('#amountInput').addEventListener('input', (e) => {
+  $('#typeInput')?.addEventListener('change', (e) => { form.job_type = e.target.value; renderForm(); });
+  $('#payInput')?.addEventListener('change', (e) => { form.payment = e.target.value; });
+  $('#amountInput')?.addEventListener('input', (e) => {
     form.amount = e.target.value === '' ? '' : Number(e.target.value);
   });
-  $('#notesInput').addEventListener('input', (e) => {
+  $('#notesInput')?.addEventListener('input', (e) => {
     form.notes = String(e.target.value || '').slice(0, NOTES1_MAX);
     if (e.target.value !== form.notes) e.target.value = form.notes;
     const count = $('#notes1Count');
     if (count) count.textContent = `${form.notes.length}/${NOTES1_MAX}`;
   });
-  $('#notesLongInput').addEventListener('input', (e) => { form.notes_long = e.target.value; });
-  $('#invoiceInput').addEventListener('input', (e) => { form.invoice = e.target.value; });
+  $('#notesLongInput')?.addEventListener('input', (e) => { form.notes_long = e.target.value; });
+  $('#invoiceInput')?.addEventListener('input', (e) => { form.invoice = e.target.value; });
   root.querySelectorAll('[data-hold]').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -544,23 +589,21 @@ function bindForm() {
   });
   root.querySelectorAll('[data-unit]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      const id = btn.dataset.unit;
-      const delta = Number(btn.dataset.delta);
-      form.units[id] = Math.max(0, (form.units[id] || 0) + delta);
-      renderForm();
+      applyUnitDelta(btn.dataset.unit, btn.dataset.delta);
     });
   });
   root.querySelectorAll('[data-team]').forEach((btn) => {
     btn.addEventListener('click', () => { form.team_lead = btn.dataset.team; renderForm(); });
   });
-  $('#saveBooking').addEventListener('click', () => save('confirmed'));
-  $('#saveTentative').addEventListener('click', () => save('tentative'));
+  $('#saveBooking')?.addEventListener('click', () => save('confirmed'));
+  $('#saveTentative')?.addEventListener('click', () => save('tentative'));
   const del = $('#deleteBooking');
   if (del) del.addEventListener('click', cancelJob);
 }
 
 function renderHits(q) {
   const box = $('#clientHits');
+  if (!box) return;
   const s = String(q || '').trim().toLowerCase();
   if (s.length < 2) {
     box.hidden = true;
@@ -613,73 +656,86 @@ function renderHits(q) {
 }
 
 export function commitBooking(formState, status = 'confirmed', io = {}) {
-  if (!formState.date || !formState.team_lead) {
-    return { error: 'Date and team are required' };
+  try {
+    if (!formState.date || !formState.team_lead) {
+      return { error: 'Date and team are required' };
+    }
+    const listFn = io.allJobs || allJobs;
+    const addFn = io.addJob || addJob;
+    const updateFn = io.updateJob || updateJob;
+    const contactsFn = io.allContacts || allContacts;
+    const jobs = listFn();
+    const prev = formState.job_id ? jobs.find((j) => j.job_id === formState.job_id) : null;
+    if (!canPlaceJobOnTeamDay(jobs, formState.date, formState.team_lead, prev)) {
+      return { error: 'That day is full' };
+    }
+    const notesRaw = formState.job_type === 'influencer' && !/influencer/i.test(formState.notes || '')
+      ? `Influencer (Free)${formState.notes ? ' — ' + formState.notes : ''}`
+      : formState.notes;
+    const notes = String(notesRaw || '').slice(0, NOTES1_MAX);
+    const phone = phonePayload(formState);
+    const addr = addressPayload(formState);
+    const isNew = !String(formState.job_id || '').trim();
+    const payload = {
+      ...formState,
+      client_name: storedClientName(formState.client_name),
+      status: status === 'tentative' ? 'tentative' : 'confirmed',
+      acs: formState.job_type === 'cleaning' ? acsLabel(formState.units) : '',
+      units: formState.job_type === 'cleaning' ? storedUnits(formState.units) : emptyUnits(),
+      notes,
+      notes_long: formState.notes_long,
+      invoice: formState.invoice || '',
+      highlight: highlightOf({ highlight: formState.highlight }),
+      mobile: phone.mobile,
+      phone_cc: phone.phone_cc,
+      phone_national: phone.phone_national,
+      hubspot_id: matchHubspotIdByPhone(phone.mobile, contactsFn()).hubspot_id || '',
+      address: addr.address,
+      address_line1: addr.address_line1,
+      address_street: addr.address_street,
+      address_place: addr.address_place,
+      address_extra: addr.address_extra,
+      district: addr.district,
+      time: formatTime24(formState.time) || String(formState.time || '').trim(),
+      payment: formState.payment,
+      payment_status: paymentStatusFromLabel(formState.payment),
+      team_members: teamMembersOnDay(jobs, formState.date, formState.team_lead),
+      amount: formState.job_type === 'cleaning'
+        ? (formState.amount === '' || formState.amount == null ? null : Number(formState.amount))
+        : null,
+      stack_order: stackOrderOnSave(jobs, formState.date, formState.team_lead, prev, formState.stack_order),
+    };
+    if (isNew) payload.job_id = mintJobId(formState);
+    delete payload.created_by;
+    delete payload.created_at;
+    delete payload.updated_by;
+    delete payload.updated_at;
+    delete payload.changes;
+    delete payload.highlight_time;
+    delete payload.highlight_notes;
+    const job = isNew ? addFn(payload) : updateFn(formState.job_id, payload);
+    if (!job) return { error: 'Could not save' };
+    if (job.team_lead) lastTeamLead = job.team_lead;
+    return { job };
+  } catch (err) {
+    return { error: (err && err.message) || 'Could not save' };
   }
-  const listFn = io.allJobs || allJobs;
-  const addFn = io.addJob || addJob;
-  const updateFn = io.updateJob || updateJob;
-  const contactsFn = io.allContacts || allContacts;
-  const jobs = listFn();
-  const prev = formState.job_id ? jobs.find((j) => j.job_id === formState.job_id) : null;
-  if (!canPlaceJobOnTeamDay(jobs, formState.date, formState.team_lead, prev)) {
-    return { error: 'That day is full' };
-  }
-  const notesRaw = formState.job_type === 'influencer' && !/influencer/i.test(formState.notes || '')
-    ? `Influencer (Free)${formState.notes ? ' — ' + formState.notes : ''}`
-    : formState.notes;
-  const notes = String(notesRaw || '').slice(0, NOTES1_MAX);
-  const phone = phonePayload(formState);
-  const addr = addressPayload(formState);
-  const payload = {
-    ...formState,
-    client_name: storedClientName(formState.client_name),
-    status: status === 'tentative' ? 'tentative' : 'confirmed',
-    acs: formState.job_type === 'cleaning' ? acsLabel(formState.units) : '',
-    units: formState.job_type === 'cleaning' ? storedUnits(formState.units) : emptyUnits(),
-    notes,
-    notes_long: formState.notes_long,
-    invoice: formState.invoice || '',
-    highlight: highlightOf({ highlight: formState.highlight }),
-    mobile: phone.mobile,
-    phone_cc: phone.phone_cc,
-    phone_national: phone.phone_national,
-    hubspot_id: matchHubspotIdByPhone(phone.mobile, contactsFn()).hubspot_id || '',
-    address: addr.address,
-    address_line1: addr.address_line1,
-    address_street: addr.address_street,
-    address_place: addr.address_place,
-    address_extra: addr.address_extra,
-    district: addr.district,
-    time: formatTime24(formState.time) || String(formState.time || '').trim(),
-    payment: formState.payment,
-    payment_status: paymentStatusFromLabel(formState.payment),
-    team_members: teamMembersOnDay(jobs, formState.date, formState.team_lead),
-    amount: formState.job_type === 'cleaning'
-      ? (formState.amount === '' || formState.amount == null ? null : Number(formState.amount))
-      : null,
-    stack_order: stackOrderOnSave(jobs, formState.date, formState.team_lead, prev, formState.stack_order),
-  };
-  delete payload.created_by;
-  delete payload.created_at;
-  delete payload.updated_by;
-  delete payload.updated_at;
-  delete payload.changes;
-  delete payload.highlight_time;
-  delete payload.highlight_notes;
-  const job = formState.job_id ? updateFn(formState.job_id, payload) : addFn(payload);
-  if (job && job.team_lead) lastTeamLead = job.team_lead;
-  return { job };
 }
 
-function save(status = 'confirmed') {
-  const result = commitBooking(form, status);
-  if (result.error) {
-    toast(result.error);
-    return;
+export function save(status = 'confirmed') {
+  try {
+    const result = commitBooking(form, status);
+    if (!result || result.error || !result.job) {
+      toast((result && result.error) || 'Could not save');
+      return result;
+    }
+    closeBooking();
+    window.dispatchEvent(new CustomEvent('be:booked', { detail: result.job }));
+    return result;
+  } catch (err) {
+    toast((err && err.message) || 'Could not save');
+    return { error: (err && err.message) || 'Could not save' };
   }
-  closeBooking();
-  window.dispatchEvent(new CustomEvent('be:booked', { detail: result.job }));
 }
 
 function cancelJob() {
@@ -847,19 +903,19 @@ function restoreAddrIfPending() {
   paintAddrCleanColors();
 }
 
-function applyPhoneClean() {
+export function applyPhoneClean() {
   if (!phoneSnap) return;
   phoneSnap = null;
   paintPhoneCleanColors();
 }
 
-function applyAddrClean() {
+export function applyAddrClean() {
   if (!addrSnap) return;
   addrSnap = null;
   paintAddrCleanColors();
 }
 
-function runPhoneClean(rawOverride) {
+export function runPhoneClean(rawOverride) {
   if (phoneSnap && rawOverride == null) {
     restorePhoneIfPending();
     return;
@@ -876,7 +932,7 @@ function runPhoneClean(rawOverride) {
   paintPhoneCleanColors();
 }
 
-function runAddrClean(rawOverride) {
+export function runAddrClean(rawOverride) {
   if (addrSnap && rawOverride == null) {
     restoreAddrIfPending();
     return;

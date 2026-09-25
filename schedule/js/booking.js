@@ -43,6 +43,19 @@ let form = {
 
 let phoneSnap = null;
 let addrSnap = null;
+let lastTeamLead = '';
+
+export function storedClientName(name) {
+  return String(name == null ? '' : name).trim();
+}
+
+export function newBookingPrefill({ date, boardTeams } = {}) {
+  const teams = Array.isArray(boardTeams) && boardTeams.length ? boardTeams : TEAMS;
+  return {
+    date: date || '',
+    team_lead: lastTeamLead || teams[0] || '',
+  };
+}
 
 function $(sel) {
   return document.querySelector(sel);
@@ -598,51 +611,50 @@ function renderHits(q) {
   });
 }
 
-function save(status = 'confirmed') {
-  if (!form.client_name.trim()) {
-    toast('Add a client name first');
-    $('#clientSearch')?.focus();
-    return;
+export function commitBooking(formState, status = 'confirmed', io = {}) {
+  if (!formState.date || !formState.team_lead) {
+    return { error: 'Date and team are required' };
   }
-  if (!form.date || !form.team_lead) {
-    toast('Date and team are required');
-    return;
-  }
-  const notesRaw = form.job_type === 'influencer' && !/influencer/i.test(form.notes || '')
-    ? `Influencer (Free)${form.notes ? ' — ' + form.notes : ''}`
-    : form.notes;
+  const listFn = io.allJobs || allJobs;
+  const addFn = io.addJob || addJob;
+  const updateFn = io.updateJob || updateJob;
+  const contactsFn = io.allContacts || allContacts;
+  const notesRaw = formState.job_type === 'influencer' && !/influencer/i.test(formState.notes || '')
+    ? `Influencer (Free)${formState.notes ? ' — ' + formState.notes : ''}`
+    : formState.notes;
   const notes = String(notesRaw || '').slice(0, NOTES1_MAX);
-  const jobs = allJobs();
-  const prev = form.job_id ? jobs.find((j) => j.job_id === form.job_id) : null;
-  const phone = phonePayload();
-  const addr = addressPayload();
+  const jobs = listFn();
+  const prev = formState.job_id ? jobs.find((j) => j.job_id === formState.job_id) : null;
+  const phone = phonePayload(formState);
+  const addr = addressPayload(formState);
   const payload = {
-    ...form,
+    ...formState,
+    client_name: storedClientName(formState.client_name),
     status: status === 'tentative' ? 'tentative' : 'confirmed',
-    acs: form.job_type === 'cleaning' ? acsLabel(form.units) : '',
-    units: form.job_type === 'cleaning' ? storedUnits(form.units) : emptyUnits(),
+    acs: formState.job_type === 'cleaning' ? acsLabel(formState.units) : '',
+    units: formState.job_type === 'cleaning' ? storedUnits(formState.units) : emptyUnits(),
     notes,
-    notes_long: form.notes_long,
-    invoice: form.invoice || '',
-    highlight: highlightOf({ highlight: form.highlight }),
+    notes_long: formState.notes_long,
+    invoice: formState.invoice || '',
+    highlight: highlightOf({ highlight: formState.highlight }),
     mobile: phone.mobile,
     phone_cc: phone.phone_cc,
     phone_national: phone.phone_national,
-    hubspot_id: matchHubspotIdByPhone(phone.mobile, allContacts()).hubspot_id || '',
+    hubspot_id: matchHubspotIdByPhone(phone.mobile, contactsFn()).hubspot_id || '',
     address: addr.address,
     address_line1: addr.address_line1,
     address_street: addr.address_street,
     address_place: addr.address_place,
     address_extra: addr.address_extra,
     district: addr.district,
-    time: formatTime24(form.time) || String(form.time || '').trim(),
-    payment: form.payment,
-    payment_status: paymentStatusFromLabel(form.payment),
-    team_members: teamMembersOnDay(jobs, form.date, form.team_lead),
-    amount: form.job_type === 'cleaning'
-      ? (form.amount === '' || form.amount == null ? null : Number(form.amount))
+    time: formatTime24(formState.time) || String(formState.time || '').trim(),
+    payment: formState.payment,
+    payment_status: paymentStatusFromLabel(formState.payment),
+    team_members: teamMembersOnDay(jobs, formState.date, formState.team_lead),
+    amount: formState.job_type === 'cleaning'
+      ? (formState.amount === '' || formState.amount == null ? null : Number(formState.amount))
       : null,
-    stack_order: stackOrderOnSave(jobs, form.date, form.team_lead, prev, form.stack_order),
+    stack_order: stackOrderOnSave(jobs, formState.date, formState.team_lead, prev, formState.stack_order),
   };
   delete payload.created_by;
   delete payload.created_at;
@@ -651,9 +663,19 @@ function save(status = 'confirmed') {
   delete payload.changes;
   delete payload.highlight_time;
   delete payload.highlight_notes;
-  const job = form.job_id ? updateJob(form.job_id, payload) : addJob(payload);
+  const job = formState.job_id ? updateFn(formState.job_id, payload) : addFn(payload);
+  if (job && job.team_lead) lastTeamLead = job.team_lead;
+  return { job };
+}
+
+function save(status = 'confirmed') {
+  const result = commitBooking(form, status);
+  if (result.error) {
+    toast(result.error);
+    return;
+  }
   closeBooking();
-  window.dispatchEvent(new CustomEvent('be:booked', { detail: job }));
+  window.dispatchEvent(new CustomEvent('be:booked', { detail: result.job }));
 }
 
 function cancelJob() {
@@ -1013,23 +1035,23 @@ function bindFormAddress() {
   }
 }
 
-function phonePayload() {
-  const cc = String(form.phone_cc || '').replace(/\D/g, '');
-  const nat = String(form.phone_national || '').replace(/\D/g, '');
-  const mobile = String(form.mobile || '').trim();
+function phonePayload(src = form) {
+  const cc = String(src.phone_cc || '').replace(/\D/g, '');
+  const nat = String(src.phone_national || '').replace(/\D/g, '');
+  const mobile = String(src.mobile || '').trim();
   if (!cc && !nat && !mobile) return { mobile: '', phone_cc: '', phone_national: '' };
   const parsed = parsePhone(composePhone(cc, nat) || mobile);
   if (!parsed.full) return { mobile: '', phone_cc: '', phone_national: '' };
   return { mobile: parsed.full, phone_cc: parsed.country, phone_national: parsed.national };
 }
 
-function addressPayload() {
-  const line1 = collapseAddr(form.address_line1);
-  const street = collapseAddr(form.address_street);
-  const place = collapseAddr(form.address_place);
-  const extra = collapseAddr(form.address_extra);
-  const code = form.district || '';
-  const composed = composeFullAddress({ line1, street, district: place, code }) || collapseAddr(form.address);
+function addressPayload(src = form) {
+  const line1 = collapseAddr(src.address_line1);
+  const street = collapseAddr(src.address_street);
+  const place = collapseAddr(src.address_place);
+  const extra = collapseAddr(src.address_extra);
+  const code = src.district || '';
+  const composed = composeFullAddress({ line1, street, district: place, code }) || collapseAddr(src.address);
   if (!line1 && !street && !place && !composed && !code) {
     return {
       address: '',

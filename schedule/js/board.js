@@ -7,9 +7,14 @@ function teamColor(name) {
   return TEAM_META[name]?.color || '#64748b';
 }
 
+export function clientCardName(name) {
+  const s = String(name == null ? '' : name).trim();
+  return s || '—';
+}
+
 function hoverTitle(job) {
-  return [job.client_name, job.time, job.acs, job.address, job.notes]
-    .filter((x) => x != null && String(x).trim())
+  return [clientCardName(job && job.client_name), job.time, job.acs, job.address, job.notes]
+    .filter((x) => x != null && String(x).trim() && String(x) !== '—')
     .join(' · ');
 }
 
@@ -103,7 +108,7 @@ function boardCardHtml(job, conflict, week) {
   const payWord = compactPayMark(job);
   const pulse = pulseRemaining(job) ? ' is-pulse' : '';
   const timeCls = conflict ? ' time-conflict' : '';
-  const name = String(job.client_name || '').trim();
+  const name = clientCardName(job.client_name);
   return `<button type="button" class="job-card job-card-detailed${hold ? ' is-tentative' : ''}${pulse}" draggable="true" data-job="${esc(job.job_id)}" style="border-left:4px solid ${left}" title="${esc(hoverTitle(job))}">
     <div class="compact-row">
       <div class="compact-col compact-col-time">
@@ -111,7 +116,7 @@ function boardCardHtml(job, conflict, week) {
         ${unitsBit}
       </div>
       <div class="compact-col compact-col-main">
-        ${name ? `<span class="compact-name">${esc(name)}</span>` : ''}
+        <span class="compact-name">${esc(name)}</span>
         ${mobile ? `<p class="detailed-phone">${esc(mobile)}</p>` : ''}
         ${addr ? `<p class="compact-addr">${esc(addr)}</p>` : ''}
         ${notes1 ? `<p class="compact-notes">${esc(notes1)}</p>` : ''}

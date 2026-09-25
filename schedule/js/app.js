@@ -4,8 +4,8 @@ import { addDays, formatDay, formatTime24, formatWeekLabel, jobTypeOf, mondayOf,
 import { allJobs, getJob, placeJobInSlot, redo, removeJob, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js?v=2';
 import { startScheduleAuth } from './auth.js';
 import { daySlotsOf, firstEmptySlotIndex, hasTimeConflict, jobsForTeamDay, layoutSlots, slotIndex } from './capacity.js';
-import { pulseRemaining, renderDayBoard, renderWeekBoard } from './board.js?v=8';
-import { closeBooking, openBooking } from './booking.js?v=17';
+import { clientCardName, pulseRemaining, renderDayBoard, renderWeekBoard } from './board.js?v=9';
+import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=18';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js?v=2';
 import { exportMasterRoster } from './export-roster.js?v=20';
 import { allContacts, initContactsStore, subscribeContacts } from './contacts-store.js?v=1';
@@ -803,7 +803,9 @@ function bindChrome() {
     paint();
   });
   $('newBooking').addEventListener('click', () => {
-    openBooking({ date: state.mode === 'day' ? state.day : TODAY });
+    const date = state.mode === 'day' ? state.day : TODAY;
+    const boardTeams = state.teams.length ? state.teams : TEAMS;
+    openBooking(newBookingPrefill({ date, boardTeams }));
   });
   const sundayBtn = $('sundayToggle');
   if (sundayBtn) {
@@ -945,7 +947,7 @@ function bindChrome() {
     state.view = 'board';
     state.focusJobId = job.job_id;
     paint();
-    toast(`${job.status === 'tentative' ? 'Tentative' : 'Saved'} ${job.client_name} · ${job.team_lead} · ${job.date}`);
+    toast(`${job.status === 'tentative' ? 'Tentative' : 'Saved'} ${clientCardName(job.client_name)} · ${job.team_lead} · ${job.date}`);
   });
   window.addEventListener('be:changed', () => paint());
   window.addEventListener('be:toast', (e) => toast(e.detail));

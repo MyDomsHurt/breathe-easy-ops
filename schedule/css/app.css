@@ -1659,6 +1659,7 @@ button.day-col-head:hover { background: #e0f2fe; }
   box-shadow: -20px 0 50px rgba(15,39,68,.18);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .phone-clean,
@@ -1834,22 +1835,17 @@ button.day-col-head:hover { background: #e0f2fe; }
   white-space: pre-wrap;
   line-height: 1.35;
   text-overflow: clip;
-  min-height: 36px;
-}
-.field textarea.full-phone {
-  max-height: calc(1.35em * 2 + 18px);
-}
-.field textarea.full-address {
-  max-height: calc(1.35em * 4 + 18px);
+  min-height: 32px;
+  max-height: none;
 }
 #phoneBlock,
 #addressBlock {
-  padding: 0 0 18px;
+  padding: 0;
 }
 #phoneBlock label,
 #addressBlock label {
   display: block;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   letter-spacing: 0;
   text-transform: none;
@@ -1891,15 +1887,21 @@ button.day-col-head:hover { background: #e0f2fe; }
   }
 }
 
+.drawer-head,
+.drawer-foot {
+  flex: 0 0 auto;
+}
 .drawer-body {
   padding: 16px 20px 8px;
   overflow: auto;
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
 }
 
 .form-block {
-  margin: 0 0 18px;
-  padding: 0 0 18px;
+  margin: 0 0 12px;
+  padding: 0 0 12px;
   border-bottom: 1px solid #eef2f6;
 }
 .form-block:last-child { margin-bottom: 0; padding-bottom: 8px; border-bottom: 0; }
@@ -1991,7 +1993,7 @@ p.hubspot-id-line {
 .grid-2 > .field, .grid-3 > .field { margin-bottom: 0; }
 .field label {
   display: block;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   letter-spacing: 0;
   text-transform: none;
@@ -2049,10 +2051,10 @@ p.hubspot-id-line {
 
 .field input, .field select, .field textarea {
   width: 100%;
-  height: 36px;
+  height: 32px;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  padding: 8px 11px;
+  padding: 5px 10px;
   font-size: 14px;
   background: #fff;
 }

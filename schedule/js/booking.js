@@ -203,8 +203,9 @@ function sizeFullBox(el, minRows, maxRows) {
   if (!el) return;
   const min = minRows || 1;
   const max = maxRows || min;
-  el.rows = min;
+  el.rows = 1;
   el.style.overflow = 'hidden';
+  el.style.overflowY = 'hidden';
   try {
     el.style.height = 'auto';
     const cs = window.getComputedStyle ? window.getComputedStyle(el) : null;
@@ -213,15 +214,27 @@ function sizeFullBox(el, minRows, maxRows) {
       const fs = cs ? parseFloat(cs.fontSize) : 14;
       lh = (Number.isFinite(fs) && fs > 0 ? fs : 14) * 1.35;
     }
-    const pad = cs ? ((parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0)) : 16;
-    const border = cs ? ((parseFloat(cs.borderTopWidth) || 0) + (parseFloat(cs.borderBottomWidth) || 0)) : 0;
-    const minH = lh * min + pad + border;
-    const maxH = lh * max + pad + border;
-    const sh = el.scrollHeight || (lh * min + pad);
-    el.style.height = Math.min(Math.max(sh + border, minH), maxH) + 'px';
+    const padY = cs ? ((parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0)) : 10;
+    const borderY = cs ? ((parseFloat(cs.borderTopWidth) || 0) + (parseFloat(cs.borderBottomWidth) || 0)) : 2;
+    const minH = lh * min + padY + borderY;
+    const maxH = lh * max + padY + borderY;
+    const sh = el.scrollHeight || (lh * min + padY);
+    let next = sh + borderY;
+    if (next < minH) next = minH;
+    const capped = next > maxH + 0.5;
+    if (capped) next = maxH;
+    el.style.height = Math.ceil(next) + 'px';
+    el.style.overflowY = capped ? 'auto' : 'hidden';
+    el.rows = min;
   } catch (err) {
     el.rows = min;
+    el.style.overflow = 'hidden';
   }
+}
+
+function sizePhoneAddrBoxes() {
+  sizeFullBox($('#mobileInput'), 1, 2);
+  sizeFullBox($('#addressInput'), 1, 4);
 }
 
 function logButtonHtml() {
@@ -304,6 +317,8 @@ export function openBooking(prefill = {}) {
   const root = $('#bookingRoot');
   root.classList.add('open');
   root.setAttribute('aria-hidden', 'false');
+  sizePhoneAddrBoxes();
+  if (typeof requestAnimationFrame === 'function') requestAnimationFrame(sizePhoneAddrBoxes);
   if (!editing) setTimeout(() => $('#clientSearch')?.focus(), 30);
 }
 
@@ -508,8 +523,7 @@ export function renderForm() {
   bindForm();
   paintPhoneCleanColors();
   paintAddrCleanColors();
-  sizeFullBox($('#mobileInput'), 1, 2);
-  sizeFullBox($('#addressInput'), 1, 4);
+  sizePhoneAddrBoxes();
   restoreDrawerScroll(scrollY);
 }
 

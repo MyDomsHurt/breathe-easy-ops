@@ -109,7 +109,7 @@ const ids = [
   'mobileInput', 'formPhoneCc', 'formPhoneNational', 'phoneCleanOpen', 'phoneApplyBtn',
   'addressInput', 'formAddrLine1', 'formAddrStreet', 'formAddrPlace', 'districtInput',
   'addrCleanOpen', 'addrApplyBtn',
-  'dateInput', 'timeInput', 'typeInput', 'payInput', 'amountInput',
+  'dateInput', 'timeInput', 'teamInput', 'typeInput', 'payInput', 'amountInput',
   'notesInput', 'notesLongInput', 'invoiceInput',
   'saveTentative', 'saveBooking', 'deleteBooking',
   'notes1Count', 'toggleLog', 'changeLog',
@@ -286,7 +286,7 @@ need('address Clean', byId.addrCleanOpen);
 need('address Apply', byId.addrApplyBtn);
 need('ACS tiles', unitBtns[0]);
 need('date', byId.dateInput);
-need('team', teamBtns[0]);
+need('team', byId.teamInput);
 need('time', byId.timeInput);
 need('type', byId.typeInput);
 need('notes 1', byId.notesInput);

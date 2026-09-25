@@ -208,19 +208,21 @@ function cleanRailHtml() {
         <button type="button" class="icon-btn" id="cleanRailClose" aria-label="Close">✕</button>
       </div>
       <div class="log-rail-body" id="cleanRailPhone">
-        <div class="field">
-          <label>Country</label>
-          <input id="formPhoneCc" class="phone-cc" value="${escapeAttr(form.phone_cc)}" placeholder="852" inputmode="numeric" aria-label="Country code" />
-          <p class="clean-was" id="wasPhoneCc" hidden></p>
-        </div>
-        <div class="field">
-          <label>Number</label>
-          <input id="formPhoneNational" class="phone-national" value="${escapeAttr(form.phone_national)}" placeholder="Number" inputmode="numeric" aria-label="National number" />
-          <p class="clean-was" id="wasPhoneNational" hidden></p>
+        <div class="rail-row">
+          <div class="field rail-cc">
+            <label>Country</label>
+            <input id="formPhoneCc" class="phone-cc" value="${escapeAttr(form.phone_cc)}" placeholder="852" inputmode="numeric" aria-label="Country code" />
+            <p class="clean-was" id="wasPhoneCc" hidden></p>
+          </div>
+          <div class="field rail-num">
+            <label>Number</label>
+            <input id="formPhoneNational" class="phone-national" value="${escapeAttr(form.phone_national)}" placeholder="Number" inputmode="numeric" aria-label="National number" />
+            <p class="clean-was" id="wasPhoneNational" hidden></p>
+          </div>
         </div>
         <div class="field">
           <label>Full</label>
-          <input id="railMobileInput" value="${escapeAttr(form.mobile)}" placeholder="+852…" aria-label="Full phone" />
+          <input id="railMobileInput" value="${escapeAttr(form.mobile)}" placeholder="+852…" aria-label="Full phone" readonly />
           <p class="clean-was" id="wasRailMobile" hidden></p>
         </div>
         <button type="button" class="primary-btn split-clean" id="phoneApplyBtn" hidden>Apply</button>
@@ -236,22 +238,24 @@ function cleanRailHtml() {
           <input id="formAddrStreet" value="${escapeAttr(form.address_street)}" />
           <p class="clean-was" id="wasAddrStreet" hidden></p>
         </div>
-        <div class="field">
-          <label>District</label>
-          <input id="formAddrPlace" value="${escapeAttr(form.address_place)}" placeholder="Mid-Levels" />
-          <p class="clean-was" id="wasAddrPlace" hidden></p>
-        </div>
-        <div class="field">
-          <label>Territory</label>
-          <select id="districtInput" aria-label="Territory">
-            <option value="">Select</option>
-            ${TERRITORIES.map((t) => `<option value="${t.code}" ${form.district === t.code ? 'selected' : ''}>${escapeAttr(t.label + ' (' + t.code + ')')}</option>`).join('')}
-          </select>
-          <p class="clean-was" id="wasAddrDistrict" hidden></p>
+        <div class="rail-row">
+          <div class="field">
+            <label>District</label>
+            <input id="formAddrPlace" value="${escapeAttr(form.address_place)}" placeholder="Mid-Levels" />
+            <p class="clean-was" id="wasAddrPlace" hidden></p>
+          </div>
+          <div class="field">
+            <label>Territory</label>
+            <select id="districtInput" aria-label="Territory">
+              <option value="">Select</option>
+              ${TERRITORIES.map((t) => `<option value="${t.code}" ${form.district === t.code ? 'selected' : ''}>${escapeAttr(t.label + ' (' + t.code + ')')}</option>`).join('')}
+            </select>
+            <p class="clean-was" id="wasAddrDistrict" hidden></p>
+          </div>
         </div>
         <div class="field">
           <label>Full</label>
-          <input id="railAddressInput" value="${escapeAttr(form.address)}" placeholder="Full Address 1" aria-label="Full Address 1" />
+          <input id="railAddressInput" value="${escapeAttr(form.address)}" placeholder="Full Address 1" aria-label="Full Address 1" readonly />
           <p class="clean-was" id="wasRailAddress" hidden></p>
         </div>
         <button type="button" class="primary-btn split-clean" id="addrApplyBtn" hidden>Apply</button>
@@ -410,12 +414,9 @@ export function renderForm() {
   if (form.team_lead && !ranked.find((r) => r.team === form.team_lead)) {
     form.team_lead = ranked[0]?.team || form.team_lead;
   }
-  const best = ranked[0];
   const warn = overlapWarning(jobs, { date: form.date, team: form.team_lead, time: form.time });
-  const selected = ranked.find((r) => r.team === form.team_lead);
-  const selectedJobs = selected?.jobCount || 0;
-  const selectedAreas = selected?.dayDistricts?.length ? selected.dayDistricts.join(', ') : '';
   const editing = Boolean(form.job_id);
+  const teamColor = (TEAM_META[form.team_lead] && TEAM_META[form.team_lead].color) || '#64748b';
   const headWhen = [form.date ? formatDay(form.date, { weekday: 'short' }) : 'Pick a date', form.team_lead || 'choose team', form.time ? shortTime(form) : '']
     .filter(Boolean)
     .join(' · ');
@@ -438,22 +439,17 @@ export function renderForm() {
         </div>
       </div>
       <div class="drawer-body">
-        <section class="form-block form-block-lead">
+        <section class="form-block">
           <div class="field${fieldClass('team')}">
             <label>Team ${holdChip('team', 'team')}</label>
             ${warn ? `<div class="team-warn">${warn}. You can still book.</div>` : ''}
-            <div class="team-picker">
-              ${TEAMS.map((team) => `
-                <button type="button" class="team-pick ${form.team_lead === team ? 'on' : ''}" data-team="${team}" style="--team:${TEAM_META[team].color};--team-soft:${TEAM_META[team].soft}">
-                  <i class="team-pip"></i><span>${team}</span>
-                </button>
-              `).join('')}
+            <div class="team-picker" style="--team:${teamColor}">
+              <i class="team-pip" aria-hidden="true"></i>
+              <select id="teamInput" aria-label="Team">
+                ${TEAMS.map((team) => `<option value="${escapeAttr(team)}" ${form.team_lead === team ? 'selected' : ''}>${escapeAttr(team)}</option>`).join('')}
+              </select>
             </div>
-            <div class="team-context">${selectedJobs} job${selectedJobs === 1 ? '' : 's'}${selectedAreas ? ' · ' + selectedAreas : ''}${best && best.team !== form.team_lead ? ' · Suggested ' + best.team : ''}</div>
           </div>
-        </section>
-
-        <section class="form-block">
           <div class="field field-primary${fieldClass('client')}">
             <label>Client ${holdChip('client', 'client')}</label>
             <div class="typeahead">
@@ -670,8 +666,9 @@ export function bindForm() {
       applyUnitDelta(btn.dataset.unit, btn.dataset.delta);
     });
   });
-  root.querySelectorAll('[data-team]').forEach((btn) => {
-    btn.addEventListener('click', () => { form.team_lead = btn.dataset.team; renderForm(); });
+  $('#teamInput')?.addEventListener('change', (e) => {
+    form.team_lead = e.target.value;
+    renderForm();
   });
   $('#saveBooking')?.addEventListener('click', () => save('confirmed'));
   $('#saveTentative')?.addEventListener('click', () => save('tentative'));
@@ -1147,7 +1144,6 @@ function bindFormPhone() {
     });
   }
   bindPhoneFull(full);
-  bindPhoneFull(rail);
 }
 
 function bindFormAddress() {
@@ -1209,7 +1205,6 @@ function bindFormAddress() {
     });
   }
   bindAddrFull(full);
-  bindAddrFull(rail);
 }
 
 function phonePayload(src = form) {

@@ -1,7 +1,7 @@
 import { DISTRICTS, JOB_TYPES, TEAMS } from './config.js?v=3';
 import { findCrewNote, isCrewNote } from './team-day.js';
 import { addDays, formatDay, formatTime24, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, normalizeLunch, pad, parseISO, shortTime, weekDays, workWeekDays } from './utils.js';
-import { allJobs, applyPhonePatch, attachLiveJobContacts, formatLiveJobPhones, getJob, importExistingJobs, placeJobInSlot, redo, removeJob, resetDemo, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js?v=2';
+import { allJobs, getJob, placeJobInSlot, redo, removeJob, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js?v=2';
 import { startScheduleAuth } from './auth.js';
 import { daySlotsOf, firstEmptySlotIndex, hasTimeConflict, jobsForTeamDay, layoutSlots, slotIndex } from './capacity.js';
 import { pulseRemaining, renderDayBoard, renderWeekBoard } from './board.js?v=8';
@@ -11,7 +11,6 @@ import { exportMasterRoster } from './export-roster.js?v=20';
 import { allContacts, initContactsStore, subscribeContacts } from './contacts-store.js?v=1';
 import { fillContactFilterSelect, importHubspotFile, renderContacts } from './contacts.js?v=2';
 import { uniqueContactValues } from './contacts-query.js?v=1';
-import { renderPhoneOutliers } from './phone-outliers.js?v=1';
 
 function calendarToday() {
   const d = new Date();
@@ -129,7 +128,6 @@ function paint() {
   $('viewBoard').hidden = state.view !== 'board';
   $('viewJobs').hidden = state.view !== 'jobs';
   if ($('viewContacts')) $('viewContacts').hidden = state.view !== 'contacts';
-  if ($('viewOutliers')) $('viewOutliers').hidden = state.view !== 'outliers';
   const root = $('appRoot');
   if (root) root.dataset.view = state.view;
   document.querySelectorAll('[data-nav]').forEach((el) => {
@@ -161,8 +159,6 @@ function paint() {
       sort: state.contactSort,
     });
     if (picked && picked.hubspot_id) state.contactId = picked.hubspot_id;
-  } else if (state.view === 'outliers') {
-    renderPhoneOutliers($('outliersMount'), allJobs(), allContacts());
   }
   syncFilterUi();
   syncSundayUi();
@@ -852,15 +848,6 @@ function bindChrome() {
       if (job) openBooking(job);
     }
   });
-  const outliersMount = $('outliersMount');
-  if (outliersMount) {
-    outliersMount.addEventListener('click', (e) => {
-      const row = e.target.closest('[data-job]');
-      if (!row) return;
-      const job = getJob(row.dataset.job);
-      if (job) openBooking(job);
-    });
-  }
   const contactsMount = $('contactsMount');
   if (contactsMount) {
     contactsMount.addEventListener('click', (e) => {
@@ -1018,13 +1005,7 @@ function bindSearch() {
 
 function bindOwnerTools() {
   const box = $('ownerTools');
-  const importBtn = $('importJobs');
   const exportBtn = $('exportRoster');
-  const applyPhonePatchBtn = $('applyPhonePatch');
-  const formatPhonesBtn = $('formatPhones');
-  const attachPhonesBtn = $('attachPhones');
-  const outliersBtn = $('phoneOutliers');
-  const resetBtn = $('resetDemo');
   if (!isOwnerUser(signedInEmail)) {
     if (box) {
       box.hidden = true;
@@ -1033,32 +1014,6 @@ function bindOwnerTools() {
     return;
   }
   if (box) box.hidden = false;
-  if (importBtn) {
-    importBtn.addEventListener('click', async () => {
-      if (!isOwnerUser(signedInEmail)) {
-        toast('Only Jeff can import jobs');
-        return;
-      }
-      if (!usingFirestore()) {
-        toast('Sign in to import into the live store');
-        return;
-      }
-      if (!confirm('One-time import of seed + technician archive into Firestore?\n\nThis can upload thousands of jobs. Do not run it on every computer or on every page load.')) {
-        return;
-      }
-      importBtn.disabled = true;
-      try {
-        const result = await importExistingJobs();
-        paint();
-        toast(`Imported ${result.count} jobs`);
-      } catch (err) {
-        console.error(err);
-        toast((err && err.message) || 'Import failed');
-      } finally {
-        importBtn.disabled = false;
-      }
-    });
-  }
   if (exportBtn) {
     exportBtn.addEventListener('click', async () => {
       if (!isOwnerUser(signedInEmail)) {
@@ -1081,94 +1036,7 @@ function bindOwnerTools() {
       }
     });
   }
-  if (applyPhonePatchBtn) {
-    applyPhonePatchBtn.addEventListener('click', async () => {
-      if (!isOwnerUser(signedInEmail)) {
-        toast('Only Jeff can apply the phone patch');
-        return;
-      }
-      if (!usingFirestore()) {
-        toast('Sign in to patch live job phones');
-        return;
-      }
-      applyPhonePatchBtn.disabled = true;
-      try {
-        const result = await applyPhonePatch();
-        toast(`${result.written} written · ${result.matched} already matched · ${result.failed} failed · ${result.missing} missing`);
-      } catch (err) {
-        console.error(err);
-        toast((err && err.message) || 'Phone patch failed');
-      } finally {
-        applyPhonePatchBtn.disabled = false;
-      }
-    });
-  }
-  if (formatPhonesBtn) {
-    formatPhonesBtn.addEventListener('click', async () => {
-      if (!isOwnerUser(signedInEmail)) {
-        toast('Only Jeff can format phones');
-        return;
-      }
-      formatPhonesBtn.disabled = true;
-      try {
-        const result = formatLiveJobPhones();
-        paint();
-        toast(`${result.formatted} formatted · ${result.ok} already ok · ${result.skipped} skipped`);
-      } catch (err) {
-        console.error(err);
-        toast((err && err.message) || 'Format phones failed');
-      } finally {
-        formatPhonesBtn.disabled = false;
-      }
-    });
-  }
-  if (attachPhonesBtn) {
-    attachPhonesBtn.addEventListener('click', () => {
-      if (!isOwnerUser(signedInEmail)) {
-        toast('Only Jeff can attach phones');
-        return;
-      }
-      attachPhonesBtn.disabled = true;
-      try {
-        const result = attachLiveJobContacts();
-        paint();
-        toast(`${result.attached} attached · ${result.already} already set · ${result.unmatched} unmatched · ${result.ambiguous} ambiguous`);
-      } catch (err) {
-        console.error(err);
-        toast((err && err.message) || 'Attach phones failed');
-      } finally {
-        attachPhonesBtn.disabled = false;
-      }
-    });
-  }
-  if (outliersBtn) {
-    outliersBtn.addEventListener('click', () => {
-      if (!isOwnerUser(signedInEmail)) {
-        toast('Only Jeff can list phone outliers');
-        return;
-      }
-      state.view = 'outliers';
-      paint();
-    });
-  }
   bindContactsImport();
-  if (resetBtn) {
-    resetBtn.addEventListener('click', () => {
-      if (!isOwnerUser(signedInEmail)) {
-        toast('Only Jeff can reset the demo');
-        return;
-      }
-      if (usingFirestore()) {
-        toast('Local demo reset is only for the offline fallback');
-        return;
-      }
-      if (confirm('Reset local demo bookings back to the seed schedule?')) {
-        resetDemo();
-        paint();
-        toast('Demo data reset');
-      }
-    });
-  }
 }
 
 function bindContactsImport() {

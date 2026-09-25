@@ -2,6 +2,7 @@ import { DISTRICTS, TEAM_META } from './config.js?v=3';
 import { conflictingJobIds, daySlotsOf, districtsForTeamOnDay, firstEmptySlotIndex, jobsForTeamDay, layoutSlots, slotFloor } from './capacity.js';
 import { cellTeamMembers, findCrewNote } from './team-day.js?v=1';
 import { acsLabel, districtChipsHtml, esc, formatDay, isWeekend, jobStatus, jobTypeOf, normalizeLunch, pad, parseAcs, parseISO, shortTime, startMinutes } from './utils.js';
+import { jobOnSiteMinutes } from './job-duration.js';
 
 function teamColor(name) {
   return TEAM_META[name]?.color || '#64748b';
@@ -114,7 +115,11 @@ function boardCardHtml(job, conflict, week) {
   const pulse = pulseRemaining(job) ? ' is-pulse' : '';
   const timeCls = conflict ? ' time-conflict' : '';
   const name = clientCardName(job.client_name);
-  return `<button type="button" class="job-card job-card-detailed${hold ? ' is-tentative' : ''}${pulse}" data-job="${esc(job.job_id)}" style="border-left:4px solid ${left}" title="${esc(hoverTitle(job))}">
+  const jobMin = week ? Math.max(44, Math.round(jobOnSiteMinutes(job) * 0.7)) : null;
+  const cardStyle = jobMin != null
+    ? `border-left:4px solid ${left};--job-min:${jobMin}px`
+    : `border-left:4px solid ${left}`;
+  return `<button type="button" class="job-card job-card-detailed${hold ? ' is-tentative' : ''}${pulse}" data-job="${esc(job.job_id)}" style="${cardStyle}" title="${esc(hoverTitle(job))}">
     <div class="compact-row">
       <div class="compact-col compact-col-time">
         <span class="compact-time${timeCls}">${esc(shortTime(job))}</span>
@@ -147,8 +152,6 @@ function emptySlotHtml(date, team, index, slim) {
   return `<button type="button" class="${cls}" data-book-date="${esc(date)}" data-book-team="${esc(team)}" data-empty-slot="1" data-slot="${index}" aria-label="Add booking"></button>`;
 }
 
-export const WEEK_HOLE_MINUTES = 120;
-
 export function weekClockJobs(jobs) {
   return (jobs || []).slice().sort((a, b) => {
     const ta = startMinutes(a);
@@ -161,8 +164,9 @@ export function weekClockJobs(jobs) {
   });
 }
 
-function weekHoleHtml(date, team) {
-  return `<button type="button" class="week-hole" data-book-date="${esc(date)}" data-book-team="${esc(team)}" data-week-hole="1" aria-label="Open time"></button>`;
+function weekHoleHtml(date, team, leftover) {
+  const h = Math.max(28, Math.round(leftover * 0.7));
+  return `<button type="button" class="week-hole" style="--hole-min:${h}px" data-book-date="${esc(date)}" data-book-team="${esc(team)}" data-week-hole="1" aria-label="Open time"></button>`;
 }
 
 function weekOpenAreaHtml(date, team) {
@@ -176,6 +180,7 @@ function renderWeekStack(jobs, lunchTime, conflicts, date, team, full) {
   const out = [];
   let lunchPlaced = lunchMins == null;
   let prevTimed = null;
+  let prevJob = null;
 
   function placeLunch() {
     if (lunchPlaced || !lunch) return;
@@ -186,11 +191,15 @@ function renderWeekStack(jobs, lunchTime, conflicts, date, team, full) {
   for (const j of ordered) {
     const m = startMinutes(j);
     if (!lunchPlaced && lunchMins != null && m != null && lunchMins <= m) placeLunch();
-    if (!full && prevTimed != null && m != null && (m - prevTimed) >= WEEK_HOLE_MINUTES) {
-      out.push(weekHoleHtml(date, team));
+    if (!full && prevTimed != null && m != null && prevJob) {
+      const leftover = m - (prevTimed + jobOnSiteMinutes(prevJob));
+      if (leftover >= 30) out.push(weekHoleHtml(date, team, leftover));
     }
     out.push(boardCardHtml(j, conflicts.has(j.job_id), true));
-    if (m != null) prevTimed = m;
+    if (m != null) {
+      prevTimed = m;
+      prevJob = j;
+    }
   }
   if (!lunchPlaced && lunch) placeLunch();
   if (!ordered.length && !full) out.push(weekOpenAreaHtml(date, team));

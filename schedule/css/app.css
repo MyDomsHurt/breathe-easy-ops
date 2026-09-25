@@ -856,9 +856,10 @@ button.day-col-head:hover { background: #e0f2fe; }
 }
 .week-hole {
   display: block;
-  flex: 0 0 auto;
+  flex: 0 0 var(--hole-min, 28px);
   width: 100%;
-  min-height: 44px;
+  height: var(--hole-min, 28px);
+  min-height: var(--hole-min, 28px);
   margin: 0;
   padding: 0;
   border: 0;
@@ -1273,8 +1274,14 @@ button.day-col-head:hover { background: #e0f2fe; }
   white-space: nowrap;
 }
 .job-card-detailed .compact-pay.is-unpaid { color: #d97706; }
+.week-cell .job-card.job-card-detailed {
+  height: var(--job-min, 44px);
+  min-height: var(--job-min, 44px);
+  flex: 0 0 var(--job-min, 44px);
+}
 .week-cell .job-card-detailed .compact-row {
   padding: 8px;
+  height: 100%;
   grid-template-columns: 5.25ch minmax(0, 1fr) max-content;
   column-gap: 8px;
 }

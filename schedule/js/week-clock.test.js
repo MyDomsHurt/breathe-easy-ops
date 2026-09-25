@@ -13,13 +13,14 @@ function assert(cond, msg) {
 const date = '2026-09-22';
 const team = 'Josh';
 
-function job(id, time) {
+function job(id, time, acs) {
   return {
     job_id: id,
     date,
     team_lead: team,
     client_name: id,
     time,
+    acs: acs || '',
     source: 'test',
   };
 }
@@ -29,7 +30,7 @@ function countClass(html, cls) {
   return (html.match(re) || []).length;
 }
 
-// 1. 09:00 and 16:00 on the same day → one open band between them.
+// 1. 09:00 and 16:00 with no ACS (45 min work) still have one hole.
 const latePair = [job('am', '09:00'), job('pm', '16:00')];
 const html1 = rosterCellHtml(latePair, latePair, date, team, 'week', latePair, date);
 assert(countClass(html1, 'week-hole') === 1, '1 hole count ' + countClass(html1, 'week-hole'));
@@ -38,7 +39,7 @@ assert(html1.indexOf('class="week-hole"') < html1.indexOf('data-job="pm"'), '1 h
 assert(html1.indexOf('empty-slot') === -1, '1 empty-slot rows');
 print('ok 1 09:00 and 16:00 have one hole');
 
-// 2. 09:00 and 10:00 → no open band between them.
+// 2. 09:00 and 10:00 with no ACS still have no hole (leftover 15).
 const packed = [job('nine', '09:00'), job('ten', '10:00')];
 const html2 = rosterCellHtml(packed, packed, date, team, 'week', packed, date);
 assert(countClass(html2, 'week-hole') === 0, '2 unexpected hole');
@@ -78,4 +79,24 @@ assert(placed.length === 1 && placed[0].id === 'job-abc', '5 placeJobInSlot');
 assert(opened.length === 0, '5 openBooking');
 print('ok 5 pointer-up moves captured job');
 
-print('ok 5 week-clock cases');
+// 6. 09:00 3S and 11:00 → no hole (135 work).
+const split3 = [job('s3', '09:00', '3S'), job('eleven', '11:00')];
+const html6 = rosterCellHtml(split3, split3, date, team, 'week', split3, date);
+assert(countClass(html6, 'week-hole') === 0, '6 unexpected hole');
+print('ok 6 09:00 3S and 11:00 have no hole');
+
+// 7. 09:00 2C and 11:00 → no hole (105 work, 15 leftover).
+const cass2 = [job('c2', '09:00', '2C'), job('eleven2', '11:00')];
+const html7 = rosterCellHtml(cass2, cass2, date, team, 'week', cass2, date);
+assert(countClass(html7, 'week-hole') === 0, '7 unexpected hole');
+print('ok 7 09:00 2C and 11:00 have no hole');
+
+// 8. 09:00 2W and 12:00 → one hole (90 work, 90 leftover).
+const win2 = [job('w2', '09:00', '2W'), job('noon', '12:00')];
+const html8 = rosterCellHtml(win2, win2, date, team, 'week', win2, date);
+assert(countClass(html8, 'week-hole') === 1, '8 hole count ' + countClass(html8, 'week-hole'));
+assert(html8.indexOf('data-job="w2"') < html8.indexOf('class="week-hole"'), '8 hole after 2W');
+assert(html8.indexOf('class="week-hole"') < html8.indexOf('data-job="noon"'), '8 hole before 12:00');
+print('ok 8 09:00 2W and 12:00 have one hole');
+
+print('ok week-clock cases');

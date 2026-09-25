@@ -99,7 +99,7 @@ let html = weekHtml(jobs);
 assert(weekCellTitle(date, true, false, 0).indexOf('Open') !== -1, '1 title Open fn');
 assert(html.indexOf('Open') !== -1, '1 Open in html');
 assert(html.indexOf('cell-add') !== -1, '1 + present before lock');
-assert(html.indexOf('empty-slot') !== -1, '1 empty slots before lock');
+assert(html.indexOf('empty-slot') === -1, '1 week rest has empty slots');
 assert(html.indexOf('is-full') === -1, '1 not full yet');
 toggleFull(jobs, true);
 html = weekHtml(jobs);
@@ -117,7 +117,7 @@ html = weekHtml(jobs);
 assert(!isTeamDayFull(jobs, date, team), '2 flag off');
 assert(html.indexOf('Open') !== -1, '2 Open');
 assert(html.indexOf('cell-add') !== -1, '2 + back');
-assert(html.indexOf('empty-slot') !== -1, '2 empty slots back');
+assert(html.indexOf('empty-slot') === -1, '2 week rest has empty slots');
 assert(html.indexOf('is-full') === -1, '2 not full class');
 print('ok 2 toggle open + back');
 

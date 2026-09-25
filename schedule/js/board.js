@@ -1,10 +1,15 @@
 import { DISTRICTS, TEAM_META } from './config.js?v=3';
 import { conflictingJobIds, daySlotsOf, districtsForTeamOnDay, firstEmptySlotIndex, jobsForTeamDay, layoutSlots, slotFloor } from './capacity.js';
 import { cellTeamMembers, findCrewNote } from './team-day.js?v=1';
-import { acsLabel, districtChipsHtml, esc, formatDay, isToday, isWeekend, jobStatus, jobTypeOf, normalizeLunch, parseAcs, parseISO, shortTime, startMinutes } from './utils.js';
+import { acsLabel, districtChipsHtml, esc, formatDay, isWeekend, jobStatus, jobTypeOf, normalizeLunch, pad, parseAcs, parseISO, shortTime, startMinutes } from './utils.js';
 
 function teamColor(name) {
   return TEAM_META[name]?.color || '#64748b';
+}
+
+function calendarDay() {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
 export function clientCardName(name) {
@@ -165,12 +170,25 @@ function renderSlotStack(slots, lunchTime, conflicts, mode, full, date, team, lu
         }
       }
       out.push(renderJob(j));
-    } else if (!full) {
-      out.push(emptySlotHtml(date, team, i, week));
+    } else if (!full && !week) {
+      out.push(emptySlotHtml(date, team, i, false));
     }
   }
   if (!placedLunch) out.push(lunchCardHtml(time, date, team));
   return out.join('');
+}
+
+export function weekDragSlotsHtml(allJobs, date, team) {
+  const list = jobsForTeamDay(allJobs, date, team);
+  const note = findCrewNote(allJobs, date, team);
+  const full = !!(note && (note.day_full === true || note.day_full === 'true'));
+  if (full) return '';
+  const laid = layoutSlots(list, daySlotsOf(note));
+  const bits = [];
+  for (let i = 0; i < laid.length; i += 1) {
+    if (!laid[i]) bits.push(emptySlotHtml(date, team, i, true));
+  }
+  return bits.join('');
 }
 
 export function weekLockBit(empty, full, count) {
@@ -183,11 +201,11 @@ export function weekCellTitle(date, empty, full, count) {
   return `${dow} ${day} · ${weekLockBit(empty, full, count)}`;
 }
 
-export function rosterCellHtml(allJobs, displayJobs, date, team, mode, lookupJobs) {
-  return cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs);
+export function rosterCellHtml(allJobs, displayJobs, date, team, mode, lookupJobs, today) {
+  return cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs, today);
 }
 
-function cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs) {
+function cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs, today) {
   const list = jobsForTeamDay(allJobs, date, team);
   const shown = jobsForTeamDay(displayJobs, date, team);
   const empty = list.length === 0;
@@ -230,7 +248,9 @@ function cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs) {
       <button type="button" class="add-slot-btn" data-add-slot="${esc(date)}" data-add-slot-team="${esc(team)}" data-add-slot-count="${slots}" title="Add a slot">+ slot</button>
       <button type="button" class="add-slot-btn" data-remove-slot="${esc(date)}" data-remove-slot-team="${esc(team)}" data-remove-slot-count="${slots}" data-remove-slot-floor="${floor}" title="Remove an empty slot"${slots <= floor ? ' disabled' : ''}>− slot</button>
     </div>`;
-  return `<div class="roster-cell ${empty ? 'empty' : 'has-jobs'}${full ? ' is-full' : ''} ${week ? 'week-cell' : 'day-cell'}" data-date="${date}" data-team="${team}">
+  const todayIso = today || calendarDay();
+  const todayCls = date === todayIso ? ' today' : '';
+  return `<div class="roster-cell ${empty ? 'empty' : 'has-jobs'}${full ? ' is-full' : ''} ${week ? 'week-cell' : 'day-cell'}${todayCls}" data-date="${date}" data-team="${team}">
     <div class="cell-top">
       <div class="cell-head-left">
         <span class="cell-status">${status}</span>
@@ -247,11 +267,12 @@ function cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs) {
   </div>`;
 }
 
-export function renderWeekBoard(el, { jobs, chipJobs, days, teams, lookupJobs }) {
+export function renderWeekBoard(el, { jobs, chipJobs, days, teams, lookupJobs, today }) {
   const shown = chipJobs || jobs;
   const lookup = lookupJobs || jobs;
+  const todayIso = today || calendarDay();
   const heads = days.map((d) => {
-    const cls = [isToday(d) ? 'today' : '', isWeekend(d) ? 'weekend' : ''].join(' ');
+    const cls = [d === todayIso ? 'today' : '', isWeekend(d) ? 'weekend' : ''].join(' ');
     return `<button class="day-col-head ${cls}" data-open-day="${d}" type="button">
       <div class="dow">${formatDay(d, { weekday: 'short', month: 'short' }).split(' ')[0]}</div>
       <div class="dom">${Number(d.slice(8))}</div>
@@ -259,7 +280,7 @@ export function renderWeekBoard(el, { jobs, chipJobs, days, teams, lookupJobs })
   }).join('');
 
   const rows = teams.map((team) => {
-    const cells = days.map((date) => cellHtml(jobs, shown, date, team, 'week', lookup)).join('');
+    const cells = days.map((date) => cellHtml(jobs, shown, date, team, 'week', lookup, todayIso)).join('');
     return `<div class="team-row-label" style="--team:${teamColor(team)}">
       <span class="team-dot" style="background:${teamColor(team)}"></span>
       <strong>${team}</strong>
@@ -273,9 +294,10 @@ export function renderWeekBoard(el, { jobs, chipJobs, days, teams, lookupJobs })
   </div></div>`;
 }
 
-export function renderDayBoard(el, { jobs, chipJobs, date, teams, lookupJobs }) {
+export function renderDayBoard(el, { jobs, chipJobs, date, teams, lookupJobs, today }) {
   const shown = chipJobs || jobs;
   const lookup = lookupJobs || jobs;
+  const todayIso = today || calendarDay();
   const cols = teams.map((team) => {
     return `<div class="day-col">
       <div class="day-col-team" style="--team:${teamColor(team)}">
@@ -284,7 +306,7 @@ export function renderDayBoard(el, { jobs, chipJobs, date, teams, lookupJobs }) 
           <strong>${team}</strong>
         </div>
       </div>
-      ${cellHtml(jobs, shown, date, team, 'day', lookup)}
+      ${cellHtml(jobs, shown, date, team, 'day', lookup, todayIso)}
     </div>`;
   }).join('');
 

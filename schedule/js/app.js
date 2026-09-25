@@ -4,7 +4,7 @@ import { addDays, formatDay, formatTime24, formatWeekLabel, jobTypeOf, mondayOf,
 import { allJobs, getJob, placeJobInSlot, redo, removeJob, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js?v=4';
 import { startScheduleAuth } from './auth.js';
 import { daySlotsOf, firstEmptySlotIndex, hasTimeConflict, jobsForTeamDay, layoutSlots, slotIndex } from './capacity.js?v=4';
-import { clientCardName, pulseRemaining, renderDayBoard, renderWeekBoard } from './board.js?v=10';
+import { clientCardName, pulseRemaining, renderDayBoard, renderWeekBoard, weekDragSlotsHtml } from './board.js?v=11';
 import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=22';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js?v=2';
 import { exportMasterRoster } from './export-roster.js?v=22';
@@ -118,9 +118,9 @@ function paintBoard() {
   const jobs = filteredJobs();
   const rosterJobs = teamJobs();
   if (state.mode === 'week') {
-    renderWeekBoard(mount, { jobs: rosterJobs, chipJobs: jobs, days: boardDays(), teams: state.teams, lookupJobs: allJobs() });
+    renderWeekBoard(mount, { jobs: rosterJobs, chipJobs: jobs, days: boardDays(), teams: state.teams, lookupJobs: allJobs(), today: TODAY });
   } else {
-    renderDayBoard(mount, { jobs: rosterJobs, chipJobs: jobs, date: state.day, teams: state.teams, lookupJobs: allJobs() });
+    renderDayBoard(mount, { jobs: rosterJobs, chipJobs: jobs, date: state.day, teams: state.teams, lookupJobs: allJobs(), today: TODAY });
   }
 }
 
@@ -428,7 +428,26 @@ let dragLunchFrom = null;
 let suppressClick = false;
 let dropHint = null;
 
+function hideWeekDropSlots() {
+  document.querySelectorAll('#boardMount [data-week-drop-stack]').forEach((el) => el.remove());
+}
+
+function showWeekDropSlots() {
+  hideWeekDropSlots();
+  document.querySelectorAll('#boardMount .week-cell:not(.is-full)').forEach((cell) => {
+    const chips = cell.querySelector('.job-chips');
+    if (!chips) return;
+    const html = weekDragSlotsHtml(allJobs(), cell.dataset.date, cell.dataset.team);
+    if (!html) return;
+    const wrap = document.createElement('div');
+    wrap.setAttribute('data-week-drop-stack', '1');
+    wrap.innerHTML = html;
+    chips.appendChild(wrap);
+  });
+}
+
 function clearDropTargets() {
+  hideWeekDropSlots();
   document.querySelectorAll('#boardMount .drop-ok, #boardMount .is-dragging, #boardMount .drop-before, #boardMount .drop-after').forEach((el) => {
     el.classList.remove('drop-ok', 'is-dragging', 'drop-before', 'drop-after');
   });
@@ -502,6 +521,7 @@ function bindBoardDrag() {
       blank.classList.add('is-dragging');
       e.dataTransfer.setData('text/plain', 'new-appointment');
       e.dataTransfer.effectAllowed = 'copy';
+      showWeekDropSlots();
     });
     blank.addEventListener('dragend', () => {
       dragJobId = '';
@@ -521,6 +541,7 @@ function bindBoardDrag() {
       lunch.classList.add('is-dragging');
       e.dataTransfer.setData('text/plain', 'lunch');
       e.dataTransfer.effectAllowed = 'move';
+      showWeekDropSlots();
       return;
     }
     const chip = e.target.closest('[data-job]');
@@ -534,6 +555,7 @@ function bindBoardDrag() {
     chip.classList.add('is-dragging');
     e.dataTransfer.setData('text/plain', dragJobId);
     e.dataTransfer.effectAllowed = 'move';
+    showWeekDropSlots();
   });
   mount.addEventListener('dragend', () => {
     dragJobId = '';

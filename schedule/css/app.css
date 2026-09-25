@@ -497,8 +497,11 @@ button.day-col-head {
 button.day-col-head:hover { background: #e0f2fe; }
 .day-col-head .dow { font-size: 11px; color: var(--muted); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
 .day-col-head .dom { font-size: 18px; font-weight: 800; letter-spacing: -0.03em; }
-.day-col-head.today { background: #e0f2fe; }
-.day-col-head.today .dom { color: var(--brand); }
+.day-col-head.today {
+  background: #f0fdf4;
+  box-shadow: inset 0 0 0 2px #86efac;
+}
+.day-col-head.today .dom { color: #166534; }
 .day-col-head.weekend { background: #f8fafc; }
 
 .team-row-label {
@@ -527,8 +530,13 @@ button.day-col-head:hover { background: #e0f2fe; }
   height: auto;
 }
 
-.roster-cell.empty { background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 70%); }
+.roster-cell.empty { background: white; }
 .roster-cell.is-full { background: #f3eee6; }
+.roster-cell.today {
+  box-shadow: inset 0 0 0 2px #86efac;
+  background: #f0fdf4;
+}
+.roster-cell.today.is-full { background: #f3eee6; }
 .roster-cell:hover { outline: 2px solid #7dd3fc; outline-offset: -2px; z-index: 1; }
 .roster-cell.drop-ok {
   outline: 2px solid #0284c7;

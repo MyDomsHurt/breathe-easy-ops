@@ -13,7 +13,7 @@ import {
   createStore,
   defaultAdapter,
   loadExistingCanonicalJobs,
-} from '../../shared/store.js?v=1';
+} from '../../shared/store.js?v=2';
 import { appendChange, asChanges, fromScheduleJob } from '../../shared/job.js';
 import { matchHubspotIdByPhone, parsePhone } from '../../shared/phone-parse.js';
 import { allContacts } from './contacts-store.js?v=1';
@@ -42,11 +42,11 @@ export async function initStore(user) {
   readyPromise = (async () => {
     const adapter = defaultAdapter({ user });
     try {
-      ops = createStore({ adapter, user });
+      ops = createStore({ adapter, user, deferRemote: true });
       await ops.ready;
     } catch (err) {
       console.warn('Live store failed, using local fallback', err);
-      ops = createStore({ adapter: defaultAdapter({ user: null }) });
+      ops = createStore({ adapter: defaultAdapter({ user: null }), deferRemote: true });
       await ops.ready;
     }
     ops.subscribe((event) => {
@@ -58,6 +58,7 @@ export async function initStore(user) {
     }
     ready = true;
     emit();
+    if (ops && typeof ops.startRemote === 'function') ops.startRemote();
     return allJobs();
   })();
   return readyPromise;

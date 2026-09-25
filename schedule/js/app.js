@@ -1,13 +1,13 @@
 import { DISTRICTS, JOB_TYPES, TEAMS } from './config.js?v=3';
 import { canPlaceJobOnTeamDay, findCrewNote, isCrewNote, isTeamDayFull } from './team-day.js?v=1';
 import { addDays, formatDay, formatTime24, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, normalizeLunch, pad, parseISO, shortTime, weekDays, workWeekDays } from './utils.js';
-import { allJobs, getJob, placeJobInSlot, redo, removeJob, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js?v=3';
+import { allJobs, getJob, placeJobInSlot, redo, removeJob, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js?v=4';
 import { startScheduleAuth } from './auth.js';
 import { daySlotsOf, firstEmptySlotIndex, hasTimeConflict, jobsForTeamDay, layoutSlots, slotIndex } from './capacity.js?v=4';
 import { clientCardName, pulseRemaining, renderDayBoard, renderWeekBoard } from './board.js?v=10';
-import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=21';
+import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=22';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js?v=2';
-import { exportMasterRoster } from './export-roster.js?v=21';
+import { exportMasterRoster } from './export-roster.js?v=22';
 import { allContacts, initContactsStore, subscribeContacts } from './contacts-store.js?v=1';
 import { fillContactFilterSelect, importHubspotFile, renderContacts } from './contacts.js?v=2';
 import { uniqueContactValues } from './contacts-query.js?v=1';

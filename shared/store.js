@@ -11,7 +11,7 @@
 import { normalizeJob } from './job.js';
 import { shouldUseFirestore } from './firebase-config.js';
 import { createLocalAdapter, OPS_JOBS_KEY, LEGACY_SCHEDULE_KEY } from './store-local.js';
-import { createFirestoreAdapter } from './store-firestore.js';
+import { createFirestoreAdapter } from './store-firestore.js?v=1';
 import {
   combineExistingJobs,
   loadExistingCanonicalJobs,
@@ -146,12 +146,16 @@ export function createStore(options = {}) {
     return api;
   });
 
-  if (typeof adapter.subscribeRemote === 'function') {
+  function startRemote() {
+    if (remoteUnsub) return;
+    if (typeof adapter.subscribeRemote !== 'function') return;
     remoteUnsub = adapter.subscribeRemote((list) => {
       hydrate(list);
       notify({ type: 'remote' });
     });
   }
+
+  if (!options.deferRemote) startRemote();
 
   const api = {
     ready,
@@ -245,6 +249,8 @@ export function createStore(options = {}) {
       }
       return imported;
     },
+
+    startRemote,
 
     subscribe(callback) {
       if (typeof callback !== 'function') return () => {};

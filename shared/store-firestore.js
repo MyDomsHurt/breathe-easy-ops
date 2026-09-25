@@ -17,6 +17,33 @@ import { normalizeJob } from './job.js';
 
 const BATCH_LIMIT = 400;
 
+function pad2(n) {
+  return String(n).padStart(2, '0');
+}
+
+export function nearbyJobsRange(now = new Date()) {
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  const from = new Date(y, m - 1, 1);
+  const to = new Date(y, m + 2, 0);
+  return {
+    from: from.getFullYear() + '-' + pad2(from.getMonth() + 1) + '-' + pad2(from.getDate()),
+    to: to.getFullYear() + '-' + pad2(to.getMonth() + 1) + '-' + pad2(to.getDate()),
+  };
+}
+
+export async function loadNearbyOrAll(rangeGet, fullGet) {
+  try {
+    const list = await rangeGet();
+    if (Array.isArray(list)) return list;
+  } catch (err) {
+    if (typeof console !== 'undefined' && console.warn) {
+      console.warn('Nearby jobs range get failed, using full query', err);
+    }
+  }
+  return fullGet();
+}
+
 export function createFirestoreAdapter(options = {}) {
   const collectionName = options.collection || JOBS_COLLECTION;
 
@@ -42,8 +69,19 @@ export function createFirestoreAdapter(options = {}) {
     collection: collectionName,
 
     async load() {
-      const snap = await jobsQuery().get();
-      return snap.docs.map(docToJob);
+      const { from, to } = nearbyJobsRange();
+      const fullGet = async () => {
+        const snap = await jobsQuery().get();
+        return snap.docs.map(docToJob);
+      };
+      const rangeGet = async () => {
+        const snap = await jobsQuery()
+          .where('date', '>=', from)
+          .where('date', '<=', to)
+          .get();
+        return snap.docs.map(docToJob);
+      };
+      return loadNearbyOrAll(rangeGet, fullGet);
     },
 
     async upsert(job) {

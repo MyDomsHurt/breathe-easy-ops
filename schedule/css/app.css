@@ -802,6 +802,7 @@ button.day-col-head:hover { background: #e0f2fe; }
   padding: 2px 8px;
   font-size: 10px;
   border-radius: 4px;
+  cursor: default;
 }
 .lunch-label { text-transform: uppercase; font-size: 10px; letter-spacing: 0.06em; }
 .lunch-time { font-variant-numeric: tabular-nums; }
@@ -1394,21 +1395,22 @@ button.day-col-head:hover { background: #e0f2fe; }
 .week-cell .job-card-detailed .compact-row {
   padding: 8px;
   height: auto;
-  grid-template-columns: 4.6ch minmax(0, 1fr) 3.2rem;
+  grid-template-columns: 4ch minmax(0, 1fr);
   column-gap: 8px;
 }
 .week-cell .job-card-detailed .compact-col-time {
-  width: 4.6ch;
-  max-width: 4.6ch;
-  min-width: 4.6ch;
+  width: 4ch;
+  max-width: 4ch;
+  min-width: 0;
+  overflow: hidden;
   gap: 3px;
 }
 .week-cell .job-card-detailed .compact-time {
-  width: 4.6ch;
-  font-size: 13px;
+  width: 4ch;
+  font-size: 12px;
 }
 .week-cell .job-card-detailed .live-units {
-  max-width: 4.6ch;
+  max-width: 4ch;
   gap: 2px;
 }
 .week-cell .job-card-detailed .live-u {
@@ -1417,14 +1419,25 @@ button.day-col-head:hover { background: #e0f2fe; }
   border-radius: 3px;
 }
 .week-cell .job-card-detailed .compact-units {
-  max-width: 4.6ch;
+  max-width: 4ch;
   font-size: 10px;
 }
-.week-cell .job-card-detailed .compact-col-meta {
-  width: 3.2rem;
+.week-cell .job-card-detailed .compact-name-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   min-width: 0;
-  max-width: 3.2rem;
-  overflow: hidden;
+}
+.week-cell .job-card-detailed .compact-name-row .compact-name {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.week-cell .job-card-detailed .compact-pills {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 3px;
+  margin-left: auto;
 }
 .week-cell .job-card-detailed .compact-type,
 .week-cell .job-card-detailed .compact-pay {

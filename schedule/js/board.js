@@ -163,6 +163,17 @@ function boardCardHtml(job, conflict, week) {
   const pulse = pulseRemaining(job) ? ' is-pulse' : '';
   const timeCls = [conflict ? 'time-conflict' : '', isHi(hi.time) ? 'is-hold' : ''].filter(Boolean).join(' ');
   const name = clientCardName(job.client_name);
+  const nameSpan = `<span class="compact-name${isHi(hi.client) ? ' is-hold' : ''}">${esc(name)}</span>`;
+  const pills = `${typeBit}${payBit}`;
+  const nameRow = week && pills
+    ? `<div class="compact-name-row">${nameSpan}<span class="compact-pills">${pills}</span></div>`
+    : nameSpan;
+  const metaCol = week
+    ? ''
+    : `<div class="compact-col compact-col-meta">
+        ${typeBit}
+        ${payBit}
+      </div>`;
   return `<button type="button" class="job-card job-card-detailed${hold ? ' is-tentative' : ''}${pulse}" data-job="${esc(job.job_id)}" style="border-left:4px solid ${left};--district-bar:${left}" title="${esc(hoverTitle(job))}">
     <div class="compact-row">
       <div class="compact-col compact-col-time">
@@ -170,22 +181,26 @@ function boardCardHtml(job, conflict, week) {
         ${unitsBit}
       </div>
       <div class="compact-col compact-col-main">
-        <span class="compact-name${isHi(hi.client) ? ' is-hold' : ''}">${esc(name)}</span>
+        ${nameRow}
         ${mobile ? `<p class="detailed-phone">${esc(mobile)}</p>` : ''}
         ${addr ? `<p class="compact-addr${isHi(hi.address) ? ' is-hold' : ''}">${esc(addr)}</p>` : ''}
         ${notes1 ? `<p class="compact-notes${isHi(hi.notes) ? ' is-hold' : ''}">${esc(notes1)}</p>` : ''}
         ${notes2 ? `<p class="detailed-notes2">${esc(notes2)}</p>` : ''}
       </div>
-      <div class="compact-col compact-col-meta">
-        ${typeBit}
-        ${payBit}
-      </div>
+      ${metaCol}
     </div>
   </button>`;
 }
 
 function lunchCardHtml(time, date, team) {
   return `<div class="lunch-card" draggable="true" data-lunch-card="1" data-edit-lunch="${esc(date)}" data-edit-lunch-team="${esc(team)}" data-lunch-value="${esc(time)}" title="Drag to move lunch, or click to set time">
+    <span class="lunch-label">Lunch</span>
+    <span class="lunch-time">${esc(time)}</span>
+  </div>`;
+}
+
+function weekLunchBarHtml(time) {
+  return `<div class="lunch-card" data-lunch-bar="1">
     <span class="lunch-label">Lunch</span>
     <span class="lunch-time">${esc(time)}</span>
   </div>`;
@@ -217,14 +232,24 @@ function weekOpenAreaHtml(date, team) {
   return `<button type="button" class="week-open-area" data-book-date="${esc(date)}" data-book-team="${esc(team)}" data-week-open="1" aria-label="Add booking"></button>`;
 }
 
-function renderWeekStack(jobs, conflicts, date, team, full) {
+function renderWeekStack(jobs, lunchTime, conflicts, date, team, full) {
   const ordered = weekClockJobs(jobs);
+  const lunch = normalizeLunch(lunchTime);
+  const lunchMins = lunch ? startMinutes({ time: lunch }) : null;
   const out = [];
+  let lunchPlaced = lunchMins == null;
   let prevTimed = null;
   let prevJob = null;
 
+  function placeLunch() {
+    if (lunchPlaced || !lunch) return;
+    out.push(weekLunchBarHtml(lunch));
+    lunchPlaced = true;
+  }
+
   for (const j of ordered) {
     const m = startMinutes(j);
+    if (!lunchPlaced && lunchMins != null && m != null && lunchMins <= m) placeLunch();
     if (!full && prevTimed != null && m != null && prevJob) {
       const leftover = m - (prevTimed + jobOnSiteMinutes(prevJob));
       if (leftover >= 30) out.push(weekHoleHtml(date, team, leftover));
@@ -235,6 +260,7 @@ function renderWeekStack(jobs, conflicts, date, team, full) {
       prevJob = j;
     }
   }
+  if (!lunchPlaced && lunch) placeLunch();
   if (!ordered.length && !full) out.push(weekOpenAreaHtml(date, team));
   return out.join('');
 }
@@ -304,7 +330,7 @@ function cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs, today) {
   const lunchSlot = Number.isFinite(lunchSlotRaw) ? lunchSlotRaw : null;
   const week = mode === 'week';
   const body = week
-    ? renderWeekStack(shown, conflicts, date, team, full)
+    ? renderWeekStack(shown, lunch, conflicts, date, team, full)
     : renderSlotStack(laid, lunch, conflicts, mode, full, date, team, lunchSlot);
   const van = cellTeamMembers(lookup, date, team);
   const vanHi = isHi(note && note.highlight_members);

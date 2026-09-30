@@ -91,13 +91,25 @@ assert(openHtml.indexOf('>Lunch<') !== -1, '6 Lunch label');
 assert(openHtml.indexOf('lunch-card') === -1, '6 lunch-card without lunch');
 print('ok 6 week no-lunch has header Lunch');
 
-// 7. Week with lunch shows Lunch HH:MM in the header and has no lunch-card.
+// 7. Week with lunch keeps header Lunch HH:MM and a visual-only bar in the stack.
 const withLunch = [job('a'), crew({ lunch: '13:00' })];
 const lunchHtml = rosterCellHtml(withLunch, withLunch, date, team, 'week', withLunch, date);
-assert(lunchHtml.indexOf('lunch-card') === -1, '7 week lunch-card');
+assert(lunchHtml.indexOf('lunch-card') !== -1, '7 missing lunch-card');
 assert(lunchHtml.indexOf('Lunch 13:00') !== -1, '7 header lunch time');
 assert(lunchHtml.indexOf('cell-lunch is-empty') === -1, '7 empty Lunch with time set');
 assert(lunchHtml.indexOf('data-lunch-value="13:00"') !== -1, '7 lunch value');
-print('ok 7 week with lunch has header time');
+assert(lunchHtml.indexOf('data-lunch-bar') !== -1, '7 visual bar');
+assert(lunchHtml.indexOf('data-lunch-card') === -1, '7 week lunch drag');
+const barAt = lunchHtml.indexOf('lunch-card');
+const barBit = lunchHtml.slice(barAt, barAt + 280);
+assert(barBit.indexOf('data-edit-lunch') === -1, '7 bar is not editor');
+assert(barBit.indexOf('13:00') !== -1, '7 bar time');
+const stacked = [job('am', { time: '09:00' }), job('pm', { time: '16:00' }), crew({ lunch: '13:00' })];
+const stackedHtml = rosterCellHtml(stacked, stacked, date, team, 'week', stacked, date);
+const iAm = stackedHtml.indexOf('data-job="am"');
+const iBar = stackedHtml.indexOf('lunch-card');
+const iPm = stackedHtml.indexOf('data-job="pm"');
+assert(iAm !== -1 && iBar !== -1 && iPm !== -1 && iAm < iBar && iBar < iPm, '7 bar between jobs');
+print('ok 7 week with lunch has header time and visual bar');
 
 print('ok quiet-week cases');

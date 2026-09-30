@@ -4,7 +4,7 @@ import { addDays, formatDay, formatTime24, formatWeekLabel, jobTypeOf, mondayOf,
 import { allJobs, getJob, placeJobInSlot, redo, removeJob, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js?v=4';
 import { startScheduleAuth } from './auth.js';
 import { daySlotsOf, firstEmptySlotIndex, hasTimeConflict, jobsForTeamDay, layoutSlots, slotIndex } from './capacity.js?v=4';
-import { clientCardName, pulseRemaining, renderDayBoard, renderWeekBoard, weekDragSlotsHtml } from './board.js?v=21';
+import { clientCardName, pulseRemaining, renderDayBoard, renderWeekBoard, weekDragSlotsHtml } from './board.js?v=22';
 import { applyJobDrop, armClickSuppress, beginDrag, capturedDragId, clearCapturedDrag, consumeClickSuppress, jobDropKind, pointerJobUp, pointerMoved, resolveDropId } from './board-drag.js?v=2';
 import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=31';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js?v=2';
@@ -373,6 +373,11 @@ function bindBoardClicks() {
       if (date && team) openBooking({ date, team_lead: team, stack_order: Number.isFinite(slot) ? slot : undefined });
       return;
     }
+    if (e.target.closest('[data-lunch-bar]')) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
     const lunchEdit = e.target.closest('[data-edit-lunch]');
     if (lunchEdit) {
       e.preventDefault();
@@ -670,7 +675,7 @@ function bindBoardPointer() {
 
   mount.addEventListener('pointerdown', (e) => {
     if (e.button != null && e.button !== 0) return;
-    if (e.target.closest('[data-lunch-card]')) return;
+    if (e.target.closest('[data-lunch-card], [data-lunch-bar]')) return;
     const chip = e.target.closest('[data-job]');
     if (!chip || !chip.dataset.job) return;
     beginDrag(chip.dataset.job);

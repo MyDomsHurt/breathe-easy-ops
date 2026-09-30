@@ -1136,8 +1136,8 @@ button.day-col-head:hover { background: #e0f2fe; }
   padding: 0;
   background: #fff;
   border: 1px solid #e2e8f0;
+  border-left: 4px solid var(--district-bar, #D1D5DB);
   border-radius: 12px;
-  border-left-width: 4px;
   box-shadow: none;
   overflow: hidden;
   cursor: grab;
@@ -1149,7 +1149,9 @@ button.day-col-head:hover { background: #e0f2fe; }
 }
 .job-card.job-card-detailed.is-tentative {
   background: #fef9c3;
-  border-color: #eab308;
+  border-top-color: #eab308;
+  border-right-color: #eab308;
+  border-bottom-color: #eab308;
 }
 .job-card-detailed .compact-row {
   display: grid;
@@ -1324,7 +1326,9 @@ button.day-col-head:hover { background: #e0f2fe; }
 }
 .week-cell .job-card.job-card-detailed.is-tentative {
   background: #fef9c3;
-  border-color: #eab308;
+  border-top-color: #eab308;
+  border-right-color: #eab308;
+  border-bottom-color: #eab308;
 }
 .week-cell .job-card.job-card-detailed.is-tentative:hover {
   background: #fef08a;

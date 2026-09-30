@@ -42,7 +42,52 @@ export function pulseRemaining(job, now = Date.now()) {
   return remain;
 }
 
-const DISTRICT_FALLBACK = { border: '#D1D5DB' };
+const DISTRICT_FALLBACK_BAR = '#D1D5DB';
+const DISTRICT_CODES = Object.keys(DISTRICTS).sort((a, b) => b.length - a.length);
+
+function districtKey(raw) {
+  const s = String(raw == null ? '' : raw).trim();
+  if (!s) return '';
+  if (DISTRICTS[s]) return s;
+  const up = s.toUpperCase();
+  for (let i = 0; i < DISTRICT_CODES.length; i++) {
+    if (DISTRICT_CODES[i].toUpperCase() === up) return DISTRICT_CODES[i];
+  }
+  return '';
+}
+
+function lastParenDistrictCode(text) {
+  const up = String(text == null ? '' : text).toUpperCase();
+  let bestAt = -1;
+  let best = '';
+  for (let i = 0; i < DISTRICT_CODES.length; i++) {
+    const needle = '(' + DISTRICT_CODES[i].toUpperCase() + ')';
+    let from = 0;
+    while (from <= up.length) {
+      const at = up.indexOf(needle, from);
+      if (at < 0) break;
+      if (at >= bestAt) {
+        bestAt = at;
+        best = DISTRICT_CODES[i];
+      }
+      from = at + 1;
+    }
+  }
+  return best;
+}
+
+function districtCodeOf(job) {
+  const fromField = districtKey(job && job.district);
+  if (fromField) return fromField;
+  return lastParenDistrictCode(job && job.address);
+}
+
+export function districtBarColor(job) {
+  if (jobStatus(job) === 'tentative') return '#ca8a04';
+  const code = districtCodeOf(job);
+  const meta = code ? DISTRICTS[code] : null;
+  return (meta && meta.border) || DISTRICT_FALLBACK_BAR;
+}
 
 function formatMobile(raw) {
   let d = String(raw || '').replace(/[^\d]/g, '');
@@ -99,8 +144,7 @@ function weekAddressLine(job) {
 
 function boardCardHtml(job, conflict, week) {
   const hold = jobStatus(job) === 'tentative';
-  const dist = DISTRICTS[job.district] || DISTRICT_FALLBACK;
-  const left = hold ? '#ca8a04' : dist.border;
+  const left = districtBarColor(job);
   const hi = job && job.highlight || {};
   const acsHold = isHi(hi.acs) ? 'is-hold' : '';
   const unitsBit = liveAcsBadges(job.acs, acsHold);
@@ -119,7 +163,7 @@ function boardCardHtml(job, conflict, week) {
   const pulse = pulseRemaining(job) ? ' is-pulse' : '';
   const timeCls = [conflict ? 'time-conflict' : '', isHi(hi.time) ? 'is-hold' : ''].filter(Boolean).join(' ');
   const name = clientCardName(job.client_name);
-  return `<button type="button" class="job-card job-card-detailed${hold ? ' is-tentative' : ''}${pulse}" data-job="${esc(job.job_id)}" style="border-left:4px solid ${left}" title="${esc(hoverTitle(job))}">
+  return `<button type="button" class="job-card job-card-detailed${hold ? ' is-tentative' : ''}${pulse}" data-job="${esc(job.job_id)}" style="border-left:4px solid ${left};--district-bar:${left}" title="${esc(hoverTitle(job))}">
     <div class="compact-row">
       <div class="compact-col compact-col-time">
         <span class="compact-time${timeCls ? ` ${timeCls}` : ''}">${esc(shortTime(job))}</span>

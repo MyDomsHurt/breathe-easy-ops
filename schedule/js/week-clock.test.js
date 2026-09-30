@@ -1,4 +1,4 @@
-import { rosterCellHtml, weekClockJobs } from './board.js';
+import { districtBarColor, rosterCellHtml, weekClockJobs } from './board.js';
 import { pointerJobUp } from './board-drag.js';
 
 function fail(msg) {
@@ -165,5 +165,43 @@ const htmlFree = rosterCellHtml(free, free, date, team, 'week', free, date);
 assert(htmlFree.indexOf('compact-pay is-free') !== -1, 'free pill');
 assert(htmlFree.indexOf('>Free<') !== -1, 'Free label');
 print('ok type and pay tags');
+
+assert(districtBarColor({ district: 'N-T' }) === '#FFE599', 'N-T bar');
+assert(districtBarColor({ district: 'HKN' }) === '#9FC5E8', 'HKN bar');
+assert(districtBarColor({ district: 'HKS' }) === '#6FA8DC', 'HKS bar');
+assert(districtBarColor({ district: 'KLN' }) === '#EA9999', 'KLN bar');
+assert(districtBarColor({ district: 'N-TW' }) === '#F9CB9C', 'N-TW bar');
+assert(districtBarColor({ district: 'TKO' }) === '#93C47D', 'TKO bar');
+assert(districtBarColor({ district: 'S-K' }) === '#B6D7A8', 'S-K bar');
+assert(districtBarColor({ district: 'L-T' }) === '#B4A7D6', 'L-T bar');
+assert(districtBarColor({ district: 'L-M' }) === '#76A5AF', 'L-M bar');
+assert(districtBarColor({ district: '', address: 'Kowloon (KLN)' }) === '#EA9999', 'Kowloon (KLN)');
+assert(districtBarColor({ district: '', address: 'Hong Kong Island (HKN)' }) === '#9FC5E8', 'Hong Kong Island (HKN)');
+assert(districtBarColor({ district: '', address: 'A (HKN) then (HKS)' }) === '#6FA8DC', 'last (CODE)');
+assert(districtBarColor({ district: 'N-T', address: 'x (HKN)' }) === '#FFE599', 'stored district wins');
+assert(districtBarColor({}) === '#D1D5DB', 'no code fallback');
+assert(districtBarColor({ district: 'Mid-Levels', address: '' }) === '#D1D5DB', 'neighbourhood is not a code');
+const parsed = { district: '', address: 'Tuen Mun (N-TW)' };
+assert(districtBarColor(parsed) === '#F9CB9C', 'N-TW from address');
+assert(parsed.district === '', 'paint does not write district');
+assert(districtBarColor({ district: 'N-T', status: 'tentative' }) === '#ca8a04', 'tentative gold');
+const htmlNt = rosterCellHtml(
+  [Object.assign(job('nt', '09:00'), { district: 'N-T' })],
+  [Object.assign(job('nt', '09:00'), { district: 'N-T' })],
+  date, team, 'week',
+  [Object.assign(job('nt', '09:00'), { district: 'N-T' })],
+  date,
+);
+assert(htmlNt.indexOf('border-left:4px solid #FFE599') !== -1, 'week card N-T inline');
+assert(htmlNt.indexOf('--district-bar:#FFE599') !== -1, 'week card N-T var');
+const htmlDay = rosterCellHtml(
+  [Object.assign(job('k', '09:00'), { address: 'Kowloon (KLN)' })],
+  [Object.assign(job('k', '09:00'), { address: 'Kowloon (KLN)' })],
+  date, team, 'day',
+  [Object.assign(job('k', '09:00'), { address: 'Kowloon (KLN)' })],
+  date,
+);
+assert(htmlDay.indexOf('border-left:4px solid #EA9999') !== -1, 'day card KLN from address');
+print('ok district bar colours');
 
 print('ok week-clock cases');

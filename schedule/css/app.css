@@ -2745,7 +2745,7 @@ p.hubspot-id-line {
   top: calc(100% + 4px);
   right: 0;
   z-index: 50;
-  min-width: 140px;
+  min-width: 196px;
   background: white;
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -2767,6 +2767,7 @@ p.hubspot-id-line {
   font-weight: 600;
   cursor: pointer;
 }
+.user-menu-item[hidden] { display: none; }
 .user-menu-item:hover { background: #f8fafc; }
 
 @media (max-width: 800px) {

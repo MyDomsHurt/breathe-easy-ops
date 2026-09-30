@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/app.css?v=44" />
+  <link rel="stylesheet" href="css/app.css?v=45" />
 </head>
 <body>
   <div id="loginScreen" class="login-screen">
@@ -74,8 +74,11 @@
           <span id="userChip" class="user-chip"></span>
         </button>
         <div id="userMenu" class="user-menu" hidden>
+          <button class="user-menu-item" id="exportRoster" type="button" hidden>Export roster</button>
+          <button class="user-menu-item" id="importHubspotCsv" type="button" hidden>Import HubSpot CSV</button>
           <button class="user-menu-item" id="logoutBtn" type="button">Sign out</button>
         </div>
+        <input id="importHubspotFile" type="file" accept=".csv,text/csv" hidden />
       </div>
     </div>
   </header>
@@ -122,17 +125,12 @@
           <option value="deals">Deals</option>
           <option value="revenue">Revenue</option>
         </select>
-        <button type="button" class="ghost-btn" id="importHubspotCsv" hidden>Import HubSpot CSV</button>
-        <input id="importHubspotFile" type="file" accept=".csv,text/csv" hidden />
       </div>
       <div id="contactsMount"></div>
     </section>
 
     <p style="margin:18px 4px 0;font-size:12px;color:#64748b">
       Click a job to edit or move it · signed-in bookings write to the live job store
-      <span id="ownerTools" hidden>
-      · <button id="exportRoster" class="ghost-btn" style="padding:3px 8px;font-size:12px">Export roster</button>
-      </span>
     </p>
   </main>
   </div>
@@ -144,6 +142,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
-  <script type="module" src="js/app.js?v=66"></script>
+  <script type="module" src="js/app.js?v=67"></script>
 </body>
 </html>

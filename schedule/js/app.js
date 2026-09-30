@@ -1260,18 +1260,17 @@ function bindSearch() {
 }
 
 function bindOwnerTools() {
-  const box = $('ownerTools');
   const exportBtn = $('exportRoster');
-  if (!isOwnerUser(signedInEmail)) {
-    if (box) {
-      box.hidden = true;
-      box.replaceChildren();
-    }
-    return;
-  }
-  if (box) box.hidden = false;
-  if (exportBtn) {
+  const importBtn = $('importHubspotCsv');
+  const file = $('importHubspotFile');
+  const jeff = isOwnerUser(signedInEmail);
+  if (exportBtn) exportBtn.hidden = !jeff;
+  if (importBtn) importBtn.hidden = !jeff;
+
+  if (exportBtn && !exportBtn.dataset.bound) {
+    exportBtn.dataset.bound = '1';
     exportBtn.addEventListener('click', async () => {
+      closeUserMenu();
       if (!isOwnerUser(signedInEmail)) {
         toast('Only Jeff can export the roster');
         return;
@@ -1292,44 +1291,39 @@ function bindOwnerTools() {
       }
     });
   }
-  bindContactsImport();
-}
 
-function bindContactsImport() {
-  const btn = $('importHubspotCsv');
-  const file = $('importHubspotFile');
-  if (!btn || !file) return;
-  const jeff = isOwnerUser(signedInEmail);
-  btn.hidden = !jeff;
-  if (!jeff) return;
-  btn.addEventListener('click', () => {
-    if (!isOwnerUser(signedInEmail)) {
-      toast('Only Jeff can import HubSpot contacts');
-      return;
-    }
-    file.value = '';
-    file.click();
-  });
-  file.addEventListener('change', async () => {
-    const picked = file.files && file.files[0];
-    file.value = '';
-    if (!picked) return;
-    if (!isOwnerUser(signedInEmail)) {
-      toast('Only Jeff can import HubSpot contacts');
-      return;
-    }
-    btn.disabled = true;
-    try {
-      const result = await importHubspotFile(picked);
-      toast('Imported ' + result.count + ' contacts');
-      paint();
-    } catch (err) {
-      console.error(err);
-      toast((err && err.message) || 'Import failed');
-    } finally {
-      btn.disabled = false;
-    }
-  });
+  if (importBtn && file && !importBtn.dataset.bound) {
+    importBtn.dataset.bound = '1';
+    importBtn.addEventListener('click', () => {
+      closeUserMenu();
+      if (!isOwnerUser(signedInEmail)) {
+        toast('Only Jeff can import HubSpot contacts');
+        return;
+      }
+      file.value = '';
+      file.click();
+    });
+    file.addEventListener('change', async () => {
+      const picked = file.files && file.files[0];
+      file.value = '';
+      if (!picked) return;
+      if (!isOwnerUser(signedInEmail)) {
+        toast('Only Jeff can import HubSpot contacts');
+        return;
+      }
+      importBtn.disabled = true;
+      try {
+        const result = await importHubspotFile(picked);
+        toast('Imported ' + result.count + ' contacts');
+        paint();
+      } catch (err) {
+        console.error(err);
+        toast((err && err.message) || 'Import failed');
+      } finally {
+        importBtn.disabled = false;
+      }
+    });
+  }
 }
 
 fillMonthSelect();

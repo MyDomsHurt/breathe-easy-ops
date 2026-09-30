@@ -1,14 +1,14 @@
 import { DISTRICTS, JOB_TYPES, TEAMS } from './config.js?v=3';
 import { canPlaceJobOnTeamDay, findCrewNote, isCrewNote, isTeamDayFull } from './team-day.js?v=1';
 import { addDays, formatDay, formatTime24, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, normalizeLunch, pad, parseISO, shortTime, weekDays, workWeekDays } from './utils.js';
-import { allJobs, applyCleanTimes, applySeptemberFixes, applySeptemberLoad, getJob, listJobsForTimeClean, placeJobInSlot, redo, removeJob, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js?v=7';
+import { allJobs, applyCleanPhones, applyCleanTimes, applySeptemberFixes, applySeptemberLoad, getJob, listContactsForPhoneClean, listJobsForTimeClean, placeJobInSlot, redo, removeJob, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js?v=8';
 import { startScheduleAuth } from './auth.js';
 import { daySlotsOf, firstEmptySlotIndex, hasTimeConflict, jobsForTeamDay, layoutSlots, slotIndex } from './capacity.js?v=4';
 import { clientCardName, pulseRemaining, renderDayBoard, renderWeekBoard, weekDragSlotsHtml } from './board.js?v=22';
 import { applyJobDrop, armClickSuppress, beginDrag, capturedDragId, clearCapturedDrag, consumeClickSuppress, jobDropKind, pointerJobUp, pointerMoved, resolveDropId } from './board-drag.js?v=2';
-import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=34';
+import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=35';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js?v=2';
-import { exportMasterRoster } from './export-roster.js?v=26';
+import { exportMasterRoster } from './export-roster.js?v=27';
 import { allContacts, initContactsStore, subscribeContacts } from './contacts-store.js?v=1';
 import { fillContactFilterSelect, importHubspotFile, renderContacts } from './contacts.js?v=2';
 import { uniqueContactValues } from './contacts-query.js?v=1';
@@ -33,6 +33,13 @@ import {
   planCheckSeptember,
   planCheckSeptemberLines,
 } from './september-check.js?v=1';
+import {
+  markPhonesCleanedDone,
+  planCleanPhones,
+  planCleanPhonesLines,
+  phonesCleanedDone,
+  readPhonesCleanedDone,
+} from './clean-phones.js?v=1';
 
 function calendarToday() {
   const d = new Date();
@@ -45,6 +52,7 @@ let signedInEmail = '';
 let septemberPending = null;
 let checkSeptemberPending = null;
 let cleanTimesPending = null;
+let cleanPhonesPending = null;
 
 function isOwnerUser(email) {
   return String(email || '').toLowerCase().trim() === OWNER_EMAIL;
@@ -923,6 +931,29 @@ function paintCleanTimes() {
   if (applyBtn) applyBtn.hidden = false;
 }
 
+function paintCleanPhones() {
+  const block = $('cleanPhonesBlock');
+  if (!block) return;
+  const show = isOwnerUser(signedInEmail) && !phonesCleanedDone();
+  block.hidden = !show;
+  const applyBtn = $('applyCleanPhonesBtn');
+  const planEl = $('cleanPhonesPlan');
+  if (!show || !cleanPhonesPending) {
+    if (applyBtn) applyBtn.hidden = true;
+    if (planEl) {
+      planEl.hidden = true;
+      planEl.textContent = '';
+    }
+    if (!show) cleanPhonesPending = null;
+    return;
+  }
+  if (planEl) {
+    planEl.hidden = false;
+    planEl.textContent = planCleanPhonesLines(cleanPhonesPending).join('\n');
+  }
+  if (applyBtn) applyBtn.hidden = false;
+}
+
 function paintSettingsPanel() {
   const list = $('teamOrderList');
   if (!list) return;
@@ -937,6 +968,7 @@ function paintSettingsPanel() {
   paintSeptemberLoad();
   paintCheckSeptember();
   paintCleanTimes();
+  paintCleanPhones();
 }
 
 function openSettingsPanel() {
@@ -1422,6 +1454,7 @@ function bindSettingsPanel() {
   bindSeptemberLoad();
   bindCheckSeptember();
   bindCleanTimes();
+  bindCleanPhones();
   const list = $('teamOrderList');
   if (list && !list.dataset.bound) {
     list.dataset.bound = '1';
@@ -1689,6 +1722,67 @@ function bindCleanTimes() {
   }
 }
 
+function bindCleanPhones() {
+  const planBtn = $('planCleanPhonesBtn');
+  const applyBtn = $('applyCleanPhonesBtn');
+  if (planBtn && !planBtn.dataset.bound) {
+    planBtn.dataset.bound = '1';
+    planBtn.addEventListener('click', async () => {
+      if (!isOwnerUser(signedInEmail)) {
+        toast('Only Jeff can clean job phones');
+        return;
+      }
+      if (phonesCleanedDone()) return;
+      if (!usingFirestore()) {
+        toast('Sign in to clean job phones');
+        return;
+      }
+      planBtn.disabled = true;
+      try {
+        const live = await listJobsForTimeClean();
+        const contacts = await listContactsForPhoneClean();
+        cleanPhonesPending = planCleanPhones(live, contacts);
+        paintCleanPhones();
+      } catch (err) {
+        console.error(err);
+        toast((err && err.message) || 'Could not read live jobs');
+      } finally {
+        planBtn.disabled = false;
+      }
+    });
+  }
+  if (applyBtn && !applyBtn.dataset.bound) {
+    applyBtn.dataset.bound = '1';
+    applyBtn.addEventListener('click', async () => {
+      if (!isOwnerUser(signedInEmail)) {
+        toast('Only Jeff can clean job phones');
+        return;
+      }
+      if (!cleanPhonesPending) return;
+      applyBtn.disabled = true;
+      if (planBtn) planBtn.disabled = true;
+      try {
+        const result = await applyCleanPhones(cleanPhonesPending.updates);
+        const one = cleanPhonesPending.oneMatches;
+        markPhonesCleanedDone();
+        cleanPhonesPending = null;
+        toast(
+          'Applied: ' + result.written + ' job phones updated, '
+          + one + ' one-contact matches',
+        );
+        paint();
+        paintSettingsPanel();
+      } catch (err) {
+        console.error(err);
+        toast((err && err.message) || 'Phone clean failed');
+      } finally {
+        applyBtn.disabled = false;
+        if (planBtn) planBtn.disabled = false;
+      }
+    });
+  }
+}
+
 function bindOwnerTools() {
   const settingsBtn = $('openSettings');
   const exportBtn = $('exportRoster');
@@ -1795,6 +1889,7 @@ startScheduleAuth()
     if (isOwnerUser(signedInEmail)) {
       await readSeptemberLoadDone();
       await readTimesCleanedDone();
+      await readPhonesCleanedDone();
     }
     paint();
     initContactsStore();

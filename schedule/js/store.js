@@ -17,7 +17,7 @@ import {
 import { appendChange, asChanges, fromScheduleJob } from '../../shared/job.js';
 import { matchHubspotIdByPhone, parsePhone } from '../../shared/phone-parse.js';
 import { allContacts } from './contacts-store.js?v=1';
-import { isJeffEmail, JOBS_COLLECTION, shouldUseFirestore } from '../../shared/firebase-config.js';
+import { CONTACTS_COLLECTION, isJeffEmail, JOBS_COLLECTION, shouldUseFirestore } from '../../shared/firebase-config.js';
 import { CREW_SOURCE, cellTeamMembers, crewNoteId, isCrewNote } from './team-day.js';
 import { planSlotTake, slotCountFor, slotFloor } from './capacity.js';
 
@@ -816,6 +816,17 @@ export async function listJobsForTimeClean() {
   return allJobs();
 }
 
+export async function listContactsForPhoneClean() {
+  if (usingFirestore() && typeof firebase !== 'undefined' && typeof firebase.firestore === 'function') {
+    const snap = await firebase.firestore().collection(CONTACTS_COLLECTION).get();
+    return snap.docs.map((doc) => {
+      const data = doc.data() || {};
+      return { ...data, hubspot_id: data.hubspot_id || doc.id };
+    });
+  }
+  return allContacts();
+}
+
 export async function applyCleanTimes(updates) {
   requireJeff('clean job times');
   if (!ops || typeof ops.upsertJob !== 'function') {
@@ -889,6 +900,44 @@ export async function applySeptemberFixes(updates) {
       written += 1;
     }
   } finally {
+    recording = true;
+    holdEmit = Math.max(0, holdEmit - 1);
+    emit();
+  }
+  return { written };
+}
+
+export async function applyCleanPhones(updates) {
+  requireJeff('clean job phones');
+  if (!ops || typeof ops.upsertJob !== 'function') {
+    throw new Error('Store is not ready');
+  }
+  if (!usingFirestore()) throw new Error('Sign in to clean job phones');
+  const list = Array.isArray(updates) ? updates : [];
+
+  holdEmit += 1;
+  recording = false;
+  if (ops && typeof ops.beginPhoneHold === 'function') ops.beginPhoneHold();
+  let written = 0;
+  try {
+    for (const row of list) {
+      if (!row || !row.job_id) continue;
+      const prev = ops.getJob(row.job_id) || row.base;
+      if (!prev || prev.deleted === true || prev.deleted === 'true') continue;
+      if (isCrewNote(prev)) continue;
+      const saved = await ops.upsertJob({
+        ...prev,
+        job_id: prev.job_id,
+        mobile: row.mobile,
+        phone_cc: row.phone_cc,
+        phone_national: row.phone_national,
+        hubspot_id: row.hubspot_id,
+      });
+      if (ops && typeof ops.holdJobPhones === 'function') ops.holdJobPhones(saved);
+      written += 1;
+    }
+  } finally {
+    if (ops && typeof ops.endPhoneHold === 'function') ops.endPhoneHold();
     recording = true;
     holdEmit = Math.max(0, holdEmit - 1);
     emit();

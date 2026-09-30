@@ -54,5 +54,10 @@ service cloud.firestore {
     match /contacts/{id} {
       allow read, write: if isOffice() || isJosh();
     }
+
+    match /settings/{id} {
+      allow read: if isOffice() || isJosh();
+      allow write: if signedIn() && email() == 'jefflamb1992@gmail.com';
+    }
   }
 }

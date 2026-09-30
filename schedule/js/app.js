@@ -12,6 +12,8 @@ import { exportMasterRoster } from './export-roster.js?v=23';
 import { allContacts, initContactsStore, subscribeContacts } from './contacts-store.js?v=1';
 import { fillContactFilterSelect, importHubspotFile, renderContacts } from './contacts.js?v=2';
 import { uniqueContactValues } from './contacts-query.js?v=1';
+import { moveTeam, visibleTeamOrder } from './team-order.js?v=1';
+import { initSettingsStore, subscribeSettings, teamOrder, writeTeamOrder } from './settings-store.js?v=1';
 
 function calendarToday() {
   const d = new Date();
@@ -113,15 +115,20 @@ function filteredJobs() {
   });
 }
 
+function visibleBoardTeams() {
+  return visibleTeamOrder(teamOrder(), state.teams);
+}
+
 function paintBoard() {
   const mount = $('boardMount');
   if (!mount) return;
   const jobs = filteredJobs();
   const rosterJobs = teamJobs();
+  const teams = visibleBoardTeams();
   if (state.mode === 'week') {
-    renderWeekBoard(mount, { jobs: rosterJobs, chipJobs: jobs, days: boardDays(), teams: state.teams, lookupJobs: allJobs(), today: TODAY });
+    renderWeekBoard(mount, { jobs: rosterJobs, chipJobs: jobs, days: boardDays(), teams, lookupJobs: allJobs(), today: TODAY });
   } else {
-    renderDayBoard(mount, { jobs: rosterJobs, chipJobs: jobs, date: state.day, teams: state.teams, lookupJobs: allJobs(), today: TODAY });
+    renderDayBoard(mount, { jobs: rosterJobs, chipJobs: jobs, date: state.day, teams, lookupJobs: allJobs(), today: TODAY });
   }
 }
 
@@ -826,6 +833,39 @@ function closeUserMenu() {
   if (btn) btn.setAttribute('aria-expanded', 'false');
 }
 
+function closeSettingsPanel() {
+  const root = $('settingsRoot');
+  if (root) {
+    root.hidden = true;
+    root.setAttribute('aria-hidden', 'true');
+  }
+}
+
+function paintSettingsPanel() {
+  const list = $('teamOrderList');
+  if (!list) return;
+  const order = teamOrder();
+  list.innerHTML = order.map((name, i) => (
+    `<div class="team-order-row">`
+    + `<span class="team-order-name">${name}</span>`
+    + `<button type="button" class="ghost-btn" data-move="-1" data-team="${name}"${i === 0 ? ' disabled' : ''} aria-label="Move ${name} up">Up</button>`
+    + `<button type="button" class="ghost-btn" data-move="1" data-team="${name}"${i === order.length - 1 ? ' disabled' : ''} aria-label="Move ${name} down">Down</button>`
+    + `</div>`
+  )).join('');
+}
+
+function openSettingsPanel() {
+  closeFilterMenus();
+  closeDatePanel();
+  closeUserMenu();
+  paintSettingsPanel();
+  const root = $('settingsRoot');
+  if (root) {
+    root.hidden = false;
+    root.setAttribute('aria-hidden', 'false');
+  }
+}
+
 function toggleDatePanel() {
   const panel = $('datePanel');
   const btn = $('weekLabel');
@@ -854,11 +894,24 @@ function filterButtonLabel(singular, plural, selected, total, emptyMeansAll) {
   return allOn ? `All ${plural}` : `${singular} · ${n}`;
 }
 
+function paintTeamFilterMenu() {
+  const menu = $('teamFilterMenu');
+  if (!menu) return;
+  const order = teamOrder();
+  const key = order.join('|');
+  if (menu.dataset.order === key) return;
+  menu.dataset.order = key;
+  menu.innerHTML = order.map((t) => `<label><input type="checkbox" value="${t}"> ${t}</label>`).join('');
+}
+
 function syncFilterUi() {
+  paintTeamFilterMenu();
   const teamBtn = $('teamFilterBtn');
   if (teamBtn) {
-    teamBtn.textContent = filterButtonLabel('Team', 'teams', state.teams, TEAMS.length, false);
-    teamBtn.classList.toggle('is-subset', state.teams.length !== TEAMS.length);
+    const vis = visibleBoardTeams();
+    const total = teamOrder().length;
+    teamBtn.textContent = filterButtonLabel('Team', 'teams', vis, total, false);
+    teamBtn.classList.toggle('is-subset', vis.length !== total);
   }
   const distBtn = $('districtFilterBtn');
   if (distBtn) {
@@ -903,9 +956,10 @@ function bindFilters() {
   const teamMenu = bindFilterDropdown(
     'teamFilterBtn',
     'teamFilterMenu',
-    TEAMS.map((t) => `<label><input type="checkbox" value="${t}" checked> ${t}</label>`).join(''),
+    teamOrder().map((t) => `<label><input type="checkbox" value="${t}" checked> ${t}</label>`).join(''),
   );
   if (teamMenu) {
+    teamMenu.dataset.order = teamOrder().join('|');
     teamMenu.addEventListener('change', (e) => {
       const input = e.target.closest('input[type="checkbox"]');
       if (!input) return;
@@ -913,7 +967,7 @@ function bindFilters() {
       if (input.checked) {
         if (!state.teams.includes(t)) state.teams = [...state.teams, t];
       } else {
-        if (state.teams.length === 1) {
+        if (visibleBoardTeams().length <= 1) {
           input.checked = true;
           return;
         }
@@ -967,6 +1021,7 @@ function bindFilters() {
     closeFilterMenus();
     closeDatePanel();
     closeUserMenu();
+    closeSettingsPanel();
   });
   syncFilterUi();
 }
@@ -1058,8 +1113,8 @@ function bindChrome() {
   });
   $('newBooking').addEventListener('click', () => {
     const date = state.mode === 'day' ? state.day : TODAY;
-    const boardTeams = state.teams.length ? state.teams : TEAMS;
-    openBooking(newBookingPrefill({ date, boardTeams }));
+    const boardTeams = visibleBoardTeams();
+    openBooking(newBookingPrefill({ date, boardTeams: boardTeams.length ? boardTeams : teamOrder() }));
   });
   const sundayBtn = $('sundayToggle');
   if (sundayBtn) {
@@ -1259,13 +1314,73 @@ function bindSearch() {
   });
 }
 
+function bindSettingsPanel() {
+  const root = $('settingsRoot');
+  if (root && !root.dataset.bound) {
+    root.dataset.bound = '1';
+    root.addEventListener('click', (e) => {
+      if (e.target === root) closeSettingsPanel();
+    });
+    const card = root.querySelector('.settings-card');
+    if (card) card.addEventListener('click', (e) => e.stopPropagation());
+  }
+  const closeBtn = $('settingsClose');
+  if (closeBtn && !closeBtn.dataset.bound) {
+    closeBtn.dataset.bound = '1';
+    closeBtn.addEventListener('click', () => closeSettingsPanel());
+  }
+  const list = $('teamOrderList');
+  if (list && !list.dataset.bound) {
+    list.dataset.bound = '1';
+    list.addEventListener('click', async (e) => {
+      const btn = e.target.closest('[data-move]');
+      if (!btn || btn.disabled) return;
+      if (!isOwnerUser(signedInEmail)) {
+        toast('Only Jeff can change team order');
+        return;
+      }
+      const name = btn.dataset.team;
+      const delta = Number(btn.dataset.move);
+      const current = teamOrder();
+      const next = moveTeam(current, name, delta);
+      if (next.join('\0') === current.join('\0')) return;
+      const buttons = list.querySelectorAll('[data-move]');
+      buttons.forEach((el) => { el.disabled = true; });
+      try {
+        await writeTeamOrder(next);
+        paint();
+        paintSettingsPanel();
+      } catch (err) {
+        console.error(err);
+        toast((err && err.message) || 'Could not save team order');
+        paintSettingsPanel();
+      }
+    });
+  }
+}
+
 function bindOwnerTools() {
+  const settingsBtn = $('openSettings');
   const exportBtn = $('exportRoster');
   const importBtn = $('importHubspotCsv');
   const file = $('importHubspotFile');
   const jeff = isOwnerUser(signedInEmail);
+  if (settingsBtn) settingsBtn.hidden = !jeff;
   if (exportBtn) exportBtn.hidden = !jeff;
   if (importBtn) importBtn.hidden = !jeff;
+
+  if (settingsBtn && !settingsBtn.dataset.bound) {
+    settingsBtn.dataset.bound = '1';
+    settingsBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeUserMenu();
+      if (!isOwnerUser(signedInEmail)) {
+        toast('Only Jeff can open Settings');
+        return;
+      }
+      openSettingsPanel();
+    });
+  }
 
   if (exportBtn && !exportBtn.dataset.bound) {
     exportBtn.dataset.bound = '1';
@@ -1329,17 +1444,24 @@ function bindOwnerTools() {
 fillMonthSelect();
 bindFilters();
 bindChrome();
+bindSettingsPanel();
 bindBoardClicks();
 bindBoardDrag();
 bindBoardPointer();
 subscribe(paint);
 subscribeContacts(paintContacts);
+subscribeSettings(() => {
+  paint();
+  const root = $('settingsRoot');
+  if (root && !root.hidden) paintSettingsPanel();
+});
 
 startScheduleAuth()
   .then(async (user) => {
     signedInEmail = (user && user.email) || '';
     bindOwnerTools();
     await initStore(user);
+    await initSettingsStore();
     paint();
     initContactsStore();
   })

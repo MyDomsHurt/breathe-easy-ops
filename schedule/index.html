@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/app.css?v=45" />
+  <link rel="stylesheet" href="css/app.css?v=46" />
 </head>
 <body>
   <div id="loginScreen" class="login-screen">
@@ -74,6 +74,7 @@
           <span id="userChip" class="user-chip"></span>
         </button>
         <div id="userMenu" class="user-menu" hidden>
+          <button class="user-menu-item" id="openSettings" type="button" hidden>Settings</button>
           <button class="user-menu-item" id="exportRoster" type="button" hidden>Export roster</button>
           <button class="user-menu-item" id="importHubspotCsv" type="button" hidden>Import HubSpot CSV</button>
           <button class="user-menu-item" id="logoutBtn" type="button">Sign out</button>
@@ -137,11 +138,23 @@
 
   <div id="bookingRoot" class="drawer-root" aria-hidden="true"></div>
   <div id="modalRoot" class="modal-root" aria-hidden="true"></div>
+  <div id="settingsRoot" class="settings-root" hidden aria-hidden="true">
+    <div class="settings-card" role="dialog" aria-labelledby="settingsTitle">
+      <div class="settings-head">
+        <h2 id="settingsTitle">Settings</h2>
+        <button type="button" class="icon-btn" id="settingsClose" aria-label="Close">×</button>
+      </div>
+      <section class="settings-block">
+        <h3>Team order</h3>
+        <div id="teamOrderList" class="team-order-list"></div>
+      </section>
+    </div>
+  </div>
   <div id="toast" class="toast" role="status"></div>
 
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
-  <script type="module" src="js/app.js?v=67"></script>
+  <script type="module" src="js/app.js?v=68"></script>
 </body>
 </html>

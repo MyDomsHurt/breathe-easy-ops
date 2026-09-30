@@ -48,11 +48,11 @@ const HEADERS = [
   'Job ID', 'Date', 'Time', 'Team', 'Who\u2019s on', 'Client', 'Mobile', 'Country', 'National', 'Address',
   'Line 1', 'Street', 'Place', 'Extra', 'ACs',
   'S', 'W', 'WP', 'B', 'C', 'UC', 'TV', 'OU', 'SwG', 'EF', 'PAU', 'BEP',
-  'Units', 'Return', 'Amount', 'Invoice', 'Receipt', 'Payment', 'Notes 1', 'Notes 2',
+  'Units', 'Return', 'Amount', 'Invoice', 'Receipt', 'Credit note', 'Payment', 'Notes 1', 'Notes 2',
 ];
 const TEXT_COLS = {
   0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1, 9: 1, 10: 1, 11: 1, 12: 1, 13: 1, 14: 1,
-  28: 1, 30: 1, 31: 1, 32: 1, 33: 1, 34: 1,
+  28: 1, 30: 1, 31: 1, 32: 1, 33: 1, 34: 1, 35: 1,
 };
 const NUM_COLS = {
   15: 1, 16: 1, 17: 1, 18: 1, 19: 1, 20: 1, 21: 1, 22: 1, 23: 1, 24: 1, 25: 1, 26: 1, 27: 1, 29: 1,
@@ -403,6 +403,7 @@ function sheetRow(j, all) {
     amountOf(j),
     j.invoice == null ? '' : String(j.invoice),
     j.receipt == null ? '' : String(j.receipt),
+    j.credit_note == null ? '' : String(j.credit_note),
     j.payment == null ? '' : String(j.payment),
     j.notes == null ? '' : String(j.notes),
     j.notes_long == null ? '' : String(j.notes_long),
@@ -467,7 +468,7 @@ function toSheet(headers, rows, spec) {
   const widthFor = spec && spec.widthFor ? spec.widthFor : function (c) {
     if (c === 0) return { wch: 18 };
     if (c === 1) return { wch: 12 };
-    if (c === 5 || c === 9 || c === 10 || c === 11 || c === 12 || c === 13 || c === 14 || c === 33 || c === 34) return { wch: 28 };
+    if (c === 5 || c === 9 || c === 10 || c === 11 || c === 12 || c === 13 || c === 14 || c === 34 || c === 35) return { wch: 28 };
     if (c === 4) return { wch: 18 };
     if (NUM_COLS[c]) return { wch: 8 };
     return { wch: 14 };
@@ -497,7 +498,7 @@ const JSON_KEYS = [
   'jobId', 'date', 'time', 'team', 'whosOn', 'client', 'mobile', 'phoneCc', 'phoneNational', 'address',
   'addressLine1', 'addressStreet', 'addressPlace', 'addressExtra', 'acs',
   'S', 'W', 'WP', 'B', 'C', 'UC', 'TV', 'OU', 'SwG', 'EF', 'PAU', 'BEP',
-  'units', 'return', 'amount', 'invoice', 'receipt', 'payment', 'notes1', 'notes2',
+  'units', 'return', 'amount', 'invoice', 'receipt', 'creditNote', 'payment', 'notes1', 'notes2',
 ];
 
 function rowToJson(row, job) {

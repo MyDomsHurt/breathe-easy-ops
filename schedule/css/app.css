@@ -2062,6 +2062,49 @@ p.hubspot-id-line {
   font-size: 14px;
   background: #fff;
 }
+.prefix-well {
+  display: flex;
+  align-items: center;
+  height: 32px;
+  box-sizing: border-box;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  padding: 0 10px;
+  gap: 6px;
+}
+.prefix-well .prefix-text {
+  flex: 0 0 auto;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  user-select: none;
+  pointer-events: none;
+}
+.field .prefix-well input {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  height: 30px;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+}
+.field .prefix-well:focus-within {
+  outline: 2px solid #bae6fd;
+  border-color: #38bdf8;
+}
+.field .prefix-well input:focus {
+  outline: none;
+  border-color: transparent;
+}
+.field.is-hold .prefix-well {
+  background: #fef9c3;
+  border-color: #eab308;
+}
 .field textarea {
   height: auto;
 }

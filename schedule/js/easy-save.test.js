@@ -1,5 +1,5 @@
 import { clientCardName } from './board.js';
-import { commitBooking, newBookingPrefill, storedClientName } from './booking.js';
+import { commitBooking, newBookingPrefill, storedClientName, storedDocRef, stripDocRef } from './booking.js';
 import { emptyUnits } from './utils.js';
 import { TEAMS } from './config.js';
 
@@ -38,6 +38,7 @@ function blankForm(over = {}) {
     status: 'confirmed',
     invoice: '',
     receipt: '',
+    credit_note: '',
     stack_order: '',
     highlight: {},
     ...over,
@@ -149,10 +150,11 @@ assert(r6.job.payment === '', '6 blank payment ' + JSON.stringify(r6.job.payment
 assert(r6.job.receipt === '', '6 empty receipt ' + JSON.stringify(r6.job.receipt));
 assert(r6.job.payment_status === '', '6 blank status ' + JSON.stringify(r6.job.payment_status));
 const r6b = commitBooking(blankForm({ ...prefill, receipt: ' R-12 ', payment: '' }), 'confirmed', io);
-assert(r6b.job.receipt === ' R-12 ', '6b keep receipt text');
+assert(r6b.job.receipt === 'R 12', '6b receipt stored ' + JSON.stringify(r6b.job.receipt));
 assert(r6b.job.payment === 'Paid', '6b receipt marks Paid ' + r6b.job.payment);
 assert(r6b.job.payment_status === 'PAID', '6b status PAID');
 const r6c = commitBooking(blankForm({ ...prefill, receipt: 'R-9', payment: 'Unpaid' }), 'confirmed', io);
+assert(r6c.job.receipt === 'R 9', '6c receipt stored');
 assert(r6c.job.payment === 'Paid', '6c Unpaid + receipt → Paid');
 const r6d = commitBooking(blankForm({ ...prefill, receipt: 'R-3', payment: 'Free' }), 'confirmed', io);
 assert(r6d.job.payment === 'Free', '6d Free stays Free');
@@ -162,3 +164,30 @@ assert(r6e.job.receipt === '', '6e receipt empty');
 const r6f = commitBooking(blankForm({ ...prefill, receipt: 'R-4', payment: 'PayMe' }), 'confirmed', io);
 assert(r6f.job.payment === 'PayMe', '6f method stays');
 print('ok 6 receipt marks Paid');
+
+assert(stripDocRef('invoice', 'Inv 5291') === '5291', '7 strip Inv');
+assert(stripDocRef('invoice', 'INV-5291') === '5291', '7 strip INV-');
+assert(stripDocRef('invoice', 'Invoice 5291') === '5291', '7 strip Invoice');
+assert(stripDocRef('receipt', 'R 1381') === '1381', '7 strip R');
+assert(stripDocRef('receipt', 'Rec 1381') === '1381', '7 strip Rec');
+assert(stripDocRef('receipt', 'Receipt-1381') === '1381', '7 strip Receipt');
+assert(stripDocRef('credit_note', 'CN 12') === '12', '7 strip CN');
+assert(stripDocRef('credit_note', 'Credit note 12') === '12', '7 strip Credit note');
+assert(storedDocRef('invoice', 'Inv 5291') === 'Inv 5291', '7 paste Inv 5291');
+assert(storedDocRef('invoice', '5291') === 'Inv 5291', '7 number Inv');
+assert(storedDocRef('receipt', '1381') === 'R 1381', '7 number R');
+assert(storedDocRef('credit_note', '12') === 'CN 12', '7 number CN');
+assert(storedDocRef('invoice', '') === '', '7 empty invoice');
+assert(storedDocRef('credit_note', '  ') === '', '7 empty CN');
+const r7 = commitBooking(blankForm({ ...prefill, invoice: 'Inv 5291', receipt: '1381', credit_note: 'CN-12' }), 'confirmed', io);
+assert(r7.job.invoice === 'Inv 5291', '7 save invoice ' + r7.job.invoice);
+assert(r7.job.receipt === 'R 1381', '7 save receipt ' + r7.job.receipt);
+assert(r7.job.credit_note === 'CN 12', '7 save CN ' + r7.job.credit_note);
+const r7b = commitBooking(blankForm({ ...prefill, credit_note: '12', payment: '' }), 'confirmed', io);
+assert(r7b.job.credit_note === 'CN 12', '7b CN stored');
+assert(r7b.job.payment === '', '7b CN does not set Paid');
+const r7c = commitBooking(blankForm({ ...prefill, invoice: '', receipt: '', credit_note: '' }), 'confirmed', io);
+assert(r7c.job.invoice === '', '7c empty invoice');
+assert(r7c.job.receipt === '', '7c empty receipt');
+assert(r7c.job.credit_note === '', '7c empty CN');
+print('ok 7 Inv R CN number fields');

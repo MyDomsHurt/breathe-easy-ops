@@ -41,6 +41,7 @@ let form = {
   changes: [],
   invoice: '',
   receipt: '',
+  credit_note: '',
   stack_order: '',
 };
 
@@ -142,12 +143,52 @@ function paymentStatusFromLabel(label) {
 }
 
 function applyReceiptMarksPaid(formState) {
-  const receipt = String(formState.receipt == null ? '' : formState.receipt).trim();
+  const receipt = storedDocRef('receipt', formState.receipt);
   if (!receipt) return formState;
   const pay = String(formState.payment == null ? '' : formState.payment).trim();
   if (pay.toLowerCase() === 'free') return formState;
   if (!pay || pay.toLowerCase() === 'unpaid') formState.payment = 'Paid';
   return formState;
+}
+
+const DOC_REFS = {
+  invoice: { prefix: 'Inv', strip: /^(invoice|inv)[\s-]*/i },
+  receipt: { prefix: 'R', strip: /^(receipt|rec|r)[\s-]*/i },
+  credit_note: { prefix: 'CN', strip: /^(credit[\s-]*note|cn)[\s-]*/i },
+};
+
+export function stripDocRef(kind, raw) {
+  const spec = DOC_REFS[kind];
+  let s = String(raw == null ? '' : raw).trim();
+  if (!s) return '';
+  if (spec) s = s.replace(spec.strip, '');
+  return s.replace(/\D/g, '');
+}
+
+export function storedDocRef(kind, raw) {
+  const n = stripDocRef(kind, raw);
+  if (!n) return '';
+  const spec = DOC_REFS[kind];
+  return spec ? spec.prefix + ' ' + n : n;
+}
+
+function prefixFieldHtml(key, label, prefix, id, value) {
+  return `<div class="field${fieldClass(key)}">
+            <label>${label} ${holdChip(key, label.toLowerCase())}</label>
+            <div class="prefix-well">
+              <span class="prefix-text">${prefix}</span>
+              <input id="${id}" value="${escapeAttr(value)}" inputmode="numeric" autocomplete="off" aria-label="${label} number" />
+            </div>
+          </div>`;
+}
+
+function bindDocRefInput(id, kind, extra) {
+  $('#' + id)?.addEventListener('input', (e) => {
+    const n = stripDocRef(kind, e.target.value);
+    if (e.target.value !== n) e.target.value = n;
+    form[kind] = n;
+    if (extra) extra();
+  });
 }
 
 function held(key) {
@@ -297,9 +338,10 @@ export function openBooking(prefill = {}) {
     updated_at: prefill.updated_at || '',
     highlight: highlightOf(prefill),
     changes: Array.isArray(prefill.changes) ? prefill.changes : [],
-    invoice: prefill.invoice || '',
+    invoice: stripDocRef('invoice', prefill.invoice),
     stack_order: prefill.stack_order != null && prefill.stack_order !== '' ? prefill.stack_order : '',
-    receipt: prefill.receipt || '',
+    receipt: stripDocRef('receipt', prefill.receipt),
+    credit_note: stripDocRef('credit_note', prefill.credit_note),
     source: prefill.source,
   };
   if (!form.date) form.date = new Date().toISOString().slice(0, 10);
@@ -511,15 +553,10 @@ export function renderForm() {
               <input id="amountInput" type="number" min="0" step="10" value="${form.amount === '' || form.amount == null ? '' : form.amount}" placeholder="HKD" />
             </div>
           </div>
-          <div class="grid-2">
-            <div class="field${fieldClass('invoice')}">
-              <label>Invoice ${holdChip('invoice', 'invoice')}</label>
-              <input id="invoiceInput" value="${escapeAttr(form.invoice || '')}" placeholder="Inv" />
-            </div>
-            <div class="field${fieldClass('receipt')}">
-              <label>Receipt ${holdChip('receipt', 'receipt')}</label>
-              <input id="receiptInput" value="${escapeAttr(form.receipt || '')}" placeholder="Rct" />
-            </div>
+          <div class="grid-3">
+            ${prefixFieldHtml('invoice', 'Invoice', 'Inv', 'invoiceInput', form.invoice || '')}
+            ${prefixFieldHtml('receipt', 'Receipt', 'R', 'receiptInput', form.receipt || '')}
+            ${prefixFieldHtml('credit_note', 'Credit note', 'CN', 'creditNoteInput', form.credit_note || '')}
           </div>
         </section>
       </div>
@@ -613,9 +650,8 @@ export function bindForm() {
     if (count) count.textContent = `${form.notes.length}/${NOTES1_MAX}`;
   });
   $('#notesLongInput')?.addEventListener('input', (e) => { form.notes_long = e.target.value; });
-  $('#invoiceInput')?.addEventListener('input', (e) => { form.invoice = e.target.value; });
-  $('#receiptInput')?.addEventListener('input', (e) => {
-    form.receipt = e.target.value;
+  bindDocRefInput('invoiceInput', 'invoice');
+  bindDocRefInput('receiptInput', 'receipt', () => {
     const before = form.payment;
     applyReceiptMarksPaid(form);
     if (form.payment !== before) {
@@ -623,6 +659,7 @@ export function bindForm() {
       if (sel) sel.value = form.payment;
     }
   });
+  bindDocRefInput('creditNoteInput', 'credit_note');
   root.querySelectorAll('[data-hold]').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -741,8 +778,9 @@ export function commitBooking(formState, status = 'confirmed', io = {}) {
       units: formState.job_type === 'cleaning' ? storedUnits(formState.units) : emptyUnits(),
       notes,
       notes_long: formState.notes_long,
-      invoice: formState.invoice || '',
-      receipt: formState.receipt == null ? '' : String(formState.receipt),
+      invoice: storedDocRef('invoice', formState.invoice),
+      receipt: storedDocRef('receipt', formState.receipt),
+      credit_note: storedDocRef('credit_note', formState.credit_note),
       highlight: highlightOf({ highlight: formState.highlight }),
       mobile: phone.mobile,
       phone_cc: phone.phone_cc,

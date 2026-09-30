@@ -110,7 +110,7 @@ const ids = [
   'addressInput', 'formAddrStreet', 'formAddrPlace', 'districtInput',
   'addrApplyBtn',
   'dateInput', 'timeInput', 'teamInput', 'typeInput', 'paymentSelect', 'amountInput',
-  'notesInput', 'notesLongInput', 'invoiceInput', 'receiptInput',
+  'notesInput', 'notesLongInput', 'invoiceInput', 'receiptInput', 'creditNoteInput',
   'saveTentative', 'saveBooking', 'deleteBooking',
   'notes1Count', 'toggleLog', 'changeLog',
 ];
@@ -292,6 +292,7 @@ need('payment', byId.paymentSelect);
 need('amount', byId.amountInput);
 need('invoice', byId.invoiceInput);
 need('receipt', byId.receiptInput);
+need('credit note', byId.creditNoteInput);
 need('Tentative', byId.saveTentative);
 need('Save', byId.saveBooking);
 need('Cancel job', byId.deleteBooking);

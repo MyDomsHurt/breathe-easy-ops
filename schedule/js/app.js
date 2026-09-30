@@ -1,7 +1,7 @@
 import { DISTRICTS, JOB_TYPES, TEAMS } from './config.js?v=3';
 import { canPlaceJobOnTeamDay, findCrewNote, isCrewNote, isTeamDayFull } from './team-day.js?v=1';
 import { addDays, formatDay, formatTime24, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, normalizeLunch, pad, parseISO, shortTime, weekDays, workWeekDays } from './utils.js';
-import { allJobs, applyCleanTimes, applySeptemberLoad, getJob, placeJobInSlot, redo, removeJob, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js?v=6';
+import { allJobs, applyCleanTimes, applySeptemberLoad, getJob, listJobsForTimeClean, placeJobInSlot, redo, removeJob, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js?v=6';
 import { startScheduleAuth } from './auth.js';
 import { daySlotsOf, firstEmptySlotIndex, hasTimeConflict, jobsForTeamDay, layoutSlots, slotIndex } from './capacity.js?v=4';
 import { clientCardName, pulseRemaining, renderDayBoard, renderWeekBoard, weekDragSlotsHtml } from './board.js?v=22';
@@ -1520,7 +1520,7 @@ function bindCleanTimes() {
   const applyBtn = $('applyCleanTimesBtn');
   if (planBtn && !planBtn.dataset.bound) {
     planBtn.dataset.bound = '1';
-    planBtn.addEventListener('click', () => {
+    planBtn.addEventListener('click', async () => {
       if (!isOwnerUser(signedInEmail)) {
         toast('Only Jeff can clean job times');
         return;
@@ -1530,9 +1530,18 @@ function bindCleanTimes() {
         toast('Sign in to clean job times');
         return;
       }
-      const plan = planCleanTimes(allJobs());
-      cleanTimesPending = plan;
-      paintCleanTimes();
+      planBtn.disabled = true;
+      try {
+        const live = await listJobsForTimeClean();
+        const plan = planCleanTimes(live);
+        cleanTimesPending = plan;
+        paintCleanTimes();
+      } catch (err) {
+        console.error(err);
+        toast((err && err.message) || 'Could not read live jobs');
+      } finally {
+        planBtn.disabled = false;
+      }
     });
   }
   if (applyBtn && !applyBtn.dataset.bound) {

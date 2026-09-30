@@ -73,6 +73,7 @@ export function planCleanTimes(liveJobs) {
       arrow: cleaned.arrow,
       from: cleaned.from,
       to: cleaned.to,
+      base: job,
     });
   }
   return {

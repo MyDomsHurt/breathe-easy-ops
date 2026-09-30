@@ -17,7 +17,7 @@ import {
 import { appendChange, asChanges, fromScheduleJob } from '../../shared/job.js';
 import { matchHubspotIdByPhone, parsePhone } from '../../shared/phone-parse.js';
 import { allContacts } from './contacts-store.js?v=1';
-import { isJeffEmail, shouldUseFirestore } from '../../shared/firebase-config.js';
+import { isJeffEmail, JOBS_COLLECTION, shouldUseFirestore } from '../../shared/firebase-config.js';
 import { CREW_SOURCE, cellTeamMembers, crewNoteId, isCrewNote } from './team-day.js';
 import { planSlotTake, slotCountFor, slotFloor } from './capacity.js';
 
@@ -805,6 +805,17 @@ export async function applySeptemberLoad({ jobs, crew, deleteIds }) {
   };
 }
 
+export async function listJobsForTimeClean() {
+  if (usingFirestore() && typeof firebase !== 'undefined' && typeof firebase.firestore === 'function') {
+    const snap = await firebase.firestore().collection(JOBS_COLLECTION).get();
+    return snap.docs.map((doc) => {
+      const data = doc.data() || {};
+      return { ...data, job_id: data.job_id || doc.id };
+    });
+  }
+  return allJobs();
+}
+
 export async function applyCleanTimes(updates) {
   requireJeff('clean job times');
   if (!ops || typeof ops.upsertJob !== 'function') {
@@ -820,7 +831,7 @@ export async function applyCleanTimes(updates) {
   try {
     for (const row of list) {
       if (!row || !row.job_id) continue;
-      const prev = ops.getJob(row.job_id);
+      const prev = ops.getJob(row.job_id) || row.base;
       if (!prev || prev.deleted === true || prev.deleted === 'true') continue;
       if (isCrewNote(prev)) continue;
       const next = { ...prev, time: row.time };

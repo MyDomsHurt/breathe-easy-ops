@@ -1,14 +1,14 @@
 import { DISTRICTS, JOB_TYPES, TEAMS } from './config.js?v=3';
 import { canPlaceJobOnTeamDay, findCrewNote, isCrewNote, isTeamDayFull } from './team-day.js?v=1';
 import { addDays, formatDay, formatTime24, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, normalizeLunch, pad, parseISO, shortTime, weekDays, workWeekDays } from './utils.js';
-import { allJobs, applySeptemberLoad, getJob, placeJobInSlot, redo, removeJob, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js?v=5';
+import { allJobs, applyCleanTimes, applySeptemberLoad, getJob, placeJobInSlot, redo, removeJob, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js?v=6';
 import { startScheduleAuth } from './auth.js';
 import { daySlotsOf, firstEmptySlotIndex, hasTimeConflict, jobsForTeamDay, layoutSlots, slotIndex } from './capacity.js?v=4';
 import { clientCardName, pulseRemaining, renderDayBoard, renderWeekBoard, weekDragSlotsHtml } from './board.js?v=22';
 import { applyJobDrop, armClickSuppress, beginDrag, capturedDragId, clearCapturedDrag, consumeClickSuppress, jobDropKind, pointerJobUp, pointerMoved, resolveDropId } from './board-drag.js?v=2';
-import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=32';
+import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=33';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js?v=2';
-import { exportMasterRoster } from './export-roster.js?v=24';
+import { exportMasterRoster } from './export-roster.js?v=25';
 import { allContacts, initContactsStore, subscribeContacts } from './contacts-store.js?v=1';
 import { fillContactFilterSelect, importHubspotFile, renderContacts } from './contacts.js?v=2';
 import { uniqueContactValues } from './contacts-query.js?v=1';
@@ -22,6 +22,13 @@ import {
   septemberLoadDone,
   validateSeptemberGlance,
 } from './september-load.js?v=1';
+import {
+  markTimesCleanedDone,
+  planCleanTimes,
+  planCleanTimesLines,
+  readTimesCleanedDone,
+  timesCleanedDone,
+} from './clean-times.js?v=1';
 
 function calendarToday() {
   const d = new Date();
@@ -32,6 +39,7 @@ const TODAY = calendarToday();
 const OWNER_EMAIL = 'jefflamb1992@gmail.com';
 let signedInEmail = '';
 let septemberPending = null;
+let cleanTimesPending = null;
 
 function isOwnerUser(email) {
   return String(email || '').toLowerCase().trim() === OWNER_EMAIL;
@@ -864,6 +872,29 @@ function paintSeptemberLoad() {
   if (applyBtn) applyBtn.hidden = false;
 }
 
+function paintCleanTimes() {
+  const block = $('cleanTimesBlock');
+  if (!block) return;
+  const show = isOwnerUser(signedInEmail) && !timesCleanedDone();
+  block.hidden = !show;
+  const applyBtn = $('applyCleanTimesBtn');
+  const planEl = $('cleanTimesPlan');
+  if (!show || !cleanTimesPending) {
+    if (applyBtn) applyBtn.hidden = true;
+    if (planEl) {
+      planEl.hidden = true;
+      planEl.textContent = '';
+    }
+    if (!show) cleanTimesPending = null;
+    return;
+  }
+  if (planEl) {
+    planEl.hidden = false;
+    planEl.textContent = planCleanTimesLines(cleanTimesPending).join('\n');
+  }
+  if (applyBtn) applyBtn.hidden = false;
+}
+
 function paintSettingsPanel() {
   const list = $('teamOrderList');
   if (!list) return;
@@ -876,6 +907,7 @@ function paintSettingsPanel() {
     + `</div>`
   )).join('');
   paintSeptemberLoad();
+  paintCleanTimes();
 }
 
 function openSettingsPanel() {
@@ -1359,6 +1391,7 @@ function bindSettingsPanel() {
     closeBtn.addEventListener('click', () => closeSettingsPanel());
   }
   bindSeptemberLoad();
+  bindCleanTimes();
   const list = $('teamOrderList');
   if (list && !list.dataset.bound) {
     list.dataset.bound = '1';
@@ -1482,6 +1515,58 @@ function bindSeptemberLoad() {
   }
 }
 
+function bindCleanTimes() {
+  const planBtn = $('planCleanTimesBtn');
+  const applyBtn = $('applyCleanTimesBtn');
+  if (planBtn && !planBtn.dataset.bound) {
+    planBtn.dataset.bound = '1';
+    planBtn.addEventListener('click', () => {
+      if (!isOwnerUser(signedInEmail)) {
+        toast('Only Jeff can clean job times');
+        return;
+      }
+      if (timesCleanedDone()) return;
+      if (!usingFirestore()) {
+        toast('Sign in to clean job times');
+        return;
+      }
+      const plan = planCleanTimes(allJobs());
+      cleanTimesPending = plan;
+      paintCleanTimes();
+    });
+  }
+  if (applyBtn && !applyBtn.dataset.bound) {
+    applyBtn.dataset.bound = '1';
+    applyBtn.addEventListener('click', async () => {
+      if (!isOwnerUser(signedInEmail)) {
+        toast('Only Jeff can clean job times');
+        return;
+      }
+      if (!cleanTimesPending) return;
+      applyBtn.disabled = true;
+      if (planBtn) planBtn.disabled = true;
+      try {
+        const arrows = cleanTimesPending.arrowLogs;
+        const result = await applyCleanTimes(cleanTimesPending.updates);
+        markTimesCleanedDone();
+        cleanTimesPending = null;
+        toast(
+          'Applied: ' + result.written + ' job times cleaned, '
+          + arrows + ' arrows became change-log rows',
+        );
+        paint();
+        paintSettingsPanel();
+      } catch (err) {
+        console.error(err);
+        toast((err && err.message) || 'Time clean failed');
+      } finally {
+        applyBtn.disabled = false;
+        if (planBtn) planBtn.disabled = false;
+      }
+    });
+  }
+}
+
 function bindOwnerTools() {
   const settingsBtn = $('openSettings');
   const exportBtn = $('exportRoster');
@@ -1585,7 +1670,10 @@ startScheduleAuth()
     bindOwnerTools();
     await initStore(user);
     await initSettingsStore();
-    if (isOwnerUser(signedInEmail)) await readSeptemberLoadDone();
+    if (isOwnerUser(signedInEmail)) {
+      await readSeptemberLoadDone();
+      await readTimesCleanedDone();
+    }
     paint();
     initContactsStore();
   })

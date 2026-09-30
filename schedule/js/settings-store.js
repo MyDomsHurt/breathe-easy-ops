@@ -1,12 +1,11 @@
 /**
- * Firestore settings/booking. Office + Josh read; Jeff writes team_order.
+ * Per-user Booking settings. Doc id is the signed-in email (lowercased).
+ * Field team_order. Never reads or writes settings/booking.
  */
 
 import { sanitizeTeamOrder } from './team-order.js?v=1';
 
 const SETTINGS_COLLECTION = 'settings';
-const BOOKING_DOC = 'booking';
-const JEFF_EMAIL = 'jefflamb1992@gmail.com';
 
 let order = sanitizeTeamOrder(null);
 let unsub = null;
@@ -23,13 +22,6 @@ function usingSettingsFirestore() {
   }
 }
 
-function docRef() {
-  if (!usingSettingsFirestore()) {
-    throw new Error('Firebase Firestore SDK is not loaded');
-  }
-  return firebase.firestore().collection(SETTINGS_COLLECTION).doc(BOOKING_DOC);
-}
-
 function currentEmail() {
   try {
     return String(
@@ -41,6 +33,17 @@ function currentEmail() {
   } catch {
     return '';
   }
+}
+
+function docRef() {
+  if (!usingSettingsFirestore()) {
+    throw new Error('Firebase Firestore SDK is not loaded');
+  }
+  const email = currentEmail();
+  if (!email) {
+    throw new Error('Sign in to save team order');
+  }
+  return firebase.firestore().collection(SETTINGS_COLLECTION).doc(email);
 }
 
 function notify() {
@@ -60,7 +63,7 @@ export function subscribeSettings(fn) {
 
 export function initSettingsStore() {
   if (unsub) return Promise.resolve(order);
-  if (!usingSettingsFirestore()) {
+  if (!usingSettingsFirestore() || !currentEmail()) {
     order = sanitizeTeamOrder(null);
     notify();
     return Promise.resolve(order);
@@ -84,8 +87,8 @@ export function initSettingsStore() {
 }
 
 export async function writeTeamOrder(next) {
-  if (currentEmail() !== JEFF_EMAIL) {
-    throw new Error('Only Jeff can change team order');
+  if (!currentEmail()) {
+    throw new Error('Sign in to save team order');
   }
   if (!usingSettingsFirestore()) {
     throw new Error('Sign in to save team order');

@@ -13,7 +13,7 @@ import { allContacts, initContactsStore, subscribeContacts } from './contacts-st
 import { fillContactFilterSelect, importHubspotFile, renderContacts } from './contacts.js?v=2';
 import { uniqueContactValues } from './contacts-query.js?v=1';
 import { moveTeam, visibleTeamOrder } from './team-order.js?v=1';
-import { initSettingsStore, subscribeSettings, teamOrder, writeTeamOrder } from './settings-store.js?v=1';
+import { initSettingsStore, subscribeSettings, teamOrder, writeTeamOrder } from './settings-store.js?v=2';
 
 function calendarToday() {
   const d = new Date();
@@ -1335,8 +1335,8 @@ function bindSettingsPanel() {
     list.addEventListener('click', async (e) => {
       const btn = e.target.closest('[data-move]');
       if (!btn || btn.disabled) return;
-      if (!isOwnerUser(signedInEmail)) {
-        toast('Only Jeff can change team order');
+      if (!signedInEmail) {
+        toast('Sign in to save team order');
         return;
       }
       const name = btn.dataset.team;
@@ -1365,7 +1365,7 @@ function bindOwnerTools() {
   const importBtn = $('importHubspotCsv');
   const file = $('importHubspotFile');
   const jeff = isOwnerUser(signedInEmail);
-  if (settingsBtn) settingsBtn.hidden = !jeff;
+  if (settingsBtn) settingsBtn.hidden = !signedInEmail;
   if (exportBtn) exportBtn.hidden = !jeff;
   if (importBtn) importBtn.hidden = !jeff;
 
@@ -1374,8 +1374,8 @@ function bindOwnerTools() {
     settingsBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       closeUserMenu();
-      if (!isOwnerUser(signedInEmail)) {
-        toast('Only Jeff can open Settings');
+      if (!signedInEmail) {
+        toast('Sign in to open Settings');
         return;
       }
       openSettingsPanel();

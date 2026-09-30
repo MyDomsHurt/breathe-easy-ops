@@ -10,3 +10,7 @@ dist
 td/shared/
 schedule/shared/
 schedule/data/sheet-import-sep-dec-2026.json
+scripts/out/
+scripts/exceptions.json
+scripts/__pycache__/
+breathe-easy-jobs-2026-september.json

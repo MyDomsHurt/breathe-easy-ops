@@ -32,11 +32,12 @@ function blankForm(over = {}) {
     team_lead: '',
     job_type: 'cleaning',
     amount: '',
-    payment: 'Unpaid',
+    payment: '',
     notes: '',
     notes_long: '',
     status: 'confirmed',
     invoice: '',
+    receipt: '',
     stack_order: '',
     highlight: {},
     ...over,
@@ -141,3 +142,23 @@ assert(io.jobs.filter((j) => j.job_id === id).length === 1, '5 still one');
 print('ok 5 cleared name stays as —');
 
 print('ok 5 easy-save cases');
+
+// 6. Blank payment persists blank. Receipt on blank/Unpaid sets Paid. Free stays Free. Empty receipt stays empty.
+const r6 = commitBooking(blankForm(prefill), 'confirmed', io);
+assert(r6.job.payment === '', '6 blank payment ' + JSON.stringify(r6.job.payment));
+assert(r6.job.receipt === '', '6 empty receipt ' + JSON.stringify(r6.job.receipt));
+assert(r6.job.payment_status === '', '6 blank status ' + JSON.stringify(r6.job.payment_status));
+const r6b = commitBooking(blankForm({ ...prefill, receipt: ' R-12 ', payment: '' }), 'confirmed', io);
+assert(r6b.job.receipt === ' R-12 ', '6b keep receipt text');
+assert(r6b.job.payment === 'Paid', '6b receipt marks Paid ' + r6b.job.payment);
+assert(r6b.job.payment_status === 'PAID', '6b status PAID');
+const r6c = commitBooking(blankForm({ ...prefill, receipt: 'R-9', payment: 'Unpaid' }), 'confirmed', io);
+assert(r6c.job.payment === 'Paid', '6c Unpaid + receipt → Paid');
+const r6d = commitBooking(blankForm({ ...prefill, receipt: 'R-3', payment: 'Free' }), 'confirmed', io);
+assert(r6d.job.payment === 'Free', '6d Free stays Free');
+const r6e = commitBooking(blankForm({ ...prefill, receipt: '', payment: 'Unpaid' }), 'confirmed', io);
+assert(r6e.job.payment === 'Unpaid', '6e empty receipt leaves Unpaid');
+assert(r6e.job.receipt === '', '6e receipt empty');
+const r6f = commitBooking(blankForm({ ...prefill, receipt: 'R-4', payment: 'PayMe' }), 'confirmed', io);
+assert(r6f.job.payment === 'PayMe', '6f method stays');
+print('ok 6 receipt marks Paid');

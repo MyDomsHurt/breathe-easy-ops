@@ -81,18 +81,13 @@ function compactTypeMark(job) {
   return null;
 }
 
-function jobIsPaid(j) {
-  const s = j && j.payment_status != null ? String(j.payment_status).trim().toUpperCase() : '';
-  if (s === 'PAID') return true;
-  if (s === 'UNPAID') return false;
-  return !!(j && j.receipt && String(j.receipt).trim());
-}
-
 function compactPayMark(j) {
-  const pay = String(j && j.payment || '').trim().toLowerCase();
-  if (pay === 'free') return { label: 'Free', kind: 'free' };
-  if (jobIsPaid(j)) return { label: 'Paid', kind: 'paid' };
-  return { label: 'Unpaid', kind: 'unpaid' };
+  const pay = String(j && j.payment || '').trim();
+  if (!pay) return null;
+  const lower = pay.toLowerCase();
+  if (lower === 'free') return { label: 'Free', kind: 'free' };
+  if (lower === 'unpaid') return { label: 'Unpaid', kind: 'unpaid' };
+  return { label: 'Paid', kind: 'paid' };
 }
 
 function weekAddressLine(job) {
@@ -118,7 +113,9 @@ function boardCardHtml(job, conflict, week) {
   const typeBit = typeMark
     ? `<span class="compact-type is-${typeMark.kind}">${esc(typeMark.label)}</span>`
     : '';
-  const payBit = `<span class="compact-pay is-${payMark.kind}">${esc(payMark.label)}</span>`;
+  const payBit = payMark
+    ? `<span class="compact-pay is-${payMark.kind}">${esc(payMark.label)}</span>`
+    : '';
   const pulse = pulseRemaining(job) ? ' is-pulse' : '';
   const timeCls = [conflict ? 'time-conflict' : '', isHi(hi.time) ? 'is-hold' : ''].filter(Boolean).join(' ');
   const name = clientCardName(job.client_name);

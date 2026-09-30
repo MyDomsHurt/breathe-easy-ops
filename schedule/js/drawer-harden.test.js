@@ -109,8 +109,8 @@ const ids = [
   'mobileInput', 'formPhoneCc', 'formPhoneNational', 'phoneApplyBtn',
   'addressInput', 'formAddrStreet', 'formAddrPlace', 'districtInput',
   'addrApplyBtn',
-  'dateInput', 'timeInput', 'teamInput', 'typeInput', 'payInput', 'amountInput',
-  'notesInput', 'notesLongInput', 'invoiceInput',
+  'dateInput', 'timeInput', 'teamInput', 'typeInput', 'paymentSelect', 'amountInput',
+  'notesInput', 'notesLongInput', 'invoiceInput', 'receiptInput',
   'saveTentative', 'saveBooking', 'deleteBooking',
   'notes1Count', 'toggleLog', 'changeLog',
 ];
@@ -163,7 +163,7 @@ function blankForm(over) {
     team_lead: '',
     job_type: 'cleaning',
     amount: '',
-    payment: 'Unpaid',
+    payment: '',
     notes: '',
     notes_long: '',
     status: 'confirmed',
@@ -288,9 +288,10 @@ need('time', byId.timeInput);
 need('type', byId.typeInput);
 need('notes 1', byId.notesInput);
 need('notes 2', byId.notesLongInput);
-need('payment', byId.payInput);
+need('payment', byId.paymentSelect);
 need('amount', byId.amountInput);
 need('invoice', byId.invoiceInput);
+need('receipt', byId.receiptInput);
 need('Tentative', byId.saveTentative);
 need('Save', byId.saveBooking);
 need('Cancel job', byId.deleteBooking);

@@ -29,7 +29,7 @@ let form = {
   team_lead: 'Josh',
   job_type: 'cleaning',
   amount: '',
-  payment: 'Unpaid',
+  payment: '',
   notes: '',
   notes_long: '',
   status: 'confirmed',
@@ -39,6 +39,8 @@ let form = {
   updated_at: '',
   highlight: {},
   changes: [],
+  invoice: '',
+  receipt: '',
   stack_order: '',
 };
 
@@ -106,6 +108,7 @@ export function applyUnitDelta(id, delta) {
 
 const PAYMENT_ALIASES = {
   unpaid: 'Unpaid',
+  paid: 'Paid',
   free: 'Free',
   deposit: 'Deposit',
   'bank transfer/fps': 'Bank Transfer/FPS',
@@ -119,21 +122,32 @@ const PAYMENT_ALIASES = {
   check: 'Cheque',
 };
 
+const PAYMENT_CHOICES = ['Unpaid', 'Paid', ...PAYMENTS.filter((p) => p !== 'Unpaid' && p !== 'Paid')];
+
 function normalizePaymentLabel(raw, status) {
   const s = String(raw || '').trim();
-  if (PAYMENTS.includes(s)) return s;
+  if (s === 'Paid' || PAYMENTS.includes(s)) return s;
   const lower = s.toLowerCase();
   const mapped = PAYMENT_ALIASES[lower];
   if (mapped) return mapped;
-  if (String(status || '').trim().toUpperCase() === 'UNPAID') return 'Unpaid';
-  if (String(status || '').trim().toUpperCase() === 'PAID' || lower === 'paid' || lower === 'visa') {
-    return 'Bank Transfer/FPS';
-  }
-  return 'Unpaid';
+  if (lower === 'visa') return 'Bank Transfer/FPS';
+  if (!s && String(status || '').trim().toUpperCase() === 'UNPAID') return 'Unpaid';
+  return '';
 }
 
 function paymentStatusFromLabel(label) {
-  return String(label || '').trim().toLowerCase() === 'unpaid' ? 'UNPAID' : 'PAID';
+  const s = String(label || '').trim().toLowerCase();
+  if (!s) return '';
+  return s === 'unpaid' ? 'UNPAID' : 'PAID';
+}
+
+function applyReceiptMarksPaid(formState) {
+  const receipt = String(formState.receipt == null ? '' : formState.receipt).trim();
+  if (!receipt) return formState;
+  const pay = String(formState.payment == null ? '' : formState.payment).trim();
+  if (pay.toLowerCase() === 'free') return formState;
+  if (!pay || pay.toLowerCase() === 'unpaid') formState.payment = 'Paid';
+  return formState;
 }
 
 function held(key) {
@@ -285,7 +299,7 @@ export function openBooking(prefill = {}) {
     changes: Array.isArray(prefill.changes) ? prefill.changes : [],
     invoice: prefill.invoice || '',
     stack_order: prefill.stack_order != null && prefill.stack_order !== '' ? prefill.stack_order : '',
-    receipt: prefill.receipt,
+    receipt: prefill.receipt || '',
     source: prefill.source,
   };
   if (!form.date) form.date = new Date().toISOString().slice(0, 10);
@@ -487,8 +501,9 @@ export function renderForm() {
             </div>
             <div class="field${fieldClass('payment')}">
               <label>Payment ${holdChip('payment', 'payment')}</label>
-              <select id="payInput">
-                ${PAYMENTS.map((p) => `<option ${form.payment === p ? 'selected' : ''}>${p}</option>`).join('')}
+              <select id="paymentSelect">
+                <option value="" ${form.payment ? '' : 'selected'}></option>
+                ${PAYMENT_CHOICES.map((p) => `<option ${form.payment === p ? 'selected' : ''}>${p}</option>`).join('')}
               </select>
             </div>
             <div class="field${fieldClass('amount')}">
@@ -496,9 +511,15 @@ export function renderForm() {
               <input id="amountInput" type="number" min="0" step="10" value="${form.amount === '' || form.amount == null ? '' : form.amount}" placeholder="HKD" />
             </div>
           </div>
-          <div class="field${fieldClass('invoice')}">
-            <label>Invoice ${holdChip('invoice', 'invoice')}</label>
-            <input id="invoiceInput" value="${escapeAttr(form.invoice || '')}" placeholder="Inv" />
+          <div class="grid-2">
+            <div class="field${fieldClass('invoice')}">
+              <label>Invoice ${holdChip('invoice', 'invoice')}</label>
+              <input id="invoiceInput" value="${escapeAttr(form.invoice || '')}" placeholder="Inv" />
+            </div>
+            <div class="field${fieldClass('receipt')}">
+              <label>Receipt ${holdChip('receipt', 'receipt')}</label>
+              <input id="receiptInput" value="${escapeAttr(form.receipt || '')}" placeholder="Rct" />
+            </div>
           </div>
         </section>
       </div>
@@ -581,7 +602,7 @@ export function bindForm() {
     renderForm();
   });
   $('#typeInput')?.addEventListener('change', (e) => { form.job_type = e.target.value; renderForm(); });
-  $('#payInput')?.addEventListener('change', (e) => { form.payment = e.target.value; });
+  $('#paymentSelect')?.addEventListener('change', (e) => { form.payment = e.target.value; });
   $('#amountInput')?.addEventListener('input', (e) => {
     form.amount = e.target.value === '' ? '' : Number(e.target.value);
   });
@@ -593,6 +614,15 @@ export function bindForm() {
   });
   $('#notesLongInput')?.addEventListener('input', (e) => { form.notes_long = e.target.value; });
   $('#invoiceInput')?.addEventListener('input', (e) => { form.invoice = e.target.value; });
+  $('#receiptInput')?.addEventListener('input', (e) => {
+    form.receipt = e.target.value;
+    const before = form.payment;
+    applyReceiptMarksPaid(form);
+    if (form.payment !== before) {
+      const sel = $('#paymentSelect');
+      if (sel) sel.value = form.payment;
+    }
+  });
   root.querySelectorAll('[data-hold]').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -702,6 +732,7 @@ export function commitBooking(formState, status = 'confirmed', io = {}) {
     const phone = phonePayload(formState);
     const addr = addressPayload(formState);
     const isNew = !String(formState.job_id || '').trim();
+    applyReceiptMarksPaid(formState);
     const payload = {
       ...formState,
       client_name: storedClientName(formState.client_name),
@@ -711,6 +742,7 @@ export function commitBooking(formState, status = 'confirmed', io = {}) {
       notes,
       notes_long: formState.notes_long,
       invoice: formState.invoice || '',
+      receipt: formState.receipt == null ? '' : String(formState.receipt),
       highlight: highlightOf({ highlight: formState.highlight }),
       mobile: phone.mobile,
       phone_cc: phone.phone_cc,
@@ -723,7 +755,7 @@ export function commitBooking(formState, status = 'confirmed', io = {}) {
       address_extra: addr.address_extra,
       district: addr.district,
       time: formatTime24(formState.time) || String(formState.time || '').trim(),
-      payment: formState.payment,
+      payment: formState.payment == null ? '' : String(formState.payment),
       payment_status: paymentStatusFromLabel(formState.payment),
       team_members: teamMembersOnDay(jobs, formState.date, formState.team_lead),
       amount: formState.job_type === 'cleaning'

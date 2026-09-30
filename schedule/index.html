@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/app.css?v=43" />
+  <link rel="stylesheet" href="css/app.css?v=44" />
 </head>
 <body>
   <div id="loginScreen" class="login-screen">
@@ -34,10 +34,7 @@
     <div class="header-inner">
       <a class="brand" href="./">
         <div class="brand-mark">BE</div>
-        <div>
-          <div class="brand-name">Breathe-Easy</div>
-          <div class="brand-sub">Booking</div>
-        </div>
+        <span class="brand-name">Booking</span>
       </a>
 
       <nav class="nav-switch" aria-label="Views">
@@ -51,7 +48,41 @@
         <div id="searchHits" class="search-hits" hidden></div>
       </div>
 
-      <div class="header-filters">
+      <div class="week-nav date-cluster">
+        <button class="icon-btn" id="prevWeek" aria-label="Previous week">‹</button>
+        <button type="button" class="week-label" id="weekLabel" aria-haspopup="true" aria-expanded="false" aria-controls="datePanel">This week</button>
+        <button class="icon-btn" id="nextWeek" aria-label="Next week">›</button>
+        <div id="datePanel" class="date-panel" hidden>
+          <button class="ghost-btn" id="thisWeek" type="button">Today</button>
+          <div class="date-panel-modes">
+            <button class="ghost-btn on" data-mode="week" type="button">Week</button>
+            <button class="ghost-btn" data-mode="day" type="button">Day</button>
+          </div>
+          <label class="date-panel-month">Month
+            <select id="monthSelect" class="month-select" aria-label="Month"></select>
+          </label>
+          <div class="date-panel-sunday">
+            <button class="ghost-btn" id="sundayToggle" type="button" aria-pressed="false">Sunday</button>
+            <button class="sunday-cue" id="sundayCue" type="button" hidden>1 on Sunday</button>
+          </div>
+        </div>
+      </div>
+
+      <button class="primary-btn" id="newBooking">+ New booking</button>
+      <div class="auth-slot">
+        <button type="button" class="user-menu-btn" id="userMenuBtn" aria-haspopup="true" aria-expanded="false" aria-controls="userMenu">
+          <span id="userChip" class="user-chip"></span>
+        </button>
+        <div id="userMenu" class="user-menu" hidden>
+          <button class="user-menu-item" id="logoutBtn" type="button">Sign out</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <section id="viewBoard">
+      <div class="board-filters">
         <div class="filter-dd" id="teamFilter">
           <button type="button" class="filter-dd-btn" id="teamFilterBtn" aria-haspopup="true" aria-expanded="false" aria-controls="teamFilterMenu">All teams</button>
           <div class="filter-dd-menu" id="teamFilterMenu" hidden></div>
@@ -65,29 +96,6 @@
           <div class="filter-dd-menu" id="typeFilterMenu" hidden></div>
         </div>
       </div>
-
-      <div class="week-nav">
-        <button class="icon-btn" id="prevWeek" aria-label="Previous week">‹</button>
-        <div class="week-label" id="weekLabel">This week</div>
-        <button class="icon-btn" id="nextWeek" aria-label="Next week">›</button>
-        <select id="monthSelect" class="month-select" aria-label="Month"></select>
-        <button class="ghost-btn" id="thisWeek">Today</button>
-        <button class="ghost-btn on" data-mode="week">Week</button>
-        <button class="ghost-btn" data-mode="day">Day</button>
-        <button class="ghost-btn" id="sundayToggle" type="button" aria-pressed="false">Sunday</button>
-        <button class="sunday-cue" id="sundayCue" type="button" hidden>1 on Sunday</button>
-      </div>
-
-      <button class="primary-btn" id="newBooking">+ New booking</button>
-      <div class="auth-slot">
-        <span id="userChip" class="user-chip"></span>
-        <button class="ghost-btn" id="logoutBtn" type="button">Sign out</button>
-      </div>
-    </div>
-  </header>
-
-  <main class="page">
-    <section id="viewBoard">
       <div class="board-legend">
         <span><i style="background:#ecfdf5;border:1px solid #86efac"></i>Empty day</span>
         <span><i style="background:repeating-linear-gradient(-45deg,#fdba74,#fdba74 2px,#fff7ed 2px,#fff7ed 4px)"></i>Return</span>
@@ -136,6 +144,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
-  <script type="module" src="js/app.js?v=65"></script>
+  <script type="module" src="js/app.js?v=66"></script>
 </body>
 </html>

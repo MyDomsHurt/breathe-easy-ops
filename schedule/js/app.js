@@ -812,6 +812,42 @@ function closeFilterMenus(except) {
   });
 }
 
+function closeDatePanel() {
+  const panel = $('datePanel');
+  const btn = $('weekLabel');
+  if (panel) panel.hidden = true;
+  if (btn) btn.setAttribute('aria-expanded', 'false');
+}
+
+function closeUserMenu() {
+  const menu = $('userMenu');
+  const btn = $('userMenuBtn');
+  if (menu) menu.hidden = true;
+  if (btn) btn.setAttribute('aria-expanded', 'false');
+}
+
+function toggleDatePanel() {
+  const panel = $('datePanel');
+  const btn = $('weekLabel');
+  if (!panel || !btn) return;
+  const open = panel.hidden;
+  closeFilterMenus();
+  closeUserMenu();
+  panel.hidden = !open;
+  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+function toggleUserMenu() {
+  const menu = $('userMenu');
+  const btn = $('userMenuBtn');
+  if (!menu || !btn) return;
+  const open = menu.hidden;
+  closeFilterMenus();
+  closeDatePanel();
+  menu.hidden = !open;
+  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
 function filterButtonLabel(singular, plural, selected, total, emptyMeansAll) {
   const n = selected.length;
   const allOn = emptyMeansAll ? n === 0 : n === total;
@@ -922,11 +958,15 @@ function bindFilters() {
   }
 
   document.addEventListener('mousedown', (e) => {
-    if (e.target.closest('.filter-dd')) return;
-    closeFilterMenus();
+    if (!e.target.closest('.filter-dd')) closeFilterMenus();
+    if (!e.target.closest('.date-cluster')) closeDatePanel();
+    if (!e.target.closest('.auth-slot')) closeUserMenu();
   });
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeFilterMenus();
+    if (e.key !== 'Escape') return;
+    closeFilterMenus();
+    closeDatePanel();
+    closeUserMenu();
   });
   syncFilterUi();
 }
@@ -967,6 +1007,22 @@ function bindChrome() {
       paint();
     });
   });
+  const weekLabel = $('weekLabel');
+  if (weekLabel) {
+    weekLabel.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleDatePanel();
+    });
+  }
+  const userMenuBtn = $('userMenuBtn');
+  if (userMenuBtn) {
+    userMenuBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleUserMenu();
+    });
+  }
   $('prevWeek').addEventListener('click', () => {
     if (state.mode === 'day') {
       state.day = addDays(state.day, -1);

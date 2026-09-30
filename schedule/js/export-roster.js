@@ -1,13 +1,14 @@
 /**
- * Jeff-only live-jobs .xlsx export: one Jobs sheet, one row per job.
+ * Jeff-only live-jobs .xlsx export: Jobs, Contacts, Change log.
  * Unit columns use the same ACS rules as td/dashboard/score-jobs.js
  * (last unit-token segment, half-clean 0.5, BEP parsed but excluded from Units).
+ * Contacts come from the Firestore contacts collection. No HubSpot writes.
  */
 import { TEAMS } from './config.js';
 import { isCrewNote, cellTeamMembers } from './team-day.js';
 import { pad, timeToMinutes } from './utils.js';
 import { isJeffEmail } from '../../shared/firebase-config.js';
-import { allJobs, initStore, usingFirestore } from './store.js?v=8';
+import { allJobs, initStore, listContactsForPhoneClean, usingFirestore } from './store.js?v=8';
 
 const SHEETJS_SRC = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
 const LEAD_MAP = {
@@ -45,18 +46,25 @@ const EQUIPMENT_UNKNOWN = {
   LEAKING: 1, INTERVIEW: 1, FILMING: 1, BATHROOM: 1, TECHNICIAN: 1,
 };
 const HEADERS = [
-  'Job ID', 'Date', 'Time', 'Team', 'Who\u2019s on', 'Client', 'Mobile', 'Country', 'National', 'Address',
+  'Job ID', 'Date', 'Time', 'Team', 'Who\u2019s on', 'Client', 'Mobile', 'HubSpot ID', 'Country', 'National', 'Address',
   'Line 1', 'Street', 'Place', 'Extra', 'ACs',
   'S', 'W', 'WP', 'B', 'C', 'UC', 'TV', 'OU', 'SwG', 'EF', 'PAU', 'BEP',
   'Units', 'Return', 'Amount', 'Invoice', 'Receipt', 'Credit note', 'Payment', 'Notes 1', 'Notes 2',
 ];
 const TEXT_COLS = {
-  0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1, 9: 1, 10: 1, 11: 1, 12: 1, 13: 1, 14: 1,
-  28: 1, 30: 1, 31: 1, 32: 1, 33: 1, 34: 1, 35: 1,
+  0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1, 9: 1, 10: 1, 11: 1, 12: 1, 13: 1, 14: 1, 15: 1,
+  29: 1, 31: 1, 32: 1, 33: 1, 34: 1, 35: 1, 36: 1,
 };
 const NUM_COLS = {
-  15: 1, 16: 1, 17: 1, 18: 1, 19: 1, 20: 1, 21: 1, 22: 1, 23: 1, 24: 1, 25: 1, 26: 1, 27: 1, 29: 1,
+  16: 1, 17: 1, 18: 1, 19: 1, 20: 1, 21: 1, 22: 1, 23: 1, 24: 1, 25: 1, 26: 1, 27: 1, 28: 1, 30: 1,
 };
+const CONTACT_HEADERS = [
+  'HubSpot ID', 'First', 'Last', 'Phone', 'Address', 'Stream', 'Tag', 'Owner', 'Deals', 'Revenue',
+];
+const CONTACT_TEXT_COLS = {
+  0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1,
+};
+const CONTACT_NUM_COLS = { 8: 1, 9: 1 };
 const TEAM_RANK = {};
 TEAMS.forEach((t, i) => { TEAM_RANK[t] = i; });
 
@@ -357,6 +365,43 @@ function amountOf(job) {
   return Number.isFinite(n) ? n : '';
 }
 
+function contactNum(v) {
+  if (v == null || v === '') return '';
+  const n = Number(v);
+  return Number.isFinite(n) ? n : '';
+}
+
+function contactSheetRow(c) {
+  const row = c && typeof c === 'object' ? c : {};
+  return [
+    row.hubspot_id == null ? '' : String(row.hubspot_id).trim(),
+    row.first_name == null ? '' : String(row.first_name),
+    row.last_name == null ? '' : String(row.last_name),
+    row.phone == null ? '' : String(row.phone),
+    row.address == null ? '' : String(row.address),
+    row.stream == null ? '' : String(row.stream),
+    row.tag == null ? '' : String(row.tag),
+    row.owner == null ? '' : String(row.owner),
+    contactNum(row.deals),
+    contactNum(row.revenue),
+  ];
+}
+
+function listExportContacts(contacts) {
+  const real = (contacts || []).filter((c) => {
+    if (!c) return false;
+    return String(c.hubspot_id == null ? '' : c.hubspot_id).trim() !== '';
+  });
+  real.sort((a, b) => {
+    const last = String(a.last_name || '').localeCompare(String(b.last_name || ''));
+    if (last) return last;
+    const first = String(a.first_name || '').localeCompare(String(b.first_name || ''));
+    if (first) return first;
+    return String(a.hubspot_id).localeCompare(String(b.hubspot_id));
+  });
+  return real;
+}
+
 function listExportJobs(jobs) {
   const real = (jobs || []).filter((j) => {
     if (!j || j.deleted || isCrewNote(j)) return false;
@@ -389,6 +434,7 @@ function sheetRow(j, all) {
     cellTeamMembers(all, j.date, lead) || '',
     j.client_name == null ? '' : String(j.client_name),
     j.mobile == null ? '' : String(j.mobile),
+    j.hubspot_id == null ? '' : String(j.hubspot_id).trim(),
     j.phone_cc == null ? '' : String(j.phone_cc),
     j.phone_national == null ? '' : String(j.phone_national),
     j.address == null ? '' : String(j.address),
@@ -468,8 +514,8 @@ function toSheet(headers, rows, spec) {
   const widthFor = spec && spec.widthFor ? spec.widthFor : function (c) {
     if (c === 0) return { wch: 18 };
     if (c === 1) return { wch: 12 };
-    if (c === 5 || c === 9 || c === 10 || c === 11 || c === 12 || c === 13 || c === 14 || c === 34 || c === 35) return { wch: 28 };
-    if (c === 4) return { wch: 18 };
+    if (c === 5 || c === 10 || c === 11 || c === 12 || c === 13 || c === 14 || c === 15 || c === 35 || c === 36) return { wch: 28 };
+    if (c === 4 || c === 7) return { wch: 18 };
     if (NUM_COLS[c]) return { wch: 8 };
     return { wch: 14 };
   };
@@ -495,7 +541,7 @@ function toSheet(headers, rows, spec) {
 }
 
 const JSON_KEYS = [
-  'jobId', 'date', 'time', 'team', 'whosOn', 'client', 'mobile', 'phoneCc', 'phoneNational', 'address',
+  'jobId', 'date', 'time', 'team', 'whosOn', 'client', 'mobile', 'hubspotId', 'phoneCc', 'phoneNational', 'address',
   'addressLine1', 'addressStreet', 'addressPlace', 'addressExtra', 'acs',
   'S', 'W', 'WP', 'B', 'C', 'UC', 'TV', 'OU', 'SwG', 'EF', 'PAU', 'BEP',
   'units', 'return', 'amount', 'invoice', 'receipt', 'creditNote', 'payment', 'notes1', 'notes2',
@@ -542,13 +588,31 @@ function changeColWidth(c) {
   return { wch: 14 };
 }
 
-function exportJobs(jobs) {
+function contactColWidth(c) {
+  if (c === 0) return { wch: 18 };
+  if (c === 1 || c === 2) return { wch: 16 };
+  if (c === 3 || c === 4) return { wch: 28 };
+  if (c === 8 || c === 9) return { wch: 10 };
+  return { wch: 14 };
+}
+
+function exportJobs(jobs, contacts) {
   const real = listExportJobs(jobs);
   const rows = real.map((j) => sheetRow(j, jobs));
   if (!rows.length) throw new Error('No jobs to export');
   const day = todayIso();
   const wb = window.XLSX.utils.book_new();
   window.XLSX.utils.book_append_sheet(wb, toSheet(HEADERS, rows), 'Jobs');
+  const contactRows = listExportContacts(contacts).map(contactSheetRow);
+  window.XLSX.utils.book_append_sheet(
+    wb,
+    toSheet(CONTACT_HEADERS, contactRows, {
+      textCols: CONTACT_TEXT_COLS,
+      numCols: CONTACT_NUM_COLS,
+      widthFor: contactColWidth,
+    }),
+    'Contacts'
+  );
   const logRows = changeLogRows(real);
   window.XLSX.utils.book_append_sheet(
     wb,
@@ -588,6 +652,20 @@ export async function exportMasterRoster() {
   if (!Array.isArray(jobs)) {
     throw new Error('Live job store is unavailable');
   }
+  const contacts = await listContactsForPhoneClean();
+  if (!Array.isArray(contacts)) {
+    throw new Error('Live contact store is unavailable');
+  }
   await loadSheetJS();
-  return exportJobs(jobs);
+  return exportJobs(jobs, contacts);
 }
+
+export {
+  HEADERS,
+  CONTACT_HEADERS,
+  JSON_KEYS,
+  sheetRow,
+  contactSheetRow,
+  listExportJobs,
+  listExportContacts,
+};

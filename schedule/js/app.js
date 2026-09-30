@@ -8,7 +8,7 @@ import { clientCardName, pulseRemaining, renderDayBoard, renderWeekBoard, weekDr
 import { applyJobDrop, armClickSuppress, beginDrag, capturedDragId, clearCapturedDrag, consumeClickSuppress, jobDropKind, pointerJobUp, pointerMoved, resolveDropId } from './board-drag.js?v=2';
 import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=35';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js?v=2';
-import { exportMasterRoster } from './export-roster.js?v=27';
+import { exportMasterRoster } from './export-roster.js?v=28';
 import { allContacts, initContactsStore, subscribeContacts } from './contacts-store.js?v=1';
 import { fillContactFilterSelect, importHubspotFile, renderContacts } from './contacts.js?v=2';
 import { uniqueContactValues } from './contacts-query.js?v=1';

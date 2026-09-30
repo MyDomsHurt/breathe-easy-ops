@@ -27,6 +27,7 @@
 
 html, body {
   margin: 0;
+  height: 100%;
   min-height: 100%;
   background:
     radial-gradient(1200px 500px at 10% -10%, #e0f2fe 0%, transparent 55%),
@@ -36,9 +37,17 @@ html, body {
   font-family: 'Libre Franklin', system-ui, sans-serif;
 }
 
+#appRoot:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
 button, input, select, textarea { font-family: inherit; }
 
 .app-header {
+  flex: 0 0 auto;
   position: sticky;
   top: 0;
   z-index: 40;
@@ -360,6 +369,7 @@ button, input, select, textarea { font-family: inherit; }
 .chip.district.on { background: #334155; }
 
 .board-legend {
+  flex: 0 0 auto;
   display: flex;
   flex-wrap: wrap;
   gap: 8px 12px;
@@ -381,9 +391,41 @@ button, input, select, textarea { font-family: inherit; }
 }
 
 .page {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   max-width: none;
   margin: 0;
-  padding: 8px 12px 32px;
+  padding: 8px 12px 12px;
+}
+
+#viewBoard:not([hidden]) {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#boardMount {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#viewJobs:not([hidden]),
+#viewContacts:not([hidden]) {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.page > p {
+  flex: 0 0 auto;
 }
 
 .appt-tray {
@@ -438,6 +480,8 @@ button, input, select, textarea { font-family: inherit; }
 .blank-line.short { width: 58%; }
 
 .board-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-x: auto;
   overflow-y: auto;
   border: 1px solid var(--line);
@@ -447,9 +491,9 @@ button, input, select, textarea { font-family: inherit; }
 }
 
 .roster {
-  width: calc(132px + var(--days, 6) * 300px);
+  width: calc(132px + var(--days, 6) * 272px);
   display: grid;
-  grid-template-columns: 132px repeat(var(--days, 6), 300px);
+  grid-template-columns: 132px repeat(var(--days, 6), 272px);
 }
 
 .roster > .board-head,
@@ -461,9 +505,9 @@ button, input, select, textarea { font-family: inherit; }
 
 .roster > .day-col-head,
 .roster > .roster-cell {
-  width: 300px;
-  min-width: 300px;
-  max-width: 300px;
+  width: 272px;
+  min-width: 272px;
+  max-width: 272px;
 }
 
 .board-head, .team-row-label, .day-col-head, .roster-cell {
@@ -477,6 +521,11 @@ button, input, select, textarea { font-family: inherit; }
   z-index: 3;
   background: #f8fafc;
   padding: 10px 8px;
+}
+
+.board-head {
+  left: 0;
+  z-index: 4;
 }
 
 .day-col-head {
@@ -510,7 +559,7 @@ button.day-col-head:hover { background: #e0f2fe; }
   z-index: 2;
   background: #fcfdfe;
   padding: 10px;
-  border-left: 3px solid var(--team, #cbd5e1);
+  color: var(--ink);
 }
 
 .team-row-label strong { display: block; font-size: 13px; }
@@ -1345,20 +1394,21 @@ button.day-col-head:hover { background: #e0f2fe; }
 .week-cell .job-card-detailed .compact-row {
   padding: 8px;
   height: auto;
-  grid-template-columns: 5.25ch minmax(0, 1fr) max-content;
+  grid-template-columns: 4.6ch minmax(0, 1fr) 3.2rem;
   column-gap: 8px;
 }
 .week-cell .job-card-detailed .compact-col-time {
-  width: 5.25ch;
-  max-width: 5.25ch;
+  width: 4.6ch;
+  max-width: 4.6ch;
+  min-width: 4.6ch;
   gap: 3px;
 }
 .week-cell .job-card-detailed .compact-time {
-  width: 5.25ch;
+  width: 4.6ch;
   font-size: 13px;
 }
 .week-cell .job-card-detailed .live-units {
-  max-width: 5.25ch;
+  max-width: 4.6ch;
   gap: 2px;
 }
 .week-cell .job-card-detailed .live-u {
@@ -1367,8 +1417,22 @@ button.day-col-head:hover { background: #e0f2fe; }
   border-radius: 3px;
 }
 .week-cell .job-card-detailed .compact-units {
-  max-width: 5.25ch;
+  max-width: 4.6ch;
   font-size: 10px;
+}
+.week-cell .job-card-detailed .compact-col-meta {
+  width: 3.2rem;
+  min-width: 0;
+  max-width: 3.2rem;
+  overflow: hidden;
+}
+.week-cell .job-card-detailed .compact-type,
+.week-cell .job-card-detailed .compact-pay {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 0 4px;
+  line-height: 14px;
+  border-radius: 3px;
 }
 .week-cell .job-card-detailed .compact-name {
   font-size: 12px;

@@ -217,24 +217,14 @@ function weekOpenAreaHtml(date, team) {
   return `<button type="button" class="week-open-area" data-book-date="${esc(date)}" data-book-team="${esc(team)}" data-week-open="1" aria-label="Add booking"></button>`;
 }
 
-function renderWeekStack(jobs, lunchTime, conflicts, date, team, full) {
+function renderWeekStack(jobs, conflicts, date, team, full) {
   const ordered = weekClockJobs(jobs);
-  const lunch = normalizeLunch(lunchTime);
-  const lunchMins = lunch ? startMinutes({ time: lunch }) : null;
   const out = [];
-  let lunchPlaced = lunchMins == null;
   let prevTimed = null;
   let prevJob = null;
 
-  function placeLunch() {
-    if (lunchPlaced || !lunch) return;
-    out.push(lunchCardHtml(lunch, date, team));
-    lunchPlaced = true;
-  }
-
   for (const j of ordered) {
     const m = startMinutes(j);
-    if (!lunchPlaced && lunchMins != null && m != null && lunchMins <= m) placeLunch();
     if (!full && prevTimed != null && m != null && prevJob) {
       const leftover = m - (prevTimed + jobOnSiteMinutes(prevJob));
       if (leftover >= 30) out.push(weekHoleHtml(date, team, leftover));
@@ -245,7 +235,6 @@ function renderWeekStack(jobs, lunchTime, conflicts, date, team, full) {
       prevJob = j;
     }
   }
-  if (!lunchPlaced && lunch) placeLunch();
   if (!ordered.length && !full) out.push(weekOpenAreaHtml(date, team));
   return out.join('');
 }
@@ -315,7 +304,7 @@ function cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs, today) {
   const lunchSlot = Number.isFinite(lunchSlotRaw) ? lunchSlotRaw : null;
   const week = mode === 'week';
   const body = week
-    ? renderWeekStack(shown, lunch, conflicts, date, team, full)
+    ? renderWeekStack(shown, conflicts, date, team, full)
     : renderSlotStack(laid, lunch, conflicts, mode, full, date, team, lunchSlot);
   const van = cellTeamMembers(lookup, date, team);
   const vanHi = isHi(note && note.highlight_members);
@@ -333,8 +322,8 @@ function cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs, today) {
     ? `<button type="button" class="cell-van${van ? '' : ' is-empty'}${vanHi ? ' hi' : ''}" data-mark-van="${esc(date)}" data-mark-van-team="${esc(team)}" aria-pressed="${vanHi ? 'true' : 'false'}" title="Mark who's on">${esc(vanLabel)}</button>`
     : `<button type="button" class="cell-van${van ? '' : ' is-empty'}${vanHi ? ' hi' : ''}" data-edit-van="${esc(date)}" data-edit-van-team="${esc(team)}" data-van-value="${esc(van)}" title="${esc(van ? van : 'Set who is on the van')}">${esc(vanLabel)}</button>
       <button type="button" class="hold-chip${vanHi ? ' on' : ''}" data-mark-van="${esc(date)}" data-mark-van-team="${esc(team)}" aria-pressed="${vanHi ? 'true' : 'false'}" title="Mark who's on">Mark</button>`;
-  const weekLunchAdd = (week && !lunch)
-    ? `<button type="button" class="cell-lunch is-empty" data-edit-lunch="${esc(date)}" data-edit-lunch-team="${esc(team)}" data-lunch-value="" title="Set lunch start">Lunch</button>`
+  const weekLunchAdd = week
+    ? `<button type="button" class="cell-lunch${lunch ? '' : ' is-empty'}" data-edit-lunch="${esc(date)}" data-edit-lunch-team="${esc(team)}" data-lunch-value="${esc(lunch)}" title="Set lunch start">${lunch ? `Lunch ${esc(lunch)}` : 'Lunch'}</button>`
     : '';
   const lunchRow = week
     ? ''
@@ -381,8 +370,7 @@ export function renderWeekBoard(el, { jobs, chipJobs, days, teams, lookupJobs, t
 
   const rows = teams.map((team) => {
     const cells = days.map((date) => cellHtml(jobs, shown, date, team, 'week', lookup, todayIso)).join('');
-    return `<div class="team-row-label" style="--team:${teamColor(team)}">
-      <span class="team-dot" style="background:${teamColor(team)}"></span>
+    return `<div class="team-row-label">
       <strong>${team}</strong>
       <div class="team-home">${(TEAM_META[team]?.home || []).join(' · ')}</div>
     </div>${cells}`;

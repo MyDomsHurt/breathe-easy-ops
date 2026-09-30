@@ -761,4 +761,48 @@ export async function importExistingJobs() {
   return { count: jobs.length, stats };
 }
 
+export async function applySeptemberLoad({ jobs, crew, deleteIds }) {
+  requireJeff('load September');
+  if (!ops || typeof ops.importJobs !== 'function' || typeof ops.upsertJob !== 'function') {
+    throw new Error('Store is not ready');
+  }
+  if (!usingFirestore()) throw new Error('Sign in to load September');
+  const jobList = Array.isArray(jobs) ? jobs : [];
+  const crewList = Array.isArray(crew) ? crew : [];
+  const ids = Array.isArray(deleteIds) ? deleteIds : [];
+
+  holdEmit += 1;
+  recording = false;
+  try {
+    for (const id of ids) {
+      const prev = ops.getJob(id);
+      if (!prev || prev.deleted === true || prev.deleted === 'true') continue;
+      ops.removeJob(id);
+    }
+    await ops.importJobs(jobList);
+    for (const note of crewList) {
+      if (!note || !note.job_id) continue;
+      const prev = ops.getJob(note.job_id);
+      await ops.upsertJob({
+        ...(prev || {}),
+        job_id: note.job_id,
+        date: note.date,
+        team_lead: note.team_lead,
+        team_members: note.team_members,
+        source: note.source,
+        deleted: false,
+      });
+    }
+  } finally {
+    recording = true;
+    holdEmit = Math.max(0, holdEmit - 1);
+    emit();
+  }
+  return {
+    jobUpserts: jobList.length,
+    crewUpserts: crewList.length,
+    softDeleted: ids.length,
+  };
+}
+
 export { jobTypeOf };

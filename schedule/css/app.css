@@ -2831,6 +2831,24 @@ p.hubspot-id-line {
 }
 .team-order-row .ghost-btn { padding: 4px 8px; font-size: 12px; }
 .team-order-row .ghost-btn:disabled { opacity: 0.35; cursor: default; }
+.settings-block + .settings-block { margin-top: 16px; }
+.september-load-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.september-load-plan {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ink);
+  white-space: pre-line;
+}
+.september-load-actions .ghost-btn:disabled,
+.september-load-actions .primary-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
 
 @media (max-width: 800px) {
   .header-inner { flex-wrap: nowrap; }

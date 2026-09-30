@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/app.css?v=48" />
+  <link rel="stylesheet" href="css/app.css?v=49" />
 </head>
 <body>
   <div id="loginScreen" class="login-screen">
@@ -80,6 +80,7 @@
           <button class="user-menu-item" id="logoutBtn" type="button">Sign out</button>
         </div>
         <input id="importHubspotFile" type="file" accept=".csv,text/csv" hidden />
+        <input id="septemberGlanceFile" type="file" accept="application/json,.json" hidden />
       </div>
     </div>
   </header>
@@ -148,6 +149,14 @@
         <h3>Team order</h3>
         <div id="teamOrderList" class="team-order-list"></div>
       </section>
+      <section class="settings-block" id="septemberLoadBlock" hidden>
+        <h3>September 2026</h3>
+        <div class="september-load-actions">
+          <button type="button" class="ghost-btn" id="loadSeptemberBtn">Load September file</button>
+          <button type="button" class="primary-btn" id="applySeptemberBtn" hidden>Apply</button>
+        </div>
+        <p id="septemberLoadPlan" class="september-load-plan" hidden></p>
+      </section>
     </div>
   </div>
   <div id="toast" class="toast" role="status"></div>
@@ -155,6 +164,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
-  <script type="module" src="js/app.js?v=70"></script>
+  <script type="module" src="js/app.js?v=71"></script>
 </body>
 </html>

@@ -1,19 +1,27 @@
 import { DISTRICTS, JOB_TYPES, TEAMS } from './config.js?v=3';
 import { canPlaceJobOnTeamDay, findCrewNote, isCrewNote, isTeamDayFull } from './team-day.js?v=1';
 import { addDays, formatDay, formatTime24, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, normalizeLunch, pad, parseISO, shortTime, weekDays, workWeekDays } from './utils.js';
-import { allJobs, getJob, placeJobInSlot, redo, removeJob, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js?v=4';
+import { allJobs, applySeptemberLoad, getJob, placeJobInSlot, redo, removeJob, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js?v=5';
 import { startScheduleAuth } from './auth.js';
 import { daySlotsOf, firstEmptySlotIndex, hasTimeConflict, jobsForTeamDay, layoutSlots, slotIndex } from './capacity.js?v=4';
 import { clientCardName, pulseRemaining, renderDayBoard, renderWeekBoard, weekDragSlotsHtml } from './board.js?v=22';
 import { applyJobDrop, armClickSuppress, beginDrag, capturedDragId, clearCapturedDrag, consumeClickSuppress, jobDropKind, pointerJobUp, pointerMoved, resolveDropId } from './board-drag.js?v=2';
-import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=31';
+import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=32';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js?v=2';
-import { exportMasterRoster } from './export-roster.js?v=23';
+import { exportMasterRoster } from './export-roster.js?v=24';
 import { allContacts, initContactsStore, subscribeContacts } from './contacts-store.js?v=1';
 import { fillContactFilterSelect, importHubspotFile, renderContacts } from './contacts.js?v=2';
 import { uniqueContactValues } from './contacts-query.js?v=1';
 import { moveTeam, visibleTeamOrder } from './team-order.js?v=1';
 import { initSettingsStore, subscribeSettings, teamOrder, writeTeamOrder } from './settings-store.js?v=2';
+import {
+  markSeptemberLoadDone,
+  planSeptemberLines,
+  planSeptemberLoad,
+  readSeptemberLoadDone,
+  septemberLoadDone,
+  validateSeptemberGlance,
+} from './september-load.js?v=1';
 
 function calendarToday() {
   const d = new Date();
@@ -23,6 +31,7 @@ function calendarToday() {
 const TODAY = calendarToday();
 const OWNER_EMAIL = 'jefflamb1992@gmail.com';
 let signedInEmail = '';
+let septemberPending = null;
 
 function isOwnerUser(email) {
   return String(email || '').toLowerCase().trim() === OWNER_EMAIL;
@@ -832,6 +841,29 @@ function closeSettingsPanel() {
   }
 }
 
+function paintSeptemberLoad() {
+  const block = $('septemberLoadBlock');
+  if (!block) return;
+  const show = isOwnerUser(signedInEmail) && !septemberLoadDone();
+  block.hidden = !show;
+  const applyBtn = $('applySeptemberBtn');
+  const planEl = $('septemberLoadPlan');
+  if (!show || !septemberPending) {
+    if (applyBtn) applyBtn.hidden = true;
+    if (planEl) {
+      planEl.hidden = true;
+      planEl.textContent = '';
+    }
+    if (!show) septemberPending = null;
+    return;
+  }
+  if (planEl) {
+    planEl.hidden = false;
+    planEl.textContent = planSeptemberLines(septemberPending.plan).join('\n');
+  }
+  if (applyBtn) applyBtn.hidden = false;
+}
+
 function paintSettingsPanel() {
   const list = $('teamOrderList');
   if (!list) return;
@@ -843,6 +875,7 @@ function paintSettingsPanel() {
     + `<button type="button" class="ghost-btn" data-move="1" data-team="${name}"${i === order.length - 1 ? ' disabled' : ''} aria-label="Move ${name} down">Down</button>`
     + `</div>`
   )).join('');
+  paintSeptemberLoad();
 }
 
 function openSettingsPanel() {
@@ -1325,6 +1358,7 @@ function bindSettingsPanel() {
     closeBtn.dataset.bound = '1';
     closeBtn.addEventListener('click', () => closeSettingsPanel());
   }
+  bindSeptemberLoad();
   const list = $('teamOrderList');
   if (list && !list.dataset.bound) {
     list.dataset.bound = '1';
@@ -1350,6 +1384,99 @@ function bindSettingsPanel() {
         console.error(err);
         toast((err && err.message) || 'Could not save team order');
         paintSettingsPanel();
+      }
+    });
+  }
+}
+
+function bindSeptemberLoad() {
+  const loadBtn = $('loadSeptemberBtn');
+  const applyBtn = $('applySeptemberBtn');
+  const file = $('septemberGlanceFile');
+  if (loadBtn && file && !loadBtn.dataset.bound) {
+    loadBtn.dataset.bound = '1';
+    loadBtn.addEventListener('click', () => {
+      if (!isOwnerUser(signedInEmail)) {
+        toast('Only Jeff can load September');
+        return;
+      }
+      if (septemberLoadDone()) return;
+      file.value = '';
+      file.click();
+    });
+    file.addEventListener('change', async () => {
+      const picked = file.files && file.files[0];
+      file.value = '';
+      if (!picked) return;
+      if (!isOwnerUser(signedInEmail)) {
+        toast('Only Jeff can load September');
+        return;
+      }
+      if (!usingFirestore()) {
+        toast('Sign in to load September');
+        return;
+      }
+      loadBtn.disabled = true;
+      try {
+        const text = await picked.text();
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch {
+          septemberPending = null;
+          toast('That file is not JSON');
+          paintSeptemberLoad();
+          return;
+        }
+        const checked = validateSeptemberGlance(data);
+        if (!checked.ok) {
+          septemberPending = null;
+          toast(checked.error);
+          paintSeptemberLoad();
+          return;
+        }
+        const plan = planSeptemberLoad(allJobs(), checked.jobs, checked.crew);
+        septemberPending = { jobs: checked.jobs, crew: checked.crew, plan };
+        paintSeptemberLoad();
+      } catch (err) {
+        console.error(err);
+        toast((err && err.message) || 'Could not read that file');
+      } finally {
+        loadBtn.disabled = false;
+      }
+    });
+  }
+  if (applyBtn && !applyBtn.dataset.bound) {
+    applyBtn.dataset.bound = '1';
+    applyBtn.addEventListener('click', async () => {
+      if (!isOwnerUser(signedInEmail)) {
+        toast('Only Jeff can load September');
+        return;
+      }
+      if (!septemberPending) return;
+      applyBtn.disabled = true;
+      if (loadBtn) loadBtn.disabled = true;
+      try {
+        const result = await applySeptemberLoad({
+          jobs: septemberPending.jobs,
+          crew: septemberPending.crew,
+          deleteIds: septemberPending.plan.softDeletes,
+        });
+        markSeptemberLoadDone();
+        septemberPending = null;
+        toast(
+          'Applied: ' + result.jobUpserts + ' job upserts, '
+          + result.crewUpserts + ' crew upserts, '
+          + result.softDeleted + ' live September jobs soft-deleted',
+        );
+        paint();
+        paintSettingsPanel();
+      } catch (err) {
+        console.error(err);
+        toast((err && err.message) || 'September load failed');
+      } finally {
+        applyBtn.disabled = false;
+        if (loadBtn) loadBtn.disabled = false;
       }
     });
   }
@@ -1458,6 +1585,7 @@ startScheduleAuth()
     bindOwnerTools();
     await initStore(user);
     await initSettingsStore();
+    if (isOwnerUser(signedInEmail)) await readSeptemberLoadDone();
     paint();
     initContactsStore();
   })

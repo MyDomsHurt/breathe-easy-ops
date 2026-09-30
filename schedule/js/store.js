@@ -854,4 +854,46 @@ export async function applyCleanTimes(updates) {
   return { written };
 }
 
+export async function applySeptemberFixes(updates) {
+  requireJeff('fix September');
+  if (!ops || typeof ops.upsertJob !== 'function') {
+    throw new Error('Store is not ready');
+  }
+  if (!usingFirestore()) throw new Error('Sign in to fix September');
+  const list = Array.isArray(updates) ? updates : [];
+
+  function inSeptember(date) {
+    const d = String(date || '').slice(0, 10);
+    return d >= '2026-09-01' && d <= '2026-09-30';
+  }
+
+  holdEmit += 1;
+  recording = false;
+  let written = 0;
+  try {
+    for (const row of list) {
+      if (!row || !row.job_id) continue;
+      if (!inSeptember(row.date)) continue;
+      const prev = ops.getJob(row.job_id) || row.base;
+      if (!prev || prev.deleted === true || prev.deleted === 'true') continue;
+      if (isCrewNote(prev)) continue;
+      if (!inSeptember(prev.date)) continue;
+      await ops.upsertJob({
+        ...prev,
+        job_id: prev.job_id,
+        date: row.date,
+        team_lead: row.team_lead,
+        time: row.time,
+        client_name: row.client_name,
+      });
+      written += 1;
+    }
+  } finally {
+    recording = true;
+    holdEmit = Math.max(0, holdEmit - 1);
+    emit();
+  }
+  return { written };
+}
+
 export { jobTypeOf };

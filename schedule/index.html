@@ -81,6 +81,7 @@
         </div>
         <input id="importHubspotFile" type="file" accept=".csv,text/csv" hidden />
         <input id="septemberGlanceFile" type="file" accept="application/json,.json" hidden />
+        <input id="checkSeptemberFile" type="file" accept="application/json,.json" hidden />
       </div>
     </div>
   </header>
@@ -157,6 +158,14 @@
         </div>
         <p id="septemberLoadPlan" class="september-load-plan" hidden></p>
       </section>
+      <section class="settings-block" id="checkSeptemberBlock" hidden>
+        <h3>September file</h3>
+        <div class="september-load-actions">
+          <button type="button" class="ghost-btn" id="checkSeptemberBtn">Check September file</button>
+          <button type="button" class="primary-btn" id="fixSeptemberBtn" hidden>Fix September</button>
+        </div>
+        <p id="checkSeptemberPlan" class="september-load-plan" hidden></p>
+      </section>
       <section class="settings-block" id="cleanTimesBlock" hidden>
         <h3>Job times</h3>
         <div class="september-load-actions">
@@ -172,6 +181,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
-  <script type="module" src="js/app.js?v=72"></script>
+  <script type="module" src="js/app.js?v=73"></script>
 </body>
 </html>

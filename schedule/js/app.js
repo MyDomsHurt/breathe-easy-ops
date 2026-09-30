@@ -1,14 +1,14 @@
 import { DISTRICTS, JOB_TYPES, TEAMS } from './config.js?v=3';
 import { canPlaceJobOnTeamDay, findCrewNote, isCrewNote, isTeamDayFull } from './team-day.js?v=1';
 import { addDays, formatDay, formatTime24, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, normalizeLunch, pad, parseISO, shortTime, weekDays, workWeekDays } from './utils.js';
-import { allJobs, applyCleanTimes, applySeptemberLoad, getJob, listJobsForTimeClean, placeJobInSlot, redo, removeJob, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js?v=6';
+import { allJobs, applyCleanTimes, applySeptemberFixes, applySeptemberLoad, getJob, listJobsForTimeClean, placeJobInSlot, redo, removeJob, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js?v=7';
 import { startScheduleAuth } from './auth.js';
 import { daySlotsOf, firstEmptySlotIndex, hasTimeConflict, jobsForTeamDay, layoutSlots, slotIndex } from './capacity.js?v=4';
 import { clientCardName, pulseRemaining, renderDayBoard, renderWeekBoard, weekDragSlotsHtml } from './board.js?v=22';
 import { applyJobDrop, armClickSuppress, beginDrag, capturedDragId, clearCapturedDrag, consumeClickSuppress, jobDropKind, pointerJobUp, pointerMoved, resolveDropId } from './board-drag.js?v=2';
-import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=33';
+import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=34';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js?v=2';
-import { exportMasterRoster } from './export-roster.js?v=25';
+import { exportMasterRoster } from './export-roster.js?v=26';
 import { allContacts, initContactsStore, subscribeContacts } from './contacts-store.js?v=1';
 import { fillContactFilterSelect, importHubspotFile, renderContacts } from './contacts.js?v=2';
 import { uniqueContactValues } from './contacts-query.js?v=1';
@@ -29,6 +29,10 @@ import {
   readTimesCleanedDone,
   timesCleanedDone,
 } from './clean-times.js?v=1';
+import {
+  planCheckSeptember,
+  planCheckSeptemberLines,
+} from './september-check.js?v=1';
 
 function calendarToday() {
   const d = new Date();
@@ -39,6 +43,7 @@ const TODAY = calendarToday();
 const OWNER_EMAIL = 'jefflamb1992@gmail.com';
 let signedInEmail = '';
 let septemberPending = null;
+let checkSeptemberPending = null;
 let cleanTimesPending = null;
 
 function isOwnerUser(email) {
@@ -872,6 +877,29 @@ function paintSeptemberLoad() {
   if (applyBtn) applyBtn.hidden = false;
 }
 
+function paintCheckSeptember() {
+  const block = $('checkSeptemberBlock');
+  if (!block) return;
+  const show = isOwnerUser(signedInEmail);
+  block.hidden = !show;
+  const applyBtn = $('fixSeptemberBtn');
+  const planEl = $('checkSeptemberPlan');
+  if (!show || !checkSeptemberPending) {
+    if (applyBtn) applyBtn.hidden = true;
+    if (planEl) {
+      planEl.hidden = true;
+      planEl.textContent = '';
+    }
+    if (!show) checkSeptemberPending = null;
+    return;
+  }
+  if (planEl) {
+    planEl.hidden = false;
+    planEl.textContent = planCheckSeptemberLines(checkSeptemberPending).join('\n');
+  }
+  if (applyBtn) applyBtn.hidden = !(checkSeptemberPending.mismatchCount > 0);
+}
+
 function paintCleanTimes() {
   const block = $('cleanTimesBlock');
   if (!block) return;
@@ -907,6 +935,7 @@ function paintSettingsPanel() {
     + `</div>`
   )).join('');
   paintSeptemberLoad();
+  paintCheckSeptember();
   paintCleanTimes();
 }
 
@@ -1391,6 +1420,7 @@ function bindSettingsPanel() {
     closeBtn.addEventListener('click', () => closeSettingsPanel());
   }
   bindSeptemberLoad();
+  bindCheckSeptember();
   bindCleanTimes();
   const list = $('teamOrderList');
   if (list && !list.dataset.bound) {
@@ -1510,6 +1540,89 @@ function bindSeptemberLoad() {
       } finally {
         applyBtn.disabled = false;
         if (loadBtn) loadBtn.disabled = false;
+      }
+    });
+  }
+}
+
+function bindCheckSeptember() {
+  const checkBtn = $('checkSeptemberBtn');
+  const applyBtn = $('fixSeptemberBtn');
+  const file = $('checkSeptemberFile');
+  if (checkBtn && file && !checkBtn.dataset.bound) {
+    checkBtn.dataset.bound = '1';
+    checkBtn.addEventListener('click', () => {
+      if (!isOwnerUser(signedInEmail)) {
+        toast('Only Jeff can check September');
+        return;
+      }
+      file.value = '';
+      file.click();
+    });
+    file.addEventListener('change', async () => {
+      const picked = file.files && file.files[0];
+      file.value = '';
+      if (!picked) return;
+      if (!isOwnerUser(signedInEmail)) {
+        toast('Only Jeff can check September');
+        return;
+      }
+      if (!usingFirestore()) {
+        toast('Sign in to check September');
+        return;
+      }
+      checkBtn.disabled = true;
+      try {
+        const text = await picked.text();
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch {
+          checkSeptemberPending = null;
+          toast('That file is not JSON');
+          paintCheckSeptember();
+          return;
+        }
+        const checked = validateSeptemberGlance(data);
+        if (!checked.ok) {
+          checkSeptemberPending = null;
+          toast(checked.error);
+          paintCheckSeptember();
+          return;
+        }
+        const live = await listJobsForTimeClean();
+        checkSeptemberPending = planCheckSeptember(checked.jobs, live);
+        paintCheckSeptember();
+      } catch (err) {
+        console.error(err);
+        toast((err && err.message) || 'Could not read that file');
+      } finally {
+        checkBtn.disabled = false;
+      }
+    });
+  }
+  if (applyBtn && !applyBtn.dataset.bound) {
+    applyBtn.dataset.bound = '1';
+    applyBtn.addEventListener('click', async () => {
+      if (!isOwnerUser(signedInEmail)) {
+        toast('Only Jeff can fix September');
+        return;
+      }
+      if (!checkSeptemberPending || !checkSeptemberPending.mismatchCount) return;
+      applyBtn.disabled = true;
+      if (checkBtn) checkBtn.disabled = true;
+      try {
+        const result = await applySeptemberFixes(checkSeptemberPending.mismatches);
+        checkSeptemberPending = null;
+        toast('Fixed ' + result.written + ' September jobs');
+        paint();
+        paintSettingsPanel();
+      } catch (err) {
+        console.error(err);
+        toast((err && err.message) || 'September fix failed');
+      } finally {
+        applyBtn.disabled = false;
+        if (checkBtn) checkBtn.disabled = false;
       }
     });
   }

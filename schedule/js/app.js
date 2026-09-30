@@ -228,16 +228,7 @@ function hideSearchHits() {
 function fillMonthSelect() {
   const sel = $('monthSelect');
   if (!sel) return;
-  const base = parseISO(TODAY);
-  const opts = [];
-  for (let i = -8; i <= 8; i += 1) {
-    const d = new Date(base.getFullYear(), base.getMonth() + i, 1);
-    const value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
-    const label = d.toLocaleDateString('en-HK', { month: 'short', year: 'numeric' });
-    opts.push(`<option value="${value}">${label}</option>`);
-  }
-  sel.innerHTML = opts.join('');
-  sel.value = monthKey(state.monday);
+  sel.value = monthKey(state.mode === 'day' ? state.day : state.monday);
 }
 
 function startVanEdit(btn) {
@@ -1106,8 +1097,13 @@ function bindChrome() {
   $('monthSelect').addEventListener('change', (e) => {
     const value = e.target.value;
     if (!value) return;
-    state.monday = mondayOfMonth(value);
-    state.day = state.monday;
+    if (state.mode === 'day') {
+      state.day = value + '-01';
+      state.monday = mondayOf(state.day);
+    } else {
+      state.monday = mondayOfMonth(value);
+      state.day = state.monday;
+    }
     state.focusJobId = '';
     paint();
   });

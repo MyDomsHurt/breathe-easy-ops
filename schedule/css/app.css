@@ -327,6 +327,8 @@ button, input, select, textarea { font-family: inherit; }
   padding: 7px 8px;
   font-size: 13px;
   font-weight: 600;
+  line-height: 1.2;
+  min-height: 32px;
   cursor: pointer;
 }
 

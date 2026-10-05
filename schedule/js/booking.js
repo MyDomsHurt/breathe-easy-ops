@@ -4,6 +4,7 @@ import { canPlaceJobOnTeamDay } from './team-day.js?v=5';
 import { addJob, allJobs, isStoreReady, removeJob, updateJob } from './store.js?v=12';
 import { allContacts } from './contacts-store.js?v=1';
 import { bookingFieldsFromContact, searchBookingClients } from './contacts-query.js?v=2';
+import { contactJobLine, jobsForContact } from './contact-jobs.js?v=2';
 import { contactDisplayName } from '../../shared/contact.js';
 import { displayNameForEmail } from '../../shared/firebase-config.js';
 import { highlightOf } from '../../shared/job.js';
@@ -305,6 +306,7 @@ function logButtonHtml() {
 }
 
 export function openBooking(prefill = {}) {
+  closeClientFlyout();
   const jobs = allJobs();
   const editing = Boolean(prefill.job_id);
   const units = (prefill.acs != null || editing)
@@ -382,6 +384,7 @@ export function openBooking(prefill = {}) {
 export function closeBooking() {
   restorePhoneIfPending();
   restoreAddrIfPending();
+  closeClientFlyout();
   const root = $('#bookingRoot');
   root.classList.remove('open', 'log-open');
   root.setAttribute('aria-hidden', 'true');
@@ -439,7 +442,6 @@ export function renderForm() {
             <label>Client ${holdChip('client', 'client')}</label>
             <div class="typeahead">
               <input id="clientSearch" type="search" placeholder="Name or phone" value="${escapeAttr(form.client_name)}" autocomplete="off" />
-              <div id="clientHits" class="typeahead-list" hidden></div>
             </div>
           </div>
           <div class="grid-2">
@@ -578,6 +580,7 @@ export function renderForm() {
         </div>
       </div>
     </aside>
+    <aside id="clientFlyout" class="client-flyout" hidden></aside>
   `;
   bindForm();
   paintPhoneCleanColors();
@@ -611,12 +614,19 @@ export function bindForm() {
   }
   root.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
+    if (clientFlyoutOpen()) {
+      e.preventDefault();
+      e.stopPropagation();
+      closeClientFlyout();
+      return;
+    }
     if (!phoneDirty() && !addrDirty()) return;
     e.preventDefault();
     e.stopPropagation();
     restorePhoneIfPending();
     restoreAddrIfPending();
   });
+  ensureClientFlyoutEsc();
   $('#clientSearch')?.addEventListener('input', (e) => {
     form.client_name = e.target.value;
     renderHits(e.target.value);
@@ -726,36 +736,114 @@ function applyPickedContact(c) {
   }
 }
 
+let clientHitRows = [];
+let clientHitPicked = null;
+let clientEscBound = false;
+
+function clientFlyoutEl() {
+  return $('#clientFlyout');
+}
+
+function clientFlyoutOpen() {
+  const el = clientFlyoutEl();
+  return !!(el && !el.hidden);
+}
+
+function closeClientFlyout() {
+  clientHitRows = [];
+  clientHitPicked = null;
+  const el = clientFlyoutEl();
+  if (!el) return;
+  el.hidden = true;
+  el.innerHTML = '';
+}
+
+function ensureClientFlyoutEsc() {
+  if (clientEscBound) return;
+  if (typeof document === 'undefined' || !document.addEventListener) return;
+  clientEscBound = true;
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (!clientFlyoutOpen()) return;
+    e.preventDefault();
+    e.stopPropagation();
+    closeClientFlyout();
+  }, true);
+}
+
+function showClientHit(client) {
+  if (!client) return;
+  clientHitPicked = client;
+  paintClientFlyout();
+}
+
+function useClientHit() {
+  if (!clientHitPicked) return;
+  applyPickedContact(clientHitPicked);
+  closeClientFlyout();
+  renderForm();
+}
+
+function paintClientFlyout() {
+  const el = clientFlyoutEl();
+  if (!el) return;
+  const hits = clientHitRows;
+  if (!hits.length) {
+    closeClientFlyout();
+    return;
+  }
+  const picked = clientHitPicked;
+  const hitHtml = hits.map((c, i) => {
+    const on = picked && String(picked.hubspot_id || '') === String(c.hubspot_id || '') && String(c.hubspot_id || '') !== '';
+    const same = picked === c || on;
+    return `<button type="button" class="client-flyout-hit${same ? ' on' : ''}" data-pick-i="${i}">
+      <strong>${escapeAttr(contactDisplayName(c))}</strong>
+      <span class="sub">${escapeAttr(c.phone || '')}</span>
+    </button>`;
+  }).join('');
+  let summary = '';
+  if (picked) {
+    const jobs = jobsForContact(allJobs(), picked.hubspot_id);
+    const lines = jobs.map((j) => `<li>${escapeAttr(contactJobLine(j))}</li>`).join('');
+    summary = `<div class="client-flyout-card">
+      <h3>${escapeAttr(contactDisplayName(picked))}</h3>
+      <p class="client-flyout-phone">${escapeAttr(picked.phone || '—')}</p>
+      <p class="client-flyout-addr">${escapeAttr(picked.address || '—')}</p>
+      <p class="client-flyout-count">Jobs · ${jobs.length}</p>
+      <ul class="client-flyout-jobs">${lines}</ul>
+      <button type="button" class="primary-btn" data-use-contact>Use this contact</button>
+    </div>`;
+  }
+  el.hidden = false;
+  el.innerHTML = `<div class="client-flyout-hits">${hitHtml}</div>${summary}`;
+  el.querySelectorAll('[data-pick-i]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      showClientHit(hits[Number(btn.dataset.pickI)]);
+    });
+  });
+  const useBtn = el.querySelector('[data-use-contact]');
+  if (useBtn) useBtn.addEventListener('click', useClientHit);
+}
+
 function renderHits(q) {
-  const box = $('#clientHits');
-  if (!box) return;
   const s = String(q || '').trim();
   if (s.length < 2) {
-    box.hidden = true;
-    box.innerHTML = '';
+    closeClientFlyout();
     return;
   }
   const hits = searchBookingClients(allContacts(), s);
   if (!hits.length) {
-    box.hidden = true;
-    box.innerHTML = '';
+    closeClientFlyout();
     return;
   }
-  box.hidden = false;
-  box.innerHTML = hits.map((c, i) => `
-    <button type="button" data-pick-i="${i}">
-      <strong>${escapeAttr(contactDisplayName(c))}</strong>
-      <span class="sub">${escapeAttr(c.phone || '')} · ${escapeAttr(c.address_place || '')} · ${escapeAttr(c.address || '')}</span>
-    </button>
-  `).join('');
-  box.querySelectorAll('button').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const client = hits[Number(btn.dataset.pickI)];
-      if (!client) return;
-      applyPickedContact(client);
-      renderForm();
-    });
-  });
+  clientHitRows = hits;
+  if (clientHitPicked) {
+    const id = String(clientHitPicked.hubspot_id || '');
+    clientHitPicked = id
+      ? (hits.find((c) => String(c.hubspot_id || '') === id) || null)
+      : null;
+  }
+  paintClientFlyout();
 }
 
 export function commitBooking(formState, status = 'confirmed', io = {}) {

@@ -2453,6 +2453,91 @@ p.hubspot-id-line {
 .typeahead-list button:hover { background: #f8fafc; }
 .typeahead-list .sub { display: block; color: var(--muted); font-size: 11px; }
 
+.client-flyout {
+  position: absolute;
+  top: 0;
+  right: min(540px, 100%);
+  height: 100%;
+  width: 320px;
+  min-width: 260px;
+  max-width: calc(100vw - min(540px, 100vw));
+  background: #fff;
+  border-right: 1px solid var(--line);
+  box-shadow: -18px 0 40px rgba(15, 39, 68, 0.1);
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  z-index: 3;
+  padding: 10px 10px 16px;
+  gap: 8px;
+}
+.client-flyout[hidden] { display: none !important; }
+.client-flyout-hits {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.client-flyout-hit {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: white;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+}
+.client-flyout-hit:hover,
+.client-flyout-hit.on { background: #e0f2fe; }
+.client-flyout-hit .sub { display: block; color: var(--muted); font-size: 11px; }
+.client-flyout-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #f8fafc;
+}
+.client-flyout-card h3 {
+  margin: 0;
+  font-size: 15px;
+  letter-spacing: -0.02em;
+}
+.client-flyout-phone,
+.client-flyout-addr,
+.client-flyout-count {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.client-flyout-addr,
+.client-flyout-count { color: var(--muted); }
+.client-flyout-jobs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.client-flyout-jobs li {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  padding: 5px 0;
+  border-top: 1px solid #eef2f6;
+  overflow-wrap: anywhere;
+}
+.client-flyout-card .primary-btn { margin-top: 6px; }
+@media (max-width: 900px) {
+  .client-flyout {
+    right: auto;
+    left: 0;
+    width: min(380px, 100%);
+    min-width: 0;
+  }
+}
+
 .unit-bar, .unit-strip {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

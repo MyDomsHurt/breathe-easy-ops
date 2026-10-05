@@ -68,4 +68,19 @@ assert(src.indexOf('Only office can open a closed day') !== -1, '5 closed-day to
 assert(src.indexOf('Only office can unlock') === -1, '5 old unlock toast');
 print('ok 5 lock click keeps board scroll');
 
-print('ok 5 boot-paint cases');
+const holAt = src.indexOf("closest('[data-holiday-date]')");
+assert(holAt !== -1, '6 no holiday click');
+const holBody = src.slice(holAt, src.indexOf('const van =', holAt));
+assert(holBody.indexOf('startHolidayEdit') !== -1, '6 holiday edits');
+const editAt = src.indexOf('function startHolidayEdit');
+assert(editAt !== -1, '6 no startHolidayEdit');
+const editBody = src.slice(editAt, src.indexOf('function bindBoardClicks', editAt));
+assert(editBody.indexOf('boardScrollState()') !== -1, '6 holiday saves scroll');
+assert(editBody.indexOf('setCompanyDay') !== -1, '6 holiday writes');
+assert(editBody.indexOf('clearCompanyDay') !== -1, '6 holiday clears');
+assert(editBody.indexOf('restoreBoardScroll(saved)') !== -1, '6 holiday restores after paint');
+assert(editBody.indexOf('Public holiday') !== -1, '6 default name');
+assert(src.indexOf('Only office can set a public holiday') !== -1, '6 office gate');
+print('ok 6 holiday click keeps board scroll');
+
+print('ok 6 boot-paint cases');

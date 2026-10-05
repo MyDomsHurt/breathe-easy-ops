@@ -2,7 +2,7 @@
  * Contact pane job list and /?date=&job= deep link.
  * Match is job.hubspot_id === contact hubspot_id only.
  */
-import { isCrewNote } from './team-day.js';
+import { isCompanyDay, isCrewNote } from './team-day.js';
 import { formatMoney } from './utils.js';
 
 function parseQuery(search) {
@@ -25,7 +25,7 @@ export function jobsForContact(jobs, hubspotId) {
   const out = (jobs || []).filter((j) => {
     if (!j) return false;
     if (j.deleted === true || j.deleted === 'true') return false;
-    if (isCrewNote(j)) return false;
+    if (isCrewNote(j) || isCompanyDay(j)) return false;
     if (j.hubspot_id == null || String(j.hubspot_id) === '') return false;
     return String(j.hubspot_id) === id;
   });

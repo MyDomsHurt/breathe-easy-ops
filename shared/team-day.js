@@ -9,6 +9,12 @@
  * Booking writes this note and copies team_members onto real jobs that day.
  * TD Who's on reads the same note. Notes are not bookings — hide them from
  * cards, search, and job counts.
+ *
+ * One company-day holiday per date in the same jobs collection:
+ *   job_id: holiday-YYYY-MM-DD
+ *   source: company-day
+ *   notes: the label (default Public holiday)
+ * It is not a booking. isTeamDayFull reads it so every team that date is Closed.
  */
 
 export const CREW_SOURCE = 'team-day-crew';
@@ -25,8 +31,38 @@ export function isCrewNote(job) {
   return String(job.job_id || '').indexOf('crew-') === 0;
 }
 
+export const COMPANY_SOURCE = 'company-day';
+
+export function holidayId(date) {
+  return `holiday-${String(date || '').trim()}`;
+}
+
+export function isCompanyDay(job) {
+  if (!job) return false;
+  if (job.source === COMPANY_SOURCE) return true;
+  return String(job.job_id || '').indexOf('holiday-') === 0;
+}
+
+export function findCompanyDay(jobs, date) {
+  const d = String(date || '').trim();
+  const id = holidayId(d);
+  let found = null;
+  for (const job of jobs || []) {
+    if (job.deleted) continue;
+    if (!isCompanyDay(job)) continue;
+    if (job.job_id === id) return job;
+    if (job.date === d) found = job;
+  }
+  return found;
+}
+
+export function companyDayName(job) {
+  const s = job && job.notes != null ? String(job.notes).trim() : '';
+  return s || 'Public holiday';
+}
+
 export function realJobs(jobs) {
-  return (jobs || []).filter((job) => !isCrewNote(job));
+  return (jobs || []).filter((job) => !isCrewNote(job) && !isCompanyDay(job));
 }
 
 export function findCrewNote(jobs, date, team) {
@@ -56,15 +92,16 @@ export function hongKongToday(now) {
 }
 
 /**
- * Locked when day_unlocked is off and any of: date before HKT today,
- * day_full, day_locked. Unlock beats the past-day rule and day_locked.
- * A past day needs no crew note.
+ * Closed when day_unlocked is off and any of: date before HKT today,
+ * a company-day holiday, day_full, day_locked. Unlock beats the past-day
+ * rule, a holiday, and day_locked. A past day needs no crew note.
  */
 export function isTeamDayFull(jobs, date, team, today) {
   const note = findCrewNote(jobs, date, team);
   if (note && flagOn(note.day_unlocked)) return false;
   const todayIso = today || hongKongToday();
   if (String(date || '') < String(todayIso)) return true;
+  if (findCompanyDay(jobs, date)) return true;
   if (note && (flagOn(note.day_full) || flagOn(note.day_locked))) return true;
   return false;
 }
@@ -79,7 +116,7 @@ export function canPlaceJobOnTeamDay(jobs, date, team, existing, today) {
 export function consensusTeamMembers(jobs, date, team) {
   const counts = new Map();
   for (const job of jobs || []) {
-    if (isCrewNote(job) || job.deleted) continue;
+    if (isCrewNote(job) || isCompanyDay(job) || job.deleted) continue;
     if (job.date !== date || job.team_lead !== team) continue;
     const value = String(job.team_members || '').trim();
     if (!value) continue;
@@ -108,6 +145,11 @@ const api = {
   CREW_SOURCE,
   crewNoteId,
   isCrewNote,
+  COMPANY_SOURCE,
+  holidayId,
+  isCompanyDay,
+  findCompanyDay,
+  companyDayName,
   realJobs,
   findCrewNote,
   hongKongToday,

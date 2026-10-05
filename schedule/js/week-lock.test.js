@@ -1,7 +1,7 @@
-import { rosterCellHtml, weekCellTitle } from './board.js';
+import { renderWeekBoard, rosterCellHtml, weekCellTitle } from './board.js';
 import { commitBooking } from './booking.js';
 import { isOfficeEmail } from '../../shared/firebase-config.js';
-import { CREW_SOURCE, canPlaceJobOnTeamDay, crewNoteId, hongKongToday, isTeamDayFull } from './team-day.js';
+import { COMPANY_SOURCE, CREW_SOURCE, canPlaceJobOnTeamDay, crewNoteId, holidayId, hongKongToday, isCompanyDay, isTeamDayFull } from './team-day.js';
 import { emptyUnits } from './utils.js';
 
 function fail(msg) {
@@ -247,4 +247,101 @@ assert(pastSatHtml.indexOf('Closed') !== -1, '11 past sat Closed');
 assert(pastSatHtml.indexOf('is-full') !== -1, '11 past sat grey from Closed');
 print('ok 11 Saturday colour follows Closed/Open');
 
-print('ok 11 week-lock cases');
+function holiday(day, name) {
+  return {
+    job_id: holidayId(day),
+    date: day,
+    source: COMPANY_SOURCE,
+    team_lead: '',
+    client_name: '',
+    mobile: '',
+    phone_cc: '',
+    phone_national: '',
+    amount: '',
+    notes: name || 'Public holiday',
+  };
+}
+
+const hDate = '2026-12-25';
+const hRec = holiday(hDate, 'Christmas');
+const hJobs = [hRec];
+
+assert(isCompanyDay(hRec), '12 is company-day');
+assert(hRec.job_id === 'holiday-2026-12-25', '12 id');
+assert(hRec.source === 'company-day', '12 source');
+assert(hRec.client_name === '', '12 no client');
+assert(!hRec.mobile, '12 no phone');
+assert(hRec.amount === '', '12 no amount');
+assert(isTeamDayFull(hJobs, hDate, 'Josh', today), '12 josh closed by holiday');
+assert(isTeamDayFull(hJobs, hDate, 'Matthew', today), '12 matthew closed by holiday');
+assert(isTeamDayFull(hJobs, hDate, 'Iggi', today), '12 iggi closed by holiday');
+assert(!isTeamDayFull(hJobs, '2026-12-24', 'Josh', today), '12 other date stays open');
+assert(!canPlaceJobOnTeamDay(hJobs, hDate, 'Josh', null, today), '12 no new booking');
+const hJosh = rosterCellHtml(hJobs, hJobs, hDate, 'Josh', 'week', hJobs, today);
+const hMatt = rosterCellHtml(hJobs, hJobs, hDate, 'Matthew', 'week', hJobs, today);
+assert(hJosh.indexOf('Closed') !== -1, '12 josh Closed');
+assert(hJosh.indexOf('is-full') !== -1, '12 josh grey because Closed');
+assert(hMatt.indexOf('Closed') !== -1, '12 matt Closed');
+assert(hMatt.indexOf('is-full') !== -1, '12 matt grey because Closed');
+assert(hJosh.indexOf('Christmas') === -1, '12 name not on team cell');
+assert(hMatt.indexOf('Christmas') === -1, '12 name not on other cell');
+const hBoard = { innerHTML: '' };
+renderWeekBoard(hBoard, {
+  jobs: hJobs,
+  days: [hDate, '2026-12-26'],
+  teams: ['Josh', 'Matthew'],
+  today,
+});
+const hHead = hBoard.innerHTML;
+assert(hHead.indexOf('>Christmas</button>') !== -1, '12 name on header');
+assert(hHead.split('>Christmas</button>').length === 2, '12 name once on header');
+assert(hHead.indexOf('data-holiday-date="' + hDate + '"') !== -1, '12 holiday control');
+assert(hHead.indexOf('class="day-col-head') !== -1, '12 head is not a nested button');
+const ioH = memoryIo(hJobs);
+const beforeH = hJobs.length;
+const rH = commitBooking(blankForm({ date: hDate, team_lead: 'Josh', client_name: 'Ada' }), 'confirmed', ioH);
+assert(rH.error === 'That day is closed', '12 save ' + rH.error);
+assert(!rH.job, '12 wrote a booking');
+assert(hJobs.length === beforeH, '12 no client job');
+assert(!hJobs.some((j) => j.client_name === 'Ada' || (j.client_name === 'Public holiday' && !isCompanyDay(j))), '12 no Public holiday booking');
+print('ok 12 one holiday closes every team that date');
+
+const opened = [hRec, crew(hDate, 'Josh', { day_unlocked: true })];
+assert(!isTeamDayFull(opened, hDate, 'Josh', today), '13 unlocked team Open');
+assert(isTeamDayFull(opened, hDate, 'Matthew', today), '13 other team Closed');
+const openCell = rosterCellHtml(opened, opened, hDate, 'Josh', 'week', opened, today);
+const closedCell = rosterCellHtml(opened, opened, hDate, 'Matthew', 'week', opened, today);
+assert(openCell.indexOf('Open') !== -1, '13 josh Open');
+assert(openCell.indexOf('is-full') === -1, '13 josh white');
+assert(closedCell.indexOf('Closed') !== -1, '13 matt Closed');
+assert(closedCell.indexOf('is-full') !== -1, '13 matt grey');
+assert(opened.some((j) => j.job_id === 'holiday-2026-12-25'), '13 holiday stays');
+print('ok 13 one team Open stays white; holiday stays; others Closed');
+
+const purpose = [crew(hDate, 'Nick', { day_full: true, day_locked: true })];
+assert(isTeamDayFull(purpose, hDate, 'Nick', today), '14 purpose-closed stays Closed after holiday gone');
+assert(!isTeamDayFull(purpose, hDate, 'Josh', today), '14 other team Open after holiday gone');
+assert(isTeamDayFull([], past, 'Josh', today), '14 past stays Closed');
+print('ok 14 clear holiday leaves purpose-closed Closed');
+
+function readSrc(name) {
+  if (typeof readFile !== 'function') fail('jsc readFile missing');
+  const paths = ['schedule/js/' + name, name, './' + name];
+  for (const p of paths) {
+    try {
+      const s = readFile(p);
+      if (s != null && String(s).length) return String(s);
+    } catch (e) {}
+  }
+  fail('cannot read ' + name);
+}
+const storeSrc = readSrc('store.js');
+assert(storeSrc.indexOf('function setCompanyDay') !== -1, '15 setCompanyDay');
+assert(storeSrc.indexOf('function clearCompanyDay') !== -1, '15 clearCompanyDay');
+assert(storeSrc.indexOf("source: COMPANY_SOURCE") !== -1, '15 writes company-day');
+assert(storeSrc.indexOf('removeJob(found.job_id)') !== -1, '15 clear removes holiday only');
+assert(storeSrc.indexOf('day_unlocked: !lockOn && (past || !!findCompanyDay(allJobs(), date))') !== -1, '15 open writes day_unlocked on holiday');
+assert(storeSrc.indexOf('Saturday') === -1, '15 no Saturday rule in store');
+print('ok 15 store holiday record and unlock');
+
+print('ok 15 week-lock cases');

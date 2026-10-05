@@ -2,6 +2,11 @@ export {
   CREW_SOURCE,
   crewNoteId,
   isCrewNote,
+  COMPANY_SOURCE,
+  holidayId,
+  isCompanyDay,
+  findCompanyDay,
+  companyDayName,
   realJobs,
   findCrewNote,
   hongKongToday,
@@ -9,4 +14,4 @@ export {
   canPlaceJobOnTeamDay,
   consensusTeamMembers,
   cellTeamMembers,
-} from '../../shared/team-day.js?v=2';
+} from '../../shared/team-day.js?v=3';

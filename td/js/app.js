@@ -814,6 +814,8 @@ function applyFilters() {
   const bounds = getRangeBounds(currentFilters.range);
   filtered = allJobs.filter(j => {
     if (isCrewNote(j)) return false;
+    if (window.BETeamDay && typeof window.BETeamDay.isCompanyDay === 'function' && window.BETeamDay.isCompanyDay(j)) return false;
+    if (j.source === 'company-day' || String(j.job_id || '').indexOf('holiday-') === 0) return false;
     if (j.deleted) return false;
     if (currentFilters.month !== 'all' && jobMonth(j) !== Number(currentFilters.month)) return false;
     if (currentFilters.team !== 'all' && j.team_lead !== currentFilters.team) return false;

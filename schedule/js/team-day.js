@@ -9,9 +9,16 @@ export {
   companyDayName,
   realJobs,
   findCrewNote,
+  dayMarkOf,
+  isHolidayMark,
+  isClosingDayMark,
+  holidayNameOf,
+  holidayNameOnDate,
+  timedDayMark,
+  dateMarkState,
   hongKongToday,
   isTeamDayFull,
   canPlaceJobOnTeamDay,
   consensusTeamMembers,
   cellTeamMembers,
-} from '../../shared/team-day.js?v=3';
+} from '../../shared/team-day.js?v=4';

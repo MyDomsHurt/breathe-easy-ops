@@ -1,15 +1,15 @@
 import { DISTRICTS, JOB_TYPES, TEAMS } from './config.js?v=3';
-import { canPlaceJobOnTeamDay, findCrewNote, hongKongToday, isCompanyDay, isCrewNote, isTeamDayFull } from './team-day.js?v=3';
+import { canPlaceJobOnTeamDay, dateMarkState, findCrewNote, hongKongToday, isCompanyDay, isCrewNote, isTeamDayFull } from './team-day.js?v=4';
 import { addDays, formatDay, formatTime24, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, normalizeLunch, parseISO, shortTime, weekDays, workWeekDays } from './utils.js';
-import { allJobs, applyCleanPhones, applyCleanTimes, applySeptemberFixes, applySeptemberLoad, clearCompanyDay, getJob, listContactsForPhoneClean, listJobsForTimeClean, placeJobInSlot, redo, removeJob, setCompanyDay, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js?v=10';
+import { allJobs, applyCleanPhones, applyCleanTimes, applySeptemberFixes, applySeptemberLoad, clearDateMark, getJob, listContactsForPhoneClean, listJobsForTimeClean, placeJobInSlot, redo, removeJob, setDateMark, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js?v=11';
 import { isOfficeEmail } from '../../shared/firebase-config.js';
 import { startScheduleAuth } from './auth.js';
 import { daySlotsOf, firstEmptySlotIndex, hasTimeConflict, jobsForTeamDay, layoutSlots, slotIndex } from './capacity.js?v=4';
-import { clientCardName, pulseRemaining, renderDayBoard, renderWeekBoard, weekDragSlotsHtml } from './board.js?v=27';
+import { clientCardName, pulseRemaining, renderDayBoard, renderWeekBoard, weekDragSlotsHtml } from './board.js?v=28';
 import { applyJobDrop, armClickSuppress, beginDrag, capturedDragId, clearCapturedDrag, consumeClickSuppress, jobDropKind, pointerJobUp, pointerMoved, resolveDropId } from './board-drag.js?v=2';
-import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=38';
+import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=39';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js?v=2';
-import { exportMasterRoster } from './export-roster.js?v=30';
+import { exportMasterRoster } from './export-roster.js?v=31';
 import { allContacts, initContactsStore, subscribeContacts } from './contacts-store.js?v=1';
 import { fillContactFilterSelect, importHubspotFile, renderContacts } from './contacts.js?v=3';
 import { uniqueContactValues } from './contacts-query.js?v=1';
@@ -422,58 +422,210 @@ function startLunchEdit(btn) {
   input.addEventListener('blur', () => finish(true));
 }
 
-function startHolidayEdit(btn) {
-  if (!isOfficeEmail(signedInEmail)) {
-    toast('Only office can set a public holiday');
-    return;
-  }
-  const date = btn.dataset.holidayDate;
-  const current = btn.dataset.holidayName || '';
-  if (!date) return;
-  const input = document.createElement('input');
-  input.type = 'text';
-  input.className = 'day-holiday-input';
-  input.value = current || 'Public holiday';
-  input.setAttribute('aria-label', 'Public holiday');
-  btn.replaceWith(input);
-  input.focus();
-  input.select();
-  let done = false;
-  function finish(save) {
-    if (done) return;
-    done = true;
-    if (save) {
-      const next = String(input.value || '').trim();
-      const saved = boardScrollState();
-      if (!next) {
-        clearCompanyDay(date);
-        toast('Holiday cleared');
-        paint();
-        restoreBoardScroll(saved);
-        return;
-      }
-      if (next !== current) {
-        setCompanyDay(date, next);
-        toast(next);
-        paint();
-        restoreBoardScroll(saved);
-        return;
-      }
+let dayMarkMenuDate = '';
+
+function dayMarkMenuEl() {
+  let el = document.getElementById('dayMarkMenu');
+  if (el) return el;
+  el = document.createElement('div');
+  el.id = 'dayMarkMenu';
+  el.className = 'day-mark-menu';
+  el.hidden = true;
+  document.body.appendChild(el);
+  el.addEventListener('mousedown', (e) => e.stopPropagation());
+  el.addEventListener('click', (e) => {
+    const choice = e.target.closest('[data-day-mark-choice]');
+    if (choice) {
+      e.preventDefault();
+      paintDayMarkForm(choice.dataset.dayMarkChoice);
+      return;
     }
-    paint();
-  }
-  input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
+    if (e.target.closest('[data-day-mark-save]')) {
       e.preventDefault();
-      input.blur();
-    } else if (e.key === 'Escape') {
+      saveDayMarkForm();
+      return;
+    }
+    if (e.target.closest('[data-day-mark-clear]')) {
       e.preventDefault();
-      finish(false);
+      applyDayMarkClear();
     }
   });
-  input.addEventListener('mousedown', (e) => e.stopPropagation());
-  input.addEventListener('click', (e) => e.stopPropagation());
-  input.addEventListener('blur', () => finish(true));
+  el.addEventListener('change', (e) => {
+    if (e.target.name === 'dayMarkScope') {
+      paintDayMarkForm('building', {
+        allDay: e.target.value === 'all',
+        teams: tickedTeamsFromMenu(el),
+      });
+    }
+  });
+  return el;
+}
+
+function closeDayMarkMenu() {
+  const el = document.getElementById('dayMarkMenu');
+  if (el) el.hidden = true;
+  dayMarkMenuDate = '';
+}
+
+function teamTickHtml(ticked) {
+  const on = new Set(ticked && ticked.length ? ticked : TEAMS);
+  return `<div class="day-mark-teams">${TEAMS.map((t) => {
+    const checked = on.has(t) ? ' checked' : '';
+    return `<label class="day-mark-team"><input type="checkbox" data-day-mark-team value="${escAttr(t)}"${checked}>${escAttr(t)}</label>`;
+  }).join('')}</div>`;
+}
+
+function escAttr(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/"/g, '&quot;');
+}
+
+function paintDayMarkForm(kind, over) {
+  const el = dayMarkMenuEl();
+  const date = dayMarkMenuDate;
+  if (!date) return;
+  const state = dateMarkState(allJobs(), date);
+  const same = state.kind === kind;
+  const ticked = over && Array.isArray(over.teams) ? over.teams : TEAMS.slice();
+  let body = '';
+  if (kind === 'holiday') {
+    const name = same && state.name ? state.name : 'Public holiday';
+    body = `<label class="day-mark-field">Name
+      <input type="text" data-day-mark-name value="${escAttr(name)}" aria-label="Public holiday name">
+    </label>`;
+  } else if (kind === 'meeting') {
+    const time = same ? state.time : '';
+    body = `${teamTickHtml(ticked)}
+      <label class="day-mark-field">Start
+        <input type="text" data-day-mark-time value="${escAttr(time)}" placeholder="09:00" aria-label="Team meeting start">
+      </label>`;
+  } else if (kind === 'building') {
+    const allDay = over && over.allDay != null ? !!over.allDay : (same ? !!state.allDay : false);
+    const time = same && !allDay ? state.time : '';
+    body = `${teamTickHtml(ticked)}
+      <div class="day-mark-scope">
+        <label><input type="radio" name="dayMarkScope" value="timed"${allDay ? '' : ' checked'}> Timed</label>
+        <label><input type="radio" name="dayMarkScope" value="all"${allDay ? ' checked' : ''}> Whole day</label>
+      </div>
+      ${allDay ? '' : `<label class="day-mark-field">Start
+        <input type="text" data-day-mark-time value="${escAttr(time)}" placeholder="09:00" aria-label="Team building start">
+      </label>`}`;
+  } else {
+    return;
+  }
+  el.innerHTML = `<div class="day-mark-choices">
+      <button type="button" data-day-mark-choice="holiday"${kind === 'holiday' ? ' class="on"' : ''}>Public holiday</button>
+      <button type="button" data-day-mark-choice="meeting"${kind === 'meeting' ? ' class="on"' : ''}>Team meeting</button>
+      <button type="button" data-day-mark-choice="building"${kind === 'building' ? ' class="on"' : ''}>Team building</button>
+    </div>
+    <div class="day-mark-form" data-day-mark-kind="${kind}">
+      ${body}
+      <div class="day-mark-actions">
+        <button type="button" class="primary-btn" data-day-mark-save>Save</button>
+        <button type="button" class="ghost-btn" data-day-mark-clear>Clear</button>
+      </div>
+    </div>`;
+  el.hidden = false;
+  const focus = el.querySelector('[data-day-mark-name], [data-day-mark-time]');
+  if (focus) {
+    focus.focus();
+    if (focus.select) focus.select();
+  }
+}
+
+function tickedTeamsFromMenu(el) {
+  return Array.from(el.querySelectorAll('[data-day-mark-team]:checked')).map((n) => n.value);
+}
+
+function saveDayMarkForm() {
+  const el = dayMarkMenuEl();
+  const date = dayMarkMenuDate;
+  const form = el.querySelector('[data-day-mark-kind]');
+  const kind = form && form.dataset.dayMarkKind;
+  if (!date || !kind) return;
+  const saved = boardScrollState();
+  if (kind === 'holiday') {
+    const name = String((el.querySelector('[data-day-mark-name]') || {}).value || '').trim();
+    if (!name) {
+      clearDateMark(date);
+      toast('Cleared');
+    } else {
+      setDateMark(date, { kind: 'holiday', name });
+      toast(name);
+    }
+  } else if (kind === 'meeting') {
+    const teams = tickedTeamsFromMenu(el);
+    const time = formatTime24((el.querySelector('[data-day-mark-time]') || {}).value);
+    if (!teams.length) {
+      toast('Tick a team');
+      return;
+    }
+    if (!time) {
+      toast('Start time is required');
+      return;
+    }
+    setDateMark(date, { kind: 'meeting', teams, time });
+    toast(`Team meeting ${time}`);
+  } else if (kind === 'building') {
+    const teams = tickedTeamsFromMenu(el);
+    if (!teams.length) {
+      toast('Tick a team');
+      return;
+    }
+    const allDay = !!(el.querySelector('input[name="dayMarkScope"][value="all"]') || {}).checked;
+    if (allDay) {
+      setDateMark(date, { kind: 'building', teams, allDay: true });
+      toast('Team building');
+    } else {
+      const time = formatTime24((el.querySelector('[data-day-mark-time]') || {}).value);
+      if (!time) {
+        toast('Start time is required');
+        return;
+      }
+      setDateMark(date, { kind: 'building', teams, time, allDay: false });
+      toast(`Team building ${time}`);
+    }
+  }
+  closeDayMarkMenu();
+  paint();
+  restoreBoardScroll(saved);
+}
+
+function applyDayMarkClear() {
+  const date = dayMarkMenuDate;
+  if (!date) return;
+  const saved = boardScrollState();
+  clearDateMark(date);
+  closeDayMarkMenu();
+  toast('Cleared');
+  paint();
+  restoreBoardScroll(saved);
+}
+
+function openDayMarkMenu(head) {
+  if (!isOfficeEmail(signedInEmail)) {
+    toast('Only office can mark this date');
+    return;
+  }
+  const date = head.dataset.dayMark;
+  if (!date) return;
+  const el = dayMarkMenuEl();
+  dayMarkMenuDate = date;
+  el.innerHTML = `<div class="day-mark-choices">
+      <button type="button" data-day-mark-choice="holiday">Public holiday</button>
+      <button type="button" data-day-mark-choice="meeting">Team meeting</button>
+      <button type="button" data-day-mark-choice="building">Team building</button>
+    </div>`;
+  el.hidden = false;
+  const rect = head.getBoundingClientRect();
+  const width = Math.max(220, rect.width);
+  let left = rect.left;
+  if (left + width > window.innerWidth - 8) left = Math.max(8, window.innerWidth - width - 8);
+  el.style.left = `${Math.round(left)}px`;
+  el.style.top = `${Math.round(rect.bottom + 4)}px`;
+  el.style.width = `${Math.round(width)}px`;
 }
 
 function bindBoardClicks() {
@@ -539,7 +691,7 @@ function bindBoardClicks() {
       if (date && team) openBooking({ date, team_lead: team, stack_order: Number.isFinite(slot) ? slot : undefined });
       return;
     }
-    if (e.target.closest('[data-lunch-bar]')) {
+    if (e.target.closest('[data-lunch-bar], [data-day-mark-bar]')) {
       e.preventDefault();
       e.stopPropagation();
       return;
@@ -549,13 +701,6 @@ function bindBoardClicks() {
       e.preventDefault();
       e.stopPropagation();
       startLunchEdit(lunchEdit);
-      return;
-    }
-    const holidayBtn = e.target.closest('[data-holiday-date]');
-    if (holidayBtn) {
-      e.preventDefault();
-      e.stopPropagation();
-      startHolidayEdit(holidayBtn);
       return;
     }
     const van = e.target.closest('[data-edit-van]');
@@ -571,12 +716,11 @@ function bindBoardClicks() {
       if (job) openBooking(job);
       return;
     }
-    const dayHead = e.target.closest('[data-open-day]');
+    const dayHead = e.target.closest('[data-day-mark]');
     if (dayHead) {
-      state.mode = 'day';
-      state.day = dayHead.dataset.openDay;
-      state.monday = mondayOf(state.day);
-      paint();
+      e.preventDefault();
+      e.stopPropagation();
+      openDayMarkMenu(dayHead);
       return;
     }
     if (e.target.closest('.cell-status') && !e.target.closest('[data-day-full]')) {
@@ -848,7 +992,7 @@ function bindBoardPointer() {
 
   mount.addEventListener('pointerdown', (e) => {
     if (e.button != null && e.button !== 0) return;
-    if (e.target.closest('[data-lunch-card], [data-lunch-bar]')) return;
+    if (e.target.closest('[data-lunch-card], [data-lunch-bar], [data-day-mark-bar]')) return;
     const chip = e.target.closest('[data-job]');
     if (!chip || !chip.dataset.job) return;
     beginDrag(chip.dataset.job);
@@ -1277,6 +1421,7 @@ function bindFilters() {
     if (!e.target.closest('.filter-dd')) closeFilterMenus();
     if (!e.target.closest('.date-cluster')) closeDatePanel();
     if (!e.target.closest('.auth-slot')) closeUserMenu();
+    if (!e.target.closest('#dayMarkMenu') && !e.target.closest('[data-day-mark]')) closeDayMarkMenu();
   });
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
@@ -1284,6 +1429,7 @@ function bindFilters() {
     closeDatePanel();
     closeUserMenu();
     closeSettingsPanel();
+    closeDayMarkMenu();
   });
   syncFilterUi();
 }

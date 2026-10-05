@@ -10,11 +10,10 @@
  * TD Who's on reads the same note. Notes are not bookings — hide them from
  * cards, search, and job counts.
  *
- * One company-day holiday per date in the same jobs collection:
- *   job_id: holiday-YYYY-MM-DD
- *   source: company-day
- *   notes: the label (default Public holiday)
- * It is not a booking. isTeamDayFull reads it so every team that date is Closed.
+ * One date mark lives on those crew notes (day_mark holiday | meeting |
+ * building). It is not a booking. Do not write holiday-YYYY-MM-DD or
+ * source company-day. Leftover company-day rows stay hidden from job lists
+ * and are not the mark.
  */
 
 export const CREW_SOURCE = 'team-day-crew';
@@ -80,6 +79,78 @@ function flagOn(value) {
   return value === true || value === 'true';
 }
 
+export function dayMarkOf(note) {
+  const m = note && note.day_mark != null ? String(note.day_mark).trim() : '';
+  if (m === 'holiday' || m === 'meeting' || m === 'building') return m;
+  return '';
+}
+
+export function isHolidayMark(note) {
+  return dayMarkOf(note) === 'holiday';
+}
+
+export function isClosingDayMark(note) {
+  const m = dayMarkOf(note);
+  if (m === 'holiday') return true;
+  if (m === 'building' && flagOn(note && note.day_mark_all_day)) return true;
+  return false;
+}
+
+export function holidayNameOf(note) {
+  if (!isHolidayMark(note)) return '';
+  const s = note && note.day_mark_name != null ? String(note.day_mark_name).trim() : '';
+  return s || 'Public holiday';
+}
+
+export function holidayNameOnDate(jobs, date) {
+  const d = String(date || '').trim();
+  for (const job of jobs || []) {
+    if (job.deleted) continue;
+    if (!isCrewNote(job) || job.date !== d) continue;
+    const name = holidayNameOf(job);
+    if (name) return name;
+  }
+  return '';
+}
+
+export function timedDayMark(note) {
+  const m = dayMarkOf(note);
+  if (m === 'meeting') {
+    const time = note && note.day_mark_time != null ? String(note.day_mark_time).trim() : '';
+    if (!time) return null;
+    return { kind: 'meeting', time, name: 'Team meeting' };
+  }
+  if (m === 'building' && !flagOn(note && note.day_mark_all_day)) {
+    const time = note && note.day_mark_time != null ? String(note.day_mark_time).trim() : '';
+    if (!time) return null;
+    return { kind: 'building', time, name: 'Team building' };
+  }
+  return null;
+}
+
+export function dateMarkState(jobs, date) {
+  const d = String(date || '').trim();
+  const teams = [];
+  let kind = '';
+  let name = '';
+  let time = '';
+  let allDay = false;
+  for (const job of jobs || []) {
+    if (job.deleted) continue;
+    if (!isCrewNote(job) || job.date !== d) continue;
+    const m = dayMarkOf(job);
+    if (!m) continue;
+    if (!kind) {
+      kind = m;
+      name = m === 'holiday' ? holidayNameOf(job) : '';
+      time = job.day_mark_time != null ? String(job.day_mark_time).trim() : '';
+      allDay = m === 'building' && flagOn(job.day_mark_all_day);
+    }
+    if (m === kind && job.team_lead) teams.push(job.team_lead);
+  }
+  return { kind, name, time, allDay, teams };
+}
+
 /** Calendar day in Asia/Hong_Kong as YYYY-MM-DD. */
 export function hongKongToday(now) {
   const d = now instanceof Date ? now : new Date();
@@ -93,15 +164,17 @@ export function hongKongToday(now) {
 
 /**
  * Closed when day_unlocked is off and any of: date before HKT today,
- * a company-day holiday, day_full, day_locked. Unlock beats the past-day
- * rule, a holiday, and day_locked. A past day needs no crew note.
+ * a holiday or whole-day building mark on this team's crew note,
+ * day_full, day_locked. Unlock beats the past-day rule, those marks,
+ * and day_locked. A past day needs no crew note. Do not read a
+ * company-day row as the mark.
  */
 export function isTeamDayFull(jobs, date, team, today) {
   const note = findCrewNote(jobs, date, team);
   if (note && flagOn(note.day_unlocked)) return false;
   const todayIso = today || hongKongToday();
   if (String(date || '') < String(todayIso)) return true;
-  if (findCompanyDay(jobs, date)) return true;
+  if (isClosingDayMark(note)) return true;
   if (note && (flagOn(note.day_full) || flagOn(note.day_locked))) return true;
   return false;
 }
@@ -152,6 +225,13 @@ const api = {
   companyDayName,
   realJobs,
   findCrewNote,
+  dayMarkOf,
+  isHolidayMark,
+  isClosingDayMark,
+  holidayNameOf,
+  holidayNameOnDate,
+  timedDayMark,
+  dateMarkState,
   hongKongToday,
   isTeamDayFull,
   canPlaceJobOnTeamDay,

@@ -10,8 +10,9 @@ import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=35'
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js?v=2';
 import { exportMasterRoster } from './export-roster.js?v=28';
 import { allContacts, initContactsStore, subscribeContacts } from './contacts-store.js?v=1';
-import { fillContactFilterSelect, importHubspotFile, renderContacts } from './contacts.js?v=2';
+import { fillContactFilterSelect, importHubspotFile, renderContacts } from './contacts.js?v=3';
 import { uniqueContactValues } from './contacts-query.js?v=1';
+import { isSundayDate, readJobLink } from './contact-jobs.js?v=1';
 import { moveTeam, visibleTeamOrder } from './team-order.js?v=1';
 import { initSettingsStore, subscribeSettings, teamOrder, writeTeamOrder } from './settings-store.js?v=2';
 import {
@@ -77,7 +78,11 @@ const state = {
   contactLanguage: '',
   contactHasAddress: false,
   contactSort: 'name',
+  contactJobsOpen: false,
 };
+
+let pendingJobLink = null;
+let applyingJobLink = false;
 
 function $(id) {
   return document.getElementById(id);
@@ -88,7 +93,7 @@ function sundayOfWeek(mondayIso) {
 }
 
 function isSunday(iso) {
-  return parseISO(iso).getDay() === 0;
+  return isSundayDate(iso);
 }
 
 function boardDays() {
@@ -174,6 +179,8 @@ function paintContacts() {
     language: state.contactLanguage,
     hasAddress: state.contactHasAddress,
     sort: state.contactSort,
+    jobs: allJobs(),
+    jobsOpen: state.contactJobsOpen,
   });
   if (picked && picked.hubspot_id) state.contactId = picked.hubspot_id;
 }
@@ -213,6 +220,39 @@ function paint() {
   syncSundayUi();
   focusJobOnBoard();
   schedulePulseClear();
+  consumePendingJobLink();
+}
+
+function stripJobLink() {
+  if (typeof history === 'undefined' || typeof history.replaceState !== 'function') return;
+  if (typeof window === 'undefined' || !window.location) return;
+  try {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has('date') && !url.searchParams.has('job')) return;
+    url.searchParams.delete('date');
+    url.searchParams.delete('job');
+    const next = url.pathname + url.search + url.hash;
+    history.replaceState({}, '', next);
+  } catch (err) {}
+}
+
+function consumePendingJobLink() {
+  if (!pendingJobLink || applyingJobLink) return;
+  const job = getJob(pendingJobLink.jobId);
+  if (!job || isCrewNote(job)) return;
+  applyingJobLink = true;
+  pendingJobLink = null;
+  stripJobLink();
+  state.view = 'board';
+  state.mode = 'week';
+  state.monday = mondayOf(job.date);
+  state.day = job.date;
+  if (isSunday(job.date)) state.showSunday = true;
+  state.focusJobId = job.job_id;
+  paint();
+  openBooking(job);
+  focusJobOnBoard();
+  applyingJobLink = false;
 }
 
 function schedulePulseClear() {
@@ -1283,7 +1323,20 @@ function bindChrome() {
   });
   const contactsMount = $('contactsMount');
   if (contactsMount) {
+    contactsMount.addEventListener('toggle', (e) => {
+      if (e.target && e.target.classList && e.target.classList.contains('contact-jobs')) {
+        state.contactJobsOpen = !!e.target.open;
+      }
+    }, true);
     contactsMount.addEventListener('click', (e) => {
+      if (e.target.closest('a.contact-job')) {
+        e.stopPropagation();
+        return;
+      }
+      if (e.target.closest('details.contact-jobs')) {
+        e.stopPropagation();
+        return;
+      }
       const copy = e.target.closest('[data-copy-phone]');
       if (copy) {
         e.preventDefault();
@@ -1301,6 +1354,7 @@ function bindChrome() {
       const row = e.target.closest('[data-contact]');
       if (!row) return;
       state.contactId = row.dataset.contact;
+      state.contactJobsOpen = false;
       paint();
     });
   }
@@ -1890,6 +1944,14 @@ startScheduleAuth()
       await readSeptemberLoadDone();
       await readTimesCleanedDone();
       await readPhonesCleanedDone();
+    }
+    pendingJobLink = readJobLink(window.location.search);
+    if (pendingJobLink) {
+      state.view = 'board';
+      state.mode = 'week';
+      state.monday = mondayOf(pendingJobLink.date);
+      state.day = pendingJobLink.date;
+      if (isSunday(pendingJobLink.date)) state.showSunday = true;
     }
     paint();
     initContactsStore();

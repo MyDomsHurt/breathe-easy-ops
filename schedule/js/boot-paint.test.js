@@ -31,6 +31,8 @@ assert(iStore !== -1 && iPaint !== -1 && iContacts !== -1, '1 missing boot calls
 assert(iStore < iPaint, '1 initStore before paint');
 assert(iPaint < iContacts, '1 paint before initContactsStore');
 assert(tail.indexOf('Promise.all') === -1, '1 Promise.all still in boot');
+assert(tail.indexOf('readJobLink') !== -1, '1 boot reads job link');
+assert(tail.indexOf('readJobLink') < iPaint, '1 job link before paint');
 print('ok 1 boot initStore → paint → initContactsStore');
 
 assert(src.indexOf('subscribeContacts(paint)') === -1, '2 subscribeContacts(paint)');

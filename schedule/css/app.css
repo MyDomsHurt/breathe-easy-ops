@@ -1741,11 +1741,41 @@ button.day-col-head:hover { background: #e0f2fe; }
   min-height: 240px;
 }
 .contact-pane h2 {
-  margin: 0 0 14px;
+  margin: 0 0 8px;
   font-size: 20px;
   font-weight: 800;
   letter-spacing: -0.03em;
 }
+.contact-jobs {
+  margin: 0 0 14px;
+}
+.contact-jobs summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--brand-ink);
+  list-style: none;
+}
+.contact-jobs summary::-webkit-details-marker { display: none; }
+.contact-jobs summary::before {
+  content: '▸ ';
+  font-weight: 700;
+}
+.contact-jobs[open] summary::before { content: '▾ '; }
+.contact-jobs-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+.contact-job {
+  display: block;
+  padding: 7px 0;
+  font-size: 13px;
+  color: var(--ink);
+  text-decoration: none;
+  border-top: 1px solid #eef2f6;
+}
+.contact-job:hover { background: #f8fafc; }
 .contact-kv {
   display: grid;
   grid-template-columns: 120px minmax(0, 1fr);

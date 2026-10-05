@@ -2,6 +2,7 @@ import { contactDisplayName } from '../../shared/contact.js';
 import { allContacts, importContacts, usingContactsFirestore } from './contacts-store.js?v=1';
 import { contactsFromCsv } from './contacts-import.js?v=2';
 import { queryContacts, uniqueContactValues } from './contacts-query.js?v=1';
+import { contactJobHref, contactJobLine, jobsForContact } from './contact-jobs.js?v=1';
 import { esc, formatMoney } from './utils.js';
 
 export { queryContacts, uniqueContactValues };
@@ -11,7 +12,21 @@ function kv(label, value) {
   return `<div class="contact-kv"><dt>${esc(label)}</dt><dd>${esc(v)}</dd></div>`;
 }
 
-function paneHtml(c) {
+function jobsHtml(c, opts) {
+  const jobs = jobsForContact(opts && opts.jobs, c && c.hubspot_id);
+  const open = opts && opts.jobsOpen ? ' open' : '';
+  const rows = jobs.map((j) => {
+    const href = contactJobHref(j);
+    if (!href) return '';
+    return `<li><a class="contact-job" href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(contactJobLine(j))}</a></li>`;
+  }).join('');
+  return `<details class="contact-jobs"${open}>
+      <summary>Jobs · ${jobs.length}</summary>
+      <ul class="contact-jobs-list">${rows}</ul>
+    </details>`;
+}
+
+function paneHtml(c, opts) {
   if (!c) {
     return `<div class="contact-pane-empty">Select a contact</div>`;
   }
@@ -25,6 +40,7 @@ function paneHtml(c) {
   return `
     <div class="contact-pane-body">
       <h2>${esc(contactDisplayName(c))}</h2>
+      ${jobsHtml(c, opts)}
       <div class="contact-kv">
         <dt>Phone</dt>
         <dd>${phone ? `${esc(phone)} <button type="button" class="ghost-btn contact-copy" data-copy-phone="${esc(phone)}">Copy</button>` : '—'}</dd>
@@ -97,7 +113,7 @@ export function renderContacts(el, opts = {}) {
           </tbody>
         </table>
       </div>
-      <div class="contact-pane">${paneHtml(selected)}</div>
+      <div class="contact-pane">${paneHtml(selected, opts)}</div>
     </div>`;
   return selected;
 }

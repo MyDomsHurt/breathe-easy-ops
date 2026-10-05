@@ -300,7 +300,7 @@ export function weekDragSlotsHtml(allJobs, date, team) {
 }
 
 export function weekLockBit(empty, full, count) {
-  return full ? 'Locked' : (empty ? 'Open' : String(count));
+  return full ? 'Closed' : 'Open';
 }
 
 export function weekCellTitle(date, empty, full, count) {
@@ -339,8 +339,8 @@ function cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs, today) {
   const dow = parseISO(date).toLocaleDateString('en-HK', { weekday: 'short' });
   const dayNum = Number(date.slice(8));
   const status = week
-    ? `${esc(dow)} ${dayNum} · <button type="button" class="cell-lock" data-day-full="${esc(date)}" data-day-full-team="${esc(team)}" aria-pressed="${full ? 'true' : 'false'}">${esc(lockBit)}</button>`
-    : esc(full ? 'Locked' : (empty ? 'Open' : list.length + ' job' + (list.length === 1 ? '' : 's')));
+    ? `${esc(dow)} ${dayNum} · ${esc(lockBit)}`
+    : esc(full ? 'Closed' : 'Open');
   const addBtn = full
     ? ''
     : `<button class="cell-add" data-book-date="${date}" data-book-team="${team}" data-slot="${firstEmptySlotIndex(list, date, team, null, slots)}" type="button" aria-label="Add booking">+</button>`;
@@ -358,12 +358,13 @@ function cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs, today) {
     </div>`;
   const floor = slotFloor(list, date, team);
   const dayTools = week ? '' : `<div class="cell-day-tools">
-      <button type="button" class="day-full-btn${full ? ' on' : ''}" data-day-full="${esc(date)}" data-day-full-team="${esc(team)}" aria-pressed="${full ? 'true' : 'false'}">Locked</button>
+      <button type="button" class="day-full-btn${full ? ' on' : ''}" data-day-full="${esc(date)}" data-day-full-team="${esc(team)}" aria-pressed="${full ? 'true' : 'false'}">${full ? 'Closed' : 'Open'}</button>
       <button type="button" class="add-slot-btn" data-add-slot="${esc(date)}" data-add-slot-team="${esc(team)}" data-add-slot-count="${slots}" title="Add a slot">+ slot</button>
       <button type="button" class="add-slot-btn" data-remove-slot="${esc(date)}" data-remove-slot-team="${esc(team)}" data-remove-slot-count="${slots}" data-remove-slot-floor="${floor}" title="Remove an empty slot"${slots <= floor ? ' disabled' : ''}>− slot</button>
     </div>`;
   const todayCls = date === todayIso ? ' today' : '';
-  return `<div class="roster-cell ${empty ? 'empty' : 'has-jobs'}${full ? ' is-full' : ''} ${week ? 'week-cell' : 'day-cell'}${todayCls}" data-date="${date}" data-team="${team}">
+  const weekendCls = isWeekend(date) ? ' weekend' : '';
+  return `<div class="roster-cell ${empty ? 'empty' : 'has-jobs'}${full ? ' is-full' : ''} ${week ? 'week-cell' : 'day-cell'}${todayCls}${weekendCls}" data-date="${date}" data-team="${team}">
     <div class="cell-top">
       <div class="cell-head-left">
         <span class="cell-status">${status}</span>

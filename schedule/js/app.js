@@ -5,9 +5,9 @@ import { allJobs, applyCleanPhones, applyCleanTimes, applySeptemberFixes, applyS
 import { isOfficeEmail } from '../../shared/firebase-config.js';
 import { startScheduleAuth } from './auth.js';
 import { daySlotsOf, firstEmptySlotIndex, hasTimeConflict, jobsForTeamDay, layoutSlots, slotIndex } from './capacity.js?v=4';
-import { clientCardName, pulseRemaining, renderDayBoard, renderWeekBoard, weekDragSlotsHtml } from './board.js?v=23';
+import { clientCardName, pulseRemaining, renderDayBoard, renderWeekBoard, weekDragSlotsHtml } from './board.js?v=24';
 import { applyJobDrop, armClickSuppress, beginDrag, capturedDragId, clearCapturedDrag, consumeClickSuppress, jobDropKind, pointerJobUp, pointerMoved, resolveDropId } from './board-drag.js?v=2';
-import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=36';
+import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=37';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js?v=2';
 import { exportMasterRoster } from './export-roster.js?v=29';
 import { allContacts, initContactsStore, subscribeContacts } from './contacts-store.js?v=1';
@@ -443,7 +443,7 @@ function bindBoardClicks() {
       e.stopPropagation();
       const on = dayFull.getAttribute('aria-pressed') !== 'true';
       if (!on && !isOfficeEmail(signedInEmail)) {
-        toast('Only office can unlock');
+        toast('Only office can open a closed day');
         return;
       }
       const saved = boardScrollState();

@@ -64,6 +64,8 @@ assert(lockBody.indexOf('paint()') !== -1, '5 lock paints');
 assert(lockBody.indexOf('restoreBoardScroll(saved)') !== -1, '5 lock restores after paint');
 assert(lockBody.indexOf('scrollIntoView') === -1, '5 lock scrollIntoView');
 assert(src.indexOf('isTeamDayFull') !== -1, '5 check stays');
+assert(src.indexOf('Only office can open a closed day') !== -1, '5 closed-day toast');
+assert(src.indexOf('Only office can unlock') === -1, '5 old unlock toast');
 print('ok 5 lock click keeps board scroll');
 
 print('ok 5 boot-paint cases');

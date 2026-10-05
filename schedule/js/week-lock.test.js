@@ -102,7 +102,7 @@ const jobs = [];
 
 assert(/^\d{4}-\d{2}-\d{2}$/.test(hongKongToday()), 'today shape ' + hongKongToday());
 
-// 1. Open week cell → lock → title Locked, beige, no +, no empty slots.
+// 1. Open week cell → close → title Closed, grey, no +, no empty slots.
 let html = weekHtml(jobs, date);
 assert(weekCellTitle(date, true, false, 0).indexOf('Open') !== -1, '1 title Open fn');
 assert(html.indexOf('Open') !== -1, '1 Open in html');
@@ -112,11 +112,12 @@ assert(html.indexOf('is-full') === -1, '1 not full yet');
 toggleLock(jobs, date, true);
 html = weekHtml(jobs, date);
 assert(isTeamDayFull(jobs, date, team, today), '1 flag');
-assert(html.indexOf('Locked') !== -1, '1 Locked in html');
-assert(html.indexOf('is-full') !== -1, '1 beige is-full');
+assert(html.indexOf('Closed') !== -1, '1 Closed in html');
+assert(html.indexOf('Locked') === -1, '1 Locked gone');
+assert(html.indexOf('is-full') !== -1, '1 grey is-full');
 assert(html.indexOf('cell-add') === -1, '1 no +');
 assert(html.indexOf('empty-slot') === -1, '1 no empty slots');
-print('ok 1 week lock Locked no + no slots');
+print('ok 1 week close Closed no + no slots');
 
 // 2. Toggle again → Open or count, + comes back.
 toggleLock(jobs, date, false);
@@ -126,6 +127,8 @@ assert(html.indexOf('Open') !== -1, '2 Open');
 assert(html.indexOf('cell-add') !== -1, '2 + back');
 assert(html.indexOf('empty-slot') === -1, '2 week rest has empty slots');
 assert(html.indexOf('is-full') === -1, '2 not full class');
+assert(weekCellTitle(date, false, false, 4).indexOf('Open') !== -1, '2 Open with jobs');
+assert(dayHtml(jobs, date).indexOf('>Open</button>') !== -1, '2 day Open');
 print('ok 2 toggle open + back');
 
 // 3. Locked day: header + and drop-on-empty do nothing. New booking → toast, no write.
@@ -136,7 +139,7 @@ assert(!canPlaceJobOnTeamDay(jobs, date, team, null, today), '3 drop-on-empty bl
 const io = memoryIo(jobs);
 const before = jobs.length;
 const r3 = commitBooking(blankForm({ date, team_lead: team, client_name: 'New' }), 'confirmed', io);
-assert(r3.error === 'That day is locked', '3 toast ' + r3.error);
+assert(r3.error === 'That day is closed', '3 toast ' + r3.error);
 assert(!r3.job, '3 wrote');
 assert(jobs.length === before, '3 count');
 print('ok 3 locked blocks + drop and new save');
@@ -156,22 +159,26 @@ const r4 = commitBooking(blankForm({
   team_lead: team,
   client_name: 'Priya Chen',
 }), 'confirmed', io);
-assert(r4.error === 'That day is locked', '4 error ' + r4.error);
+assert(r4.error === 'That day is closed', '4 error ' + r4.error);
 assert(!r4.job, '4 wrote');
 assert(jobs.filter((j) => j.job_id === 'job-keep' && j.client_name === 'Priya').length === 1, '4 still Priya');
 print('ok 4 save on locked day blocked');
 
-// 5. Week cells do not render the day Locked button, +slot, −slot, or Mark.
+// 5. Week cells do not render the day close button, +slot, −slot, or Mark.
 html = weekHtml(jobs, date);
 assert(html.indexOf('Day full') === -1, '5 Day full');
-assert(html.indexOf('>Locked</button>') !== -1, '5 week title Locked');
+assert(html.indexOf('cell-lock') === -1, '5 week title is not the close control');
+assert(html.indexOf('data-day-full') === -1, '5 week has no close control');
+assert(html.indexOf('Closed') !== -1, '5 week title Closed');
+assert(html.indexOf('Locked') === -1, '5 week Locked gone');
 assert(html.indexOf('day-full-btn') === -1, '5 week day-full-btn');
 assert(html.indexOf('+ slot') === -1, '5 + slot');
 assert(html.indexOf('− slot') === -1, '5 minus slot');
 assert(html.indexOf('>Mark<') === -1, '5 Mark');
 const day = dayHtml(jobs, date);
-assert(day.indexOf('day-full-btn') !== -1, '5 day view keeps lock button');
-assert(day.indexOf('>Locked</button>') !== -1, '5 day view label Locked');
+assert(day.indexOf('day-full-btn') !== -1, '5 day view keeps close button');
+assert(day.indexOf('>Closed</button>') !== -1, '5 day view label Closed');
+assert(day.indexOf('Locked') === -1, '5 day Locked gone');
 assert(day.indexOf('+ slot') !== -1, '5 day view keeps + slot');
 print('ok 5 week chrome gone, day tools stay');
 
@@ -180,13 +187,14 @@ const pastJobs = [];
 assert(isTeamDayFull(pastJobs, past, team, today), '6 past locked with no note');
 assert(!canPlaceJobOnTeamDay(pastJobs, past, team, null, today), '6 past drop blocked');
 const pastHtml = weekHtml(pastJobs, past);
-assert(pastHtml.indexOf('Locked') !== -1, '6 past paints Locked');
-assert(pastHtml.indexOf('is-full') !== -1, '6 past beige');
+assert(pastHtml.indexOf('Closed') !== -1, '6 past paints Closed');
+assert(pastHtml.indexOf('Locked') === -1, '6 past Locked gone');
+assert(pastHtml.indexOf('is-full') !== -1, '6 past grey');
 assert(pastHtml.indexOf('cell-add') === -1, '6 past no +');
 assert(pastJobs.length === 0, '6 no crew note created');
 const ioPast = memoryIo(pastJobs);
 const r6 = commitBooking(blankForm({ date: past, team_lead: team, client_name: 'Ada' }), 'confirmed', ioPast);
-assert(r6.error === 'That day is locked', '6 past save ' + r6.error);
+assert(r6.error === 'That day is closed', '6 past save ' + r6.error);
 assert(pastJobs.length === 0, '6 past no write');
 print('ok 6 past day locked with no crew note');
 
@@ -223,4 +231,12 @@ assert(!isOfficeEmail('joshua@breathe-easyhk.com'), '10 josh not office');
 assert(!isOfficeEmail('matthewgross2001@gmail.com'), '10 tech not office');
 print('ok 10 unlock office only');
 
-print('ok 10 week-lock cases');
+// 11. Saturday uses the weekend class so it paints the same grey as Closed.
+const sat = '2026-12-19';
+const satHtml = weekHtml([], sat);
+assert(satHtml.indexOf('weekend') !== -1, '11 sat weekend');
+assert(satHtml.indexOf('Open') !== -1, '11 sat Open');
+assert(satHtml.indexOf('is-full') === -1, '11 sat not closed');
+print('ok 11 Saturday weekend class');
+
+print('ok 11 week-lock cases');

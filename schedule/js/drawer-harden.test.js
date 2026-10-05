@@ -248,7 +248,7 @@ assert(typeof r4.job.job_id === 'string' && r4.job.job_id.indexOf('2026-12-15-jo
 assert(mintJobId({ date: '2026-12-15', team_lead: 'Josh' }).indexOf('2026-12-15-josh-') === 0, '4 mint shape');
 print('ok 4 minted id ' + r4.job.job_id);
 
-// 5. New job onto a Full day → { error: "That day is locked" }.
+// 5. New job onto a Full day → { error: "That day is closed" }.
 const fullJobs = [{
   job_id: crewNoteId('2026-12-15', 'Josh'),
   date: '2026-12-15',
@@ -260,7 +260,7 @@ const fullJobs = [{
 const io5 = memoryIo(fullJobs);
 const before = fullJobs.length;
 const r5 = commitBooking(blankForm({ date: '2026-12-15', team_lead: 'Josh', client_name: 'Ada' }), 'confirmed', io5);
-assert(r5.error === 'That day is locked', '5 error ' + (r5 && r5.error));
+assert(r5.error === 'That day is closed', '5 error ' + (r5 && r5.error));
 assert(!r5.job, '5 wrote');
 assert(fullJobs.length === before, '5 count');
 print('ok 5 full day no write');

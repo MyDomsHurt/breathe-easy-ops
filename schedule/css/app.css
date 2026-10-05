@@ -2,6 +2,7 @@
   --ink: #0f2744;
   --muted: #5b6b7c;
   --line: #d9e2ec;
+  --day-line: #a8b6c4;
   --paper: #f4f7fa;
   --card: #ffffff;
   --brand: #075985;
@@ -574,7 +575,7 @@ button, input, select, textarea { font-family: inherit; }
 
 .board-head, .team-row-label, .day-col-head, .roster-cell {
   border-bottom: 1px solid var(--line);
-  border-right: 1px solid #eef2f6;
+  border-right: 1px solid var(--day-line);
 }
 
 .board-head, .day-col-head {
@@ -603,7 +604,7 @@ button.day-col-head {
   background: #f8fafc;
   border: 0;
   border-bottom: 1px solid var(--line);
-  border-right: 1px solid #eef2f6;
+  border-right: 1px solid var(--day-line);
 }
 button.day-col-head:hover { background: #e0f2fe; }
 .day-col-head .dow { font-size: 11px; color: var(--muted); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
@@ -613,7 +614,7 @@ button.day-col-head:hover { background: #e0f2fe; }
   box-shadow: inset 0 0 0 1px #bbf7d0;
 }
 .day-col-head.today .dom { color: #166534; }
-.day-col-head.weekend { background: #f8fafc; }
+.day-col-head.weekend { background: #e8eef3; }
 
 .team-row-label {
   position: sticky;
@@ -642,7 +643,12 @@ button.day-col-head:hover { background: #e0f2fe; }
 }
 
 .roster-cell.empty { background: white; }
-.roster-cell.is-full { background: #f3eee6; }
+.roster-cell.is-full,
+.roster-cell.weekend { background: #e8eef3; }
+.roster-cell.is-full .job-card.job-card-detailed,
+.roster-cell.weekend .job-card.job-card-detailed {
+  background: #fff;
+}
 .roster-cell:hover { outline: 2px solid #7dd3fc; outline-offset: -2px; z-index: 1; }
 .roster-cell.drop-ok {
   outline: 2px solid #0284c7;
@@ -724,19 +730,7 @@ button.day-col-head:hover { background: #e0f2fe; }
 
 .roster-cell.empty .cell-status { color: #047857; }
 .roster-cell.has-jobs .cell-status { color: var(--ink); }
-.roster-cell.is-full .cell-status { color: #92400e; }
-.cell-lock {
-  border: 0;
-  background: transparent;
-  padding: 0;
-  font: inherit;
-  font-weight: 800;
-  letter-spacing: inherit;
-  text-transform: inherit;
-  color: inherit;
-  cursor: pointer;
-}
-.cell-lock:hover { text-decoration: underline; }
+.roster-cell.is-full .cell-status { color: #475569; }
 .week-cell .cell-van { cursor: pointer; }
 
 .cell-members {

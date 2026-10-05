@@ -118,8 +118,8 @@ print('ok 6 boot URL reader and new tab leaves Contacts');
 
 const html = readSrc('../index.html');
 assert(html.indexOf('id="viewContacts"') !== -1, 'same contacts page');
-assert(html.indexOf('js/app.js?v=82') !== -1, 'app cache');
-assert(html.indexOf('css/app.css?v=54') !== -1, 'css cache');
+assert(html.indexOf('js/app.js?v=83') !== -1, 'app cache');
+assert(html.indexOf('css/app.css?v=55') !== -1, 'css cache');
 assert(appSrc.indexOf("from './contacts.js?v=3'") !== -1, 'contacts cache');
 assert(appSrc.indexOf("from './contact-jobs.js?v=2'") !== -1, 'contact-jobs cache');
 assert(!/api\.hubapi|hubspot\.com|createDeal|writeDeal/.test(contactsSrc), 'no HubSpot writes in contacts');

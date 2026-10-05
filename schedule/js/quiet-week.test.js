@@ -74,7 +74,9 @@ renderWeekBoard(el, {
 });
 const html = el.innerHTML;
 assert(html.indexOf('day-col-head today') !== -1 || html.indexOf('day-col-head  today') !== -1, '5 head today class');
-assert(html.indexOf('data-open-day="2026-09-22"') !== -1, '5 today head missing');
+assert(html.indexOf('data-day-mark="2026-09-22"') !== -1, '5 today head missing');
+assert(html.indexOf('Holiday') === -1, '5 no Holiday word on unset dates');
+assert(html.indexOf('day-mark-name') === -1, '5 no mark word on unset dates');
 assert(/day-col-head[^>]*today/.test(html) || html.indexOf('class="day-col-head today') !== -1, '5 head class');
 assert(html.indexOf('week-cell today') !== -1 || html.indexOf('week-cell  today') !== -1 || /week-cell[^"]*today/.test(html), '5 week cell today');
 assert(html.indexOf('data-date="2026-09-21"') !== -1, '5 other day missing');

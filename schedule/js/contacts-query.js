@@ -62,3 +62,51 @@ export function uniqueContactValues(list, field) {
   });
   return [...set].sort((a, b) => a.localeCompare(b));
 }
+
+function contactNameParts(c) {
+  const first = String(c && c.first_name || '').trim();
+  const last = String(c && c.last_name || '').trim();
+  return { first, last, name: [first, last].filter(Boolean).join(' ') };
+}
+
+/** Booking client box: name and phone only. Digit match. No job required. */
+export function matchesBookingClient(c, query) {
+  const raw = String(query || '').trim();
+  if (!raw) return false;
+  const s = raw.toLowerCase();
+  const parts = contactNameParts(c);
+  if (parts.name && parts.name.toLowerCase().includes(s)) return true;
+  if (parts.first && parts.first.toLowerCase().includes(s)) return true;
+  if (parts.last && parts.last.toLowerCase().includes(s)) return true;
+  const qDigits = raw.replace(/\D/g, '');
+  if (!qDigits) return false;
+  const all = phoneDigits(c && c.phone);
+  if (!all) return false;
+  if (all === qDigits || all.includes(qDigits) || qDigits.includes(all)) return true;
+  const tail = phoneTail8(c && c.phone);
+  if (tail && (tail === qDigits || tail.endsWith(qDigits) || qDigits.endsWith(tail))) return true;
+  return false;
+}
+
+export function searchBookingClients(list, query, limit = 7) {
+  const rows = Array.isArray(list) ? list : [];
+  const hits = rows.filter((c) => matchesBookingClient(c, query));
+  hits.sort((a, b) => contactDisplayName(a).localeCompare(contactDisplayName(b)));
+  const n = Number(limit);
+  const cap = Number.isFinite(n) && n > 0 ? n : 7;
+  return hits.slice(0, cap);
+}
+
+export function bookingFieldsFromContact(c) {
+  const parts = contactNameParts(c);
+  return {
+    client_name: parts.name,
+    phone: String(c && c.phone || '').trim(),
+    address: String(c && c.address || '').trim(),
+    address_line1: String(c && c.address_line1 || '').trim(),
+    address_street: String(c && c.address_street || '').trim(),
+    address_place: String(c && c.address_place || '').trim(),
+    address_territory: String(c && c.address_territory || '').trim(),
+    hubspot_id: String(c && c.hubspot_id || '').trim(),
+  };
+}

@@ -1,7 +1,7 @@
 import { contactDisplayName } from '../../shared/contact.js';
 import { allContacts, importContacts, usingContactsFirestore } from './contacts-store.js?v=1';
 import { contactsFromCsv } from './contacts-import.js?v=2';
-import { queryContacts, uniqueContactValues } from './contacts-query.js?v=1';
+import { queryContacts, uniqueContactValues } from './contacts-query.js?v=2';
 import { contactJobHref, contactJobLine, jobsForContact } from './contact-jobs.js?v=1';
 import { esc, formatMoney } from './utils.js';
 

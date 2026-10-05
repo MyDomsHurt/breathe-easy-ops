@@ -3,7 +3,8 @@ import { overlapWarning, stackOrderOnSave, suggestTeams, teamMembersOnDay } from
 import { canPlaceJobOnTeamDay } from './team-day.js?v=4';
 import { addJob, allJobs, isStoreReady, removeJob, updateJob } from './store.js?v=11';
 import { allContacts } from './contacts-store.js?v=1';
-import { uniqueClientsFrom } from './seed.js';
+import { bookingFieldsFromContact, searchBookingClients } from './contacts-query.js?v=2';
+import { contactDisplayName } from '../../shared/contact.js';
 import { displayNameForEmail } from '../../shared/firebase-config.js';
 import { highlightOf } from '../../shared/job.js';
 import { acsLabel, emptyUnits, formatDay, formatTime24, jobStatus, jobTypeOf, NOTES1_MAX, parseAcs, shortTime, storedUnits } from './utils.js?v=3';
@@ -691,55 +692,67 @@ export function bindForm() {
   if (del) del.addEventListener('click', cancelJob);
 }
 
+function applyPickedContact(c) {
+  const picked = bookingFieldsFromContact(c);
+  form.client_name = picked.client_name;
+  form.hubspot_id = picked.hubspot_id;
+  const p = parsePhone(picked.phone);
+  form.mobile = p.full || picked.phone;
+  form.phone_cc = p.country || '';
+  form.phone_national = p.national || '';
+  form.address = picked.address;
+  form.address_line1 = picked.address_line1;
+  form.address_street = picked.address_street;
+  form.address_place = picked.address_place;
+  form.address_extra = '';
+  form.district = '';
+  const terr = picked.address_territory;
+  if (terr) {
+    const hit = TERRITORIES.find((t) => (
+      t.code === terr.toUpperCase() || t.label.toLowerCase() === terr.toLowerCase()
+    ));
+    if (hit) form.district = hit.code;
+  }
+  if (form.address && !form.address_line1 && !form.address_street) {
+    const parsed = parseAddress(form.address);
+    form.address_line1 = parsed.line1 || '';
+    form.address_street = parsed.street || '';
+    form.address_place = parsed.district || form.address_place;
+    if (parsed.code) form.district = parsed.code;
+    if (parsed.composed) form.address = parsed.composed;
+  } else if (form.address && !form.district) {
+    const parsed = parseAddress(form.address);
+    if (parsed.code) form.district = parsed.code;
+  }
+}
+
 function renderHits(q) {
   const box = $('#clientHits');
   if (!box) return;
-  const s = String(q || '').trim().toLowerCase();
+  const s = String(q || '').trim();
   if (s.length < 2) {
     box.hidden = true;
     box.innerHTML = '';
     return;
   }
-  const clients = uniqueClientsFrom(allJobs());
-  const hits = clients.filter((c) => (
-    `${c.name} ${c.mobile} ${c.address}`.toLowerCase().includes(s)
-  )).slice(0, 7);
+  const hits = searchBookingClients(allContacts(), s);
   if (!hits.length) {
     box.hidden = true;
     box.innerHTML = '';
     return;
   }
   box.hidden = false;
-  box.innerHTML = hits.map((c) => `
-    <button type="button" data-pick-mobile="${escapeAttr(c.mobile)}">
-      <strong>${c.name}</strong>
-      <span class="sub">${c.mobile || ''} · ${c.district || ''} · ${c.address || ''}</span>
+  box.innerHTML = hits.map((c, i) => `
+    <button type="button" data-pick-i="${i}">
+      <strong>${escapeAttr(contactDisplayName(c))}</strong>
+      <span class="sub">${escapeAttr(c.phone || '')} · ${escapeAttr(c.address_place || '')} · ${escapeAttr(c.address || '')}</span>
     </button>
   `).join('');
   box.querySelectorAll('button').forEach((btn) => {
     btn.addEventListener('click', () => {
-      const client = clients.find((c) => c.mobile === btn.dataset.pickMobile);
+      const client = hits[Number(btn.dataset.pickI)];
       if (!client) return;
-      form.client_name = client.name;
-      form.mobile = client.mobile;
-      const p = parsePhone(client.mobile);
-      form.phone_cc = client.phone_cc || p.country || '';
-      form.phone_national = client.phone_national || p.national || '';
-      if (p.full) form.mobile = p.full;
-      form.address = client.address;
-      form.district = client.district;
-      form.address_line1 = client.address_line1 || '';
-      form.address_street = client.address_street || '';
-      form.address_place = client.address_place || '';
-      form.address_extra = client.address_extra || '';
-      if (form.address && !form.address_line1 && !form.address_street) {
-        const parsed = parseAddress(form.address);
-        form.address_line1 = parsed.line1 || '';
-        form.address_street = parsed.street || '';
-        form.address_place = parsed.district || form.address_place;
-        if (parsed.code) form.district = parsed.code;
-        if (parsed.composed) form.address = parsed.composed;
-      }
+      applyPickedContact(client);
       renderForm();
     });
   });
@@ -788,7 +801,9 @@ export function commitBooking(formState, status = 'confirmed', io = {}) {
       mobile: phone.mobile,
       phone_cc: phone.phone_cc,
       phone_national: phone.phone_national,
-      hubspot_id: matchHubspotIdByPhone(phone.mobile, contactsFn()).hubspot_id || '',
+      hubspot_id: matchHubspotIdByPhone(phone.mobile, contactsFn()).hubspot_id
+        || String(formState.hubspot_id || '').trim()
+        || '',
       address: addr.address,
       address_line1: addr.address_line1,
       address_street: addr.address_street,

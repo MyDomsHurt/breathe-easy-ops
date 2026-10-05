@@ -1,19 +1,19 @@
 import { DISTRICTS, JOB_TYPES, TEAMS } from './config.js?v=3';
-import { canPlaceJobOnTeamDay, findCrewNote, hongKongToday, isCrewNote, isTeamDayFull } from './team-day.js?v=2';
+import { canPlaceJobOnTeamDay, findCrewNote, hongKongToday, isCompanyDay, isCrewNote, isTeamDayFull } from './team-day.js?v=3';
 import { addDays, formatDay, formatTime24, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, normalizeLunch, parseISO, shortTime, weekDays, workWeekDays } from './utils.js';
-import { allJobs, applyCleanPhones, applyCleanTimes, applySeptemberFixes, applySeptemberLoad, getJob, listContactsForPhoneClean, listJobsForTimeClean, placeJobInSlot, redo, removeJob, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js?v=9';
+import { allJobs, applyCleanPhones, applyCleanTimes, applySeptemberFixes, applySeptemberLoad, clearCompanyDay, getJob, listContactsForPhoneClean, listJobsForTimeClean, placeJobInSlot, redo, removeJob, setCompanyDay, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js?v=10';
 import { isOfficeEmail } from '../../shared/firebase-config.js';
 import { startScheduleAuth } from './auth.js';
 import { daySlotsOf, firstEmptySlotIndex, hasTimeConflict, jobsForTeamDay, layoutSlots, slotIndex } from './capacity.js?v=4';
-import { clientCardName, pulseRemaining, renderDayBoard, renderWeekBoard, weekDragSlotsHtml } from './board.js?v=26';
+import { clientCardName, pulseRemaining, renderDayBoard, renderWeekBoard, weekDragSlotsHtml } from './board.js?v=27';
 import { applyJobDrop, armClickSuppress, beginDrag, capturedDragId, clearCapturedDrag, consumeClickSuppress, jobDropKind, pointerJobUp, pointerMoved, resolveDropId } from './board-drag.js?v=2';
-import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=37';
+import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=38';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js?v=2';
-import { exportMasterRoster } from './export-roster.js?v=29';
+import { exportMasterRoster } from './export-roster.js?v=30';
 import { allContacts, initContactsStore, subscribeContacts } from './contacts-store.js?v=1';
 import { fillContactFilterSelect, importHubspotFile, renderContacts } from './contacts.js?v=3';
 import { uniqueContactValues } from './contacts-query.js?v=1';
-import { isSundayDate, readJobLink } from './contact-jobs.js?v=1';
+import { isSundayDate, readJobLink } from './contact-jobs.js?v=2';
 import { moveTeam, visibleTeamOrder } from './team-order.js?v=1';
 import { initSettingsStore, subscribeSettings, teamOrder, writeTeamOrder } from './settings-store.js?v=2';
 import {
@@ -107,7 +107,7 @@ function visibleDates() {
 function sundayJobCount() {
   const sun = sundayOfWeek(state.monday);
   return allJobs().filter((j) => {
-    if (isCrewNote(j)) return false;
+    if (isCrewNote(j) || isCompanyDay(j)) return false;
     if (j.date !== sun) return false;
     if (state.teams.length && !state.teams.includes(j.team_lead)) return false;
     if (state.districts.length && !state.districts.includes(j.district)) return false;
@@ -137,6 +137,7 @@ function teamJobs() {
   const dates = new Set(visibleDates());
   return allJobs().filter((j) => (
     !isCrewNote(j)
+    && !isCompanyDay(j)
     && dates.has(j.date)
     && (!state.teams.length || state.teams.includes(j.team_lead))
   ));
@@ -276,7 +277,7 @@ function stripJobLink() {
 function consumePendingJobLink() {
   if (!pendingJobLink || applyingJobLink) return;
   const job = getJob(pendingJobLink.jobId);
-  if (!job || isCrewNote(job)) return;
+  if (!job || isCrewNote(job) || isCompanyDay(job)) return;
   applyingJobLink = true;
   pendingJobLink = null;
   stripJobLink();
@@ -421,6 +422,60 @@ function startLunchEdit(btn) {
   input.addEventListener('blur', () => finish(true));
 }
 
+function startHolidayEdit(btn) {
+  if (!isOfficeEmail(signedInEmail)) {
+    toast('Only office can set a public holiday');
+    return;
+  }
+  const date = btn.dataset.holidayDate;
+  const current = btn.dataset.holidayName || '';
+  if (!date) return;
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'day-holiday-input';
+  input.value = current || 'Public holiday';
+  input.setAttribute('aria-label', 'Public holiday');
+  btn.replaceWith(input);
+  input.focus();
+  input.select();
+  let done = false;
+  function finish(save) {
+    if (done) return;
+    done = true;
+    if (save) {
+      const next = String(input.value || '').trim();
+      const saved = boardScrollState();
+      if (!next) {
+        clearCompanyDay(date);
+        toast('Holiday cleared');
+        paint();
+        restoreBoardScroll(saved);
+        return;
+      }
+      if (next !== current) {
+        setCompanyDay(date, next);
+        toast(next);
+        paint();
+        restoreBoardScroll(saved);
+        return;
+      }
+    }
+    paint();
+  }
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      input.blur();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      finish(false);
+    }
+  });
+  input.addEventListener('mousedown', (e) => e.stopPropagation());
+  input.addEventListener('click', (e) => e.stopPropagation());
+  input.addEventListener('blur', () => finish(true));
+}
+
 function bindBoardClicks() {
   $('boardMount').addEventListener('click', (e) => {
     if (consumeClickSuppress()) {
@@ -494,6 +549,13 @@ function bindBoardClicks() {
       e.preventDefault();
       e.stopPropagation();
       startLunchEdit(lunchEdit);
+      return;
+    }
+    const holidayBtn = e.target.closest('[data-holiday-date]');
+    if (holidayBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      startHolidayEdit(holidayBtn);
       return;
     }
     const van = e.target.closest('[data-edit-van]');
@@ -1508,11 +1570,11 @@ function bindSearch() {
   if (!input || !box) return;
   input.addEventListener('input', () => {
     state.query = input.value;
-    renderSearchHits(box, allJobs().filter((j) => !isCrewNote(j)), state.query);
+    renderSearchHits(box, allJobs().filter((j) => !isCrewNote(j) && !isCompanyDay(j)), state.query);
     if (state.view === 'jobs') paint();
   });
   input.addEventListener('focus', () => {
-    renderSearchHits(box, allJobs().filter((j) => !isCrewNote(j)), input.value);
+    renderSearchHits(box, allJobs().filter((j) => !isCrewNote(j) && !isCompanyDay(j)), input.value);
   });
   input.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter') return;

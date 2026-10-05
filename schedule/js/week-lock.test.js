@@ -124,6 +124,8 @@ toggleLock(jobs, date, false);
 html = weekHtml(jobs, date);
 assert(!isTeamDayFull(jobs, date, team, today), '2 flag off');
 assert(html.indexOf('Open') !== -1, '2 Open');
+assert(html.indexOf('>Open</button>') !== -1, '2 week Open is the button');
+assert(html.indexOf('class="cell-lock"') !== -1, '2 week Open has cell-lock');
 assert(html.indexOf('cell-add') !== -1, '2 + back');
 assert(html.indexOf('empty-slot') === -1, '2 week rest has empty slots');
 assert(html.indexOf('is-full') === -1, '2 not full class');
@@ -164,12 +166,13 @@ assert(!r4.job, '4 wrote');
 assert(jobs.filter((j) => j.job_id === 'job-keep' && j.client_name === 'Priya').length === 1, '4 still Priya');
 print('ok 4 save on locked day blocked');
 
-// 5. Week cells do not render the day close button, +slot, −slot, or Mark.
+// 5. Week Closed/Open word is the close control. Day-full-btn, +slot, −slot, Mark stay off week.
 html = weekHtml(jobs, date);
 assert(html.indexOf('Day full') === -1, '5 Day full');
-assert(html.indexOf('cell-lock') === -1, '5 week title is not the close control');
-assert(html.indexOf('data-day-full') === -1, '5 week has no close control');
-assert(html.indexOf('Closed') !== -1, '5 week title Closed');
+assert(html.indexOf('class="cell-lock"') !== -1, '5 week Closed/Open is a button');
+assert(html.indexOf('data-day-full="') !== -1, '5 week data-day-full');
+assert(html.indexOf('data-day-full-team="') !== -1, '5 week data-day-full-team');
+assert(html.indexOf('>Closed</button>') !== -1, '5 week word Closed is the button');
 assert(html.indexOf('Locked') === -1, '5 week Locked gone');
 assert(html.indexOf('day-full-btn') === -1, '5 week day-full-btn');
 assert(html.indexOf('+ slot') === -1, '5 + slot');
@@ -180,7 +183,7 @@ assert(day.indexOf('day-full-btn') !== -1, '5 day view keeps close button');
 assert(day.indexOf('>Closed</button>') !== -1, '5 day view label Closed');
 assert(day.indexOf('Locked') === -1, '5 day Locked gone');
 assert(day.indexOf('+ slot') !== -1, '5 day view keeps + slot');
-print('ok 5 week chrome gone, day tools stay');
+print('ok 5 week Closed/Open button, day tools stay');
 
 // 6. Past team-day with no crew note is locked. Drop and save blocked.
 const pastJobs = [];

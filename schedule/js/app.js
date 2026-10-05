@@ -5,7 +5,7 @@ import { allJobs, applyCleanPhones, applyCleanTimes, applySeptemberFixes, applyS
 import { isOfficeEmail } from '../../shared/firebase-config.js';
 import { startScheduleAuth } from './auth.js';
 import { daySlotsOf, firstEmptySlotIndex, hasTimeConflict, jobsForTeamDay, layoutSlots, slotIndex } from './capacity.js?v=4';
-import { clientCardName, pulseRemaining, renderDayBoard, renderWeekBoard, weekDragSlotsHtml } from './board.js?v=24';
+import { clientCardName, pulseRemaining, renderDayBoard, renderWeekBoard, weekDragSlotsHtml } from './board.js?v=25';
 import { applyJobDrop, armClickSuppress, beginDrag, capturedDragId, clearCapturedDrag, consumeClickSuppress, jobDropKind, pointerJobUp, pointerMoved, resolveDropId } from './board-drag.js?v=2';
 import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=37';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js?v=2';

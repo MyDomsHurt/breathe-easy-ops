@@ -339,7 +339,7 @@ function cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs, today) {
   const dow = parseISO(date).toLocaleDateString('en-HK', { weekday: 'short' });
   const dayNum = Number(date.slice(8));
   const status = week
-    ? `${esc(dow)} ${dayNum} · ${esc(lockBit)}`
+    ? `${esc(dow)} ${dayNum} · <button type="button" class="cell-lock" data-day-full="${esc(date)}" data-day-full-team="${esc(team)}" aria-pressed="${full ? 'true' : 'false'}">${esc(lockBit)}</button>`
     : esc(full ? 'Closed' : 'Open');
   const addBtn = full
     ? ''

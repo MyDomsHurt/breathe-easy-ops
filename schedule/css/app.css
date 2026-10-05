@@ -731,6 +731,22 @@ button.day-col-head:hover { background: #e0f2fe; }
 .roster-cell.empty .cell-status { color: #047857; }
 .roster-cell.has-jobs .cell-status { color: var(--ink); }
 .roster-cell.is-full .cell-status { color: #475569; }
+.cell-lock {
+  border: 0;
+  background: transparent;
+  padding: 8px 8px;
+  margin: -8px -4px;
+  min-height: 32px;
+  font: inherit;
+  font-weight: 800;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
 .week-cell .cell-van { cursor: pointer; }
 
 .cell-members {

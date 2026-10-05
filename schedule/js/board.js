@@ -1,6 +1,6 @@
 import { DISTRICTS, TEAM_META } from './config.js?v=3';
 import { conflictingJobIds, daySlotsOf, districtsForTeamOnDay, firstEmptySlotIndex, jobsForTeamDay, layoutSlots, slotFloor } from './capacity.js';
-import { cellTeamMembers, companyDayName, findCompanyDay, findCrewNote, hongKongToday, isTeamDayFull } from './team-day.js?v=3';
+import { cellTeamMembers, findCrewNote, holidayNameOnDate, hongKongToday, isTeamDayFull, timedDayMark } from './team-day.js?v=4';
 import { acsLabel, districtChipsHtml, esc, formatDay, isWeekend, jobStatus, jobTypeOf, normalizeLunch, parseAcs, parseISO, shortTime, startMinutes } from './utils.js';
 import { jobOnSiteMinutes } from './job-duration.js';
 
@@ -205,6 +205,32 @@ function weekLunchBarHtml(time) {
   </div>`;
 }
 
+function weekMarkBarHtml(kind, time, name) {
+  return `<div class="lunch-card" data-day-mark-bar="${esc(kind)}">
+    <span class="lunch-label">${esc(name)}</span>
+    <span class="lunch-time">${esc(time)}</span>
+  </div>`;
+}
+
+function timedBarsForNote(lunchTime, note) {
+  const bars = [];
+  const lunch = normalizeLunch(lunchTime);
+  if (lunch) {
+    const mins = startMinutes({ time: lunch });
+    if (mins != null) bars.push({ mins, key: 'lunch', html: weekLunchBarHtml(lunch) });
+  }
+  const mark = timedDayMark(note);
+  if (mark) {
+    const time = normalizeLunch(mark.time);
+    if (time) {
+      const mins = startMinutes({ time });
+      if (mins != null) bars.push({ mins, key: 'mark', html: weekMarkBarHtml(mark.kind, time, mark.name) });
+    }
+  }
+  bars.sort((a, b) => a.mins - b.mins || (a.key === 'lunch' ? -1 : 1));
+  return bars;
+}
+
 function emptySlotHtml(date, team, index, slim) {
   const cls = slim ? 'empty-slot empty-slot-slim' : 'empty-slot';
   return `<button type="button" class="${cls}" data-book-date="${esc(date)}" data-book-team="${esc(team)}" data-empty-slot="1" data-slot="${index}" aria-label="Add booking"></button>`;
@@ -231,24 +257,24 @@ function weekOpenAreaHtml(date, team) {
   return `<button type="button" class="week-open-area" data-book-date="${esc(date)}" data-book-team="${esc(team)}" data-week-open="1" aria-label="Add booking"></button>`;
 }
 
-function renderWeekStack(jobs, lunchTime, conflicts, date, team, full) {
+function renderWeekStack(jobs, lunchTime, conflicts, date, team, full, note) {
   const ordered = weekClockJobs(jobs);
-  const lunch = normalizeLunch(lunchTime);
-  const lunchMins = lunch ? startMinutes({ time: lunch }) : null;
+  const bars = timedBarsForNote(lunchTime, note);
   const out = [];
-  let lunchPlaced = lunchMins == null;
+  let bi = 0;
   let prevTimed = null;
   let prevJob = null;
 
-  function placeLunch() {
-    if (lunchPlaced || !lunch) return;
-    out.push(weekLunchBarHtml(lunch));
-    lunchPlaced = true;
+  function placeDue(m) {
+    while (bi < bars.length && (m == null || bars[bi].mins <= m)) {
+      out.push(bars[bi].html);
+      bi += 1;
+    }
   }
 
   for (const j of ordered) {
     const m = startMinutes(j);
-    if (!lunchPlaced && lunchMins != null && m != null && lunchMins <= m) placeLunch();
+    if (m != null) placeDue(m);
     if (!full && prevTimed != null && m != null && prevJob) {
       const leftover = m - (prevTimed + jobOnSiteMinutes(prevJob));
       if (leftover >= 30) out.push(weekHoleHtml(date, team, leftover));
@@ -259,19 +285,57 @@ function renderWeekStack(jobs, lunchTime, conflicts, date, team, full) {
       prevJob = j;
     }
   }
-  if (!lunchPlaced && lunch) placeLunch();
-  if (!ordered.length && !full) out.push(weekOpenAreaHtml(date, team));
+  placeDue(null);
+  if (!ordered.length && !full && !bars.length) out.push(weekOpenAreaHtml(date, team));
   return out.join('');
 }
 
-function renderSlotStack(slots, lunchTime, conflicts, mode, full, date, team, lunchSlot) {
+function renderSlotStack(slots, lunchTime, conflicts, mode, full, date, team, lunchSlot, note) {
   const time = normalizeLunch(lunchTime);
   const lunchMins = time ? startMinutes({ time }) : null;
   const pin = Number.isFinite(Number(lunchSlot)) ? Number(lunchSlot) : null;
+  const mark = timedDayMark(note);
+  const markTime = mark ? normalizeLunch(mark.time) : '';
+  const markMins = markTime ? startMinutes({ time: markTime }) : null;
   const week = mode === 'week';
   const renderJob = (j) => boardCardHtml(j, conflicts.has(j.job_id), week);
   const out = [];
   let placedLunch = !time;
+  let placedMark = !markTime;
+
+  function placeMarkIfDue(jobMins) {
+    if (placedMark || markMins == null) return;
+    if (jobMins == null || markMins <= jobMins) {
+      out.push(weekMarkBarHtml(mark.kind, markTime, mark.name));
+      placedMark = true;
+    }
+  }
+
+  function placeLunchIfDue(jobMins) {
+    if (placedLunch || !time || pin != null) return;
+    if (jobMins == null || lunchMins <= jobMins) {
+      out.push(lunchCardHtml(time, date, team));
+      placedLunch = true;
+    }
+  }
+
+  function placeDue(jobMins) {
+    const lunchDue = !placedLunch && time && pin == null && (jobMins == null || lunchMins <= jobMins);
+    const markDue = !placedMark && markMins != null && (jobMins == null || markMins <= jobMins);
+    if (lunchDue && markDue) {
+      if (lunchMins <= markMins) {
+        placeLunchIfDue(jobMins);
+        placeMarkIfDue(jobMins);
+      } else {
+        placeMarkIfDue(jobMins);
+        placeLunchIfDue(jobMins);
+      }
+    } else {
+      placeLunchIfDue(jobMins);
+      placeMarkIfDue(jobMins);
+    }
+  }
+
   for (let i = 0; i < slots.length; i += 1) {
     if (!placedLunch && pin != null && i === pin) {
       out.push(lunchCardHtml(time, date, team));
@@ -279,19 +343,15 @@ function renderSlotStack(slots, lunchTime, conflicts, mode, full, date, team, lu
     }
     const j = slots[i];
     if (j) {
-      if (!placedLunch && pin == null) {
-        const t = startMinutes(j);
-        if (t == null || t >= lunchMins) {
-          out.push(lunchCardHtml(time, date, team));
-          placedLunch = true;
-        }
-      }
+      const t = startMinutes(j);
+      placeDue(t == null ? null : t);
       out.push(renderJob(j));
     } else if (!full && !week) {
       out.push(emptySlotHtml(date, team, i, false));
     }
   }
-  if (!placedLunch) out.push(lunchCardHtml(time, date, team));
+  placeDue(null);
+  if (!placedLunch && time) out.push(lunchCardHtml(time, date, team));
   return out.join('');
 }
 
@@ -330,8 +390,8 @@ function cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs, today) {
   const lunchSlot = Number.isFinite(lunchSlotRaw) ? lunchSlotRaw : null;
   const week = mode === 'week';
   const body = week
-    ? renderWeekStack(shown, lunch, conflicts, date, team, full)
-    : renderSlotStack(laid, lunch, conflicts, mode, full, date, team, lunchSlot);
+    ? renderWeekStack(shown, lunch, conflicts, date, team, full, note)
+    : renderSlotStack(laid, lunch, conflicts, mode, full, date, team, lunchSlot, note);
   const van = cellTeamMembers(lookup, date, team);
   const vanHi = isHi(note && note.highlight_members);
   const vanLabel = van || "Who's on";
@@ -381,12 +441,10 @@ function cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs, today) {
   </div>`;
 }
 
-function holidayHeadHtml(lookup, date) {
-  const rec = findCompanyDay(lookup, date);
-  const name = rec ? companyDayName(rec) : '';
-  const label = name || 'Holiday';
-  const empty = name ? '' : ' is-empty';
-  return `<button type="button" class="day-holiday${empty}" data-holiday-date="${esc(date)}" data-holiday-name="${esc(name)}" title="Public holiday">${esc(label)}</button>`;
+function dateMarkHeadHtml(lookup, date) {
+  const name = holidayNameOnDate(lookup, date);
+  if (!name) return '';
+  return `<div class="day-mark-name">${esc(name)}</div>`;
 }
 
 export function renderWeekBoard(el, { jobs, chipJobs, days, teams, lookupJobs, today }) {
@@ -395,10 +453,10 @@ export function renderWeekBoard(el, { jobs, chipJobs, days, teams, lookupJobs, t
   const todayIso = today || calendarDay();
   const heads = days.map((d) => {
     const cls = [d === todayIso ? 'today' : '', isWeekend(d) ? 'weekend' : ''].join(' ');
-    return `<div class="day-col-head ${cls}" data-open-day="${d}">
+    return `<div class="day-col-head ${cls}" data-day-mark="${d}" role="button" tabindex="0">
       <div class="dow">${formatDay(d, { weekday: 'short', month: 'short' }).split(' ')[0]}</div>
       <div class="dom">${Number(d.slice(8))}</div>
-      ${holidayHeadHtml(lookup, d)}
+      ${dateMarkHeadHtml(lookup, d)}
     </div>`;
   }).join('');
 
@@ -433,7 +491,7 @@ export function renderDayBoard(el, { jobs, chipJobs, date, teams, lookupJobs, to
   }).join('');
 
   el.innerHTML = `<div class="board-wrap">
-    <div class="day-roster-head">${formatDay(date, { weekday: 'long' })}${holidayHeadHtml(lookup, date)}</div>
+    <div class="day-roster-head" data-day-mark="${esc(date)}" role="button" tabindex="0">${formatDay(date, { weekday: 'long' })}${dateMarkHeadHtml(lookup, date)}</div>
     <div class="day-roster" style="--cols:${teams.length}">${cols}</div>
   </div>`;
 }

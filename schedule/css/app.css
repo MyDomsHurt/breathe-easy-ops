@@ -612,42 +612,98 @@ button, input, select, textarea { font-family: inherit; }
 }
 .day-col-head.today:hover { background: #f0fdf4; }
 .day-col-head.today .dom { color: #166534; }
-.day-holiday {
+.day-mark-name {
   display: block;
   margin: 4px auto 0;
   max-width: 100%;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  font: inherit;
   font-size: 11px;
   font-weight: 700;
   line-height: 1.3;
   color: var(--ink);
-  cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  pointer-events: none;
 }
-.day-holiday.is-empty {
-  font-weight: 500;
-  opacity: 0.55;
+.day-mark-menu {
+  position: fixed;
+  z-index: 80;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
 }
-.day-holiday:hover { color: var(--brand-ink); }
-.day-holiday-input {
-  display: block;
-  margin: 4px auto 0;
-  width: 100%;
-  max-width: 14em;
-  border: 1px solid #7dd3fc;
-  border-radius: 4px;
-  padding: 1px 4px;
+.day-mark-menu[hidden] { display: none; }
+.day-mark-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.day-mark-choices button {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: white;
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 7px 10px;
   font: inherit;
-  font-size: 11px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.day-mark-choices button:hover,
+.day-mark-choices button.on {
+  background: #e0f2fe;
+  border-color: #7dd3fc;
+  color: var(--brand-ink);
+}
+.day-mark-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.day-mark-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.day-mark-field input[type="text"] {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 13px;
   font-weight: 600;
   color: var(--ink);
-  background: white;
-  text-align: center;
+}
+.day-mark-teams,
+.day-mark-scope {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.day-mark-team,
+.day-mark-scope label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--ink);
+  cursor: pointer;
+}
+.day-mark-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .team-row-label {
@@ -1232,15 +1288,12 @@ button, input, select, textarea { font-family: inherit; }
   display: flex;
   align-items: baseline;
   gap: 10px;
+  cursor: pointer;
 }
-.day-roster-head .day-holiday {
+.day-roster-head .day-mark-name {
   display: inline-block;
   margin: 0;
   font-weight: 700;
-}
-.day-roster-head .day-holiday-input {
-  margin: 0;
-  width: 14em;
 }
 
 .day-roster {

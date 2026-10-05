@@ -265,6 +265,26 @@ assert(!r5.job, '5 wrote');
 assert(fullJobs.length === before, '5 count');
 print('ok 5 full day no write');
 
+const onClosed = {
+  job_id: 'job-keep',
+  date: '2026-12-15',
+  team_lead: 'Josh',
+  client_name: 'Priya',
+  mobile: '',
+  source: 'local',
+};
+fullJobs.push(onClosed);
+const r5b = commitBooking(blankForm({
+  job_id: 'job-keep',
+  date: '2026-12-15',
+  team_lead: 'Josh',
+  client_name: 'Priya',
+  mobile: '91234567',
+}), 'confirmed', io5);
+assert(!r5b.error, '5b error ' + (r5b && r5b.error));
+assert(String(r5b.job.mobile || '').indexOf('91234567') !== -1, '5b phone');
+print('ok 5b existing job on closed day saves');
+
 // 6. Walk drawer controls: each has a listener after bindForm().
 bindForm();
 const missing = [];

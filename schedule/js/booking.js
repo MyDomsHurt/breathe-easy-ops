@@ -759,7 +759,10 @@ export function commitBooking(formState, status = 'confirmed', io = {}) {
     }
     const jobs = listFn();
     const prev = formState.job_id ? jobs.find((j) => j.job_id === formState.job_id) : null;
-    if (!canPlaceJobOnTeamDay(jobs, formState.date, formState.team_lead, prev)) {
+    const stay = !!(prev
+      && String(prev.date || '') === String(formState.date || '')
+      && String(prev.team_lead || '') === String(formState.team_lead || ''));
+    if (!stay && !canPlaceJobOnTeamDay(jobs, formState.date, formState.team_lead, prev)) {
       return { error: 'That day is closed' };
     }
     const notesRaw = formState.job_type === 'influencer' && !/influencer/i.test(formState.notes || '')

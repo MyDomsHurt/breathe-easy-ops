@@ -146,12 +146,13 @@ assert(!r3.job, '3 wrote');
 assert(jobs.length === before, '3 count');
 print('ok 3 locked blocks + drop and new save');
 
-// 4. Job already on a locked day: card save is blocked.
+// 4. Job already on a locked day: same date and team save is allowed.
 const live = {
   job_id: 'job-keep',
   date,
   team_lead: team,
   client_name: 'Priya',
+  mobile: '',
   source: 'local',
 };
 jobs.push(live);
@@ -160,11 +161,52 @@ const r4 = commitBooking(blankForm({
   date,
   team_lead: team,
   client_name: 'Priya Chen',
+  mobile: '91234567',
 }), 'confirmed', io);
-assert(r4.error === 'That day is closed', '4 error ' + r4.error);
-assert(!r4.job, '4 wrote');
-assert(jobs.filter((j) => j.job_id === 'job-keep' && j.client_name === 'Priya').length === 1, '4 still Priya');
-print('ok 4 save on locked day blocked');
+assert(!r4.error, '4 error ' + r4.error);
+assert(r4.job, '4 wrote');
+assert(r4.job.client_name === 'Priya Chen', '4 name');
+assert(String(r4.job.mobile || '').indexOf('91234567') !== -1, '4 phone ' + r4.job.mobile);
+assert(r4.job.date === date && r4.job.team_lead === team, '4 stayed on team-day');
+const r4new = commitBooking(blankForm({ date, team_lead: team, client_name: 'Ada' }), 'confirmed', io);
+assert(r4new.error === 'That day is closed', '4 new still blocked');
+assert(!r4new.job, '4 new wrote');
+const openJob = {
+  job_id: 'job-open-src',
+  date: '2026-12-16',
+  team_lead: 'Matthew',
+  client_name: 'Ken',
+  source: 'local',
+};
+jobs.push(openJob);
+const r4move = commitBooking(blankForm({
+  job_id: 'job-open-src',
+  date,
+  team_lead: team,
+  client_name: 'Ken',
+}), 'confirmed', io);
+assert(r4move.error === 'That day is closed', '4 move onto closed');
+assert(jobs.find((j) => j.job_id === 'job-open-src').date === '2026-12-16', '4 move wrote');
+const satJobs = [{
+  job_id: 'job-sat',
+  date: past,
+  team_lead: team,
+  client_name: 'Sat',
+  mobile: '',
+  source: 'local',
+}];
+const ioSat = memoryIo(satJobs);
+assert(isTeamDayFull(satJobs, past, team, today), '4 past closed');
+const rSat = commitBooking(blankForm({
+  job_id: 'job-sat',
+  date: past,
+  team_lead: team,
+  client_name: 'Sat',
+  mobile: '91234567',
+}), 'confirmed', ioSat);
+assert(!rSat.error, '4 past existing save ' + rSat.error);
+assert(String(rSat.job.mobile || '').indexOf('91234567') !== -1, '4 past phone');
+print('ok 4 same-day save on closed; new and move stay blocked');
 
 // 5. Week Closed/Open word is the close control. Day-full-btn, +slot, −slot, Mark stay off week.
 html = weekHtml(jobs, date);

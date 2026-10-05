@@ -105,7 +105,7 @@ bookingRoot.querySelector = (sel) => document.querySelector(sel);
 bookingRoot.querySelectorAll = (sel) => document.querySelectorAll(sel);
 
 const ids = [
-  'clientSearch', 'clientHits',
+  'clientSearch', 'clientHits', 'clientFlyout',
   'mobileInput', 'formPhoneCc', 'formPhoneNational', 'phoneApplyBtn',
   'addressInput', 'formAddrStreet', 'formAddrPlace', 'districtInput',
   'addrApplyBtn',

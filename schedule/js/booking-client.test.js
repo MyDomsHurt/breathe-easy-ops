@@ -1,5 +1,6 @@
 import { bookingFieldsFromContact, matchesBookingClient, searchBookingClients } from './contacts-query.js';
 import { commitBooking } from './booking.js';
+import { contactJobLine, jobsForContact } from './contact-jobs.js';
 import { emptyUnits } from './utils.js';
 
 function fail(msg) {
@@ -156,18 +157,54 @@ const savedPhone = commitBooking(blankForm({
 assert(savedPhone.job.hubspot_id === '201', '4 phone rematch keeps the same id');
 print('ok 4 save keeps the picked HubSpot id');
 
+const jeff = {
+  hubspot_id: '6110',
+  first_name: 'Jeff',
+  last_name: 'Lamb',
+  phone: '+85261105262',
+  address: '12A, The Morgan, 31 Conduit Road, Mid-Levels (HKN)',
+};
+const jeffJobs = [
+  { job_id: 'old', date: '2026-09-22', time: '09:00', team_lead: 'Josh', acs: '2S', amount: 800, hubspot_id: '6110' },
+  { job_id: 'new', date: '2026-10-01', time: '10:30', team_lead: 'Josh', acs: '1W', amount: 400, hubspot_id: '6110' },
+  { job_id: 'other', date: '2026-10-02', time: '11:00', team_lead: 'Josh', acs: '1S', amount: 200, hubspot_id: '999' },
+];
+const jeffListed = jobsForContact(jeffJobs, jeff.hubspot_id);
+assert(jeffListed.length === 2, '5 Jeff jobs by hubspot_id');
+assert(jeffListed[0].date === '2026-10-01', '5 newest first');
+assert(contactJobLine(jeffListed[0]).indexOf('2026-10-01') !== -1, '5 line date');
+assert(contactJobLine(jeffListed[0]).indexOf('10:30') !== -1, '5 line time');
+assert(contactJobLine(jeffListed[0]).indexOf('Josh') !== -1, '5 line team');
+assert(contactJobLine(jeffListed[0]).indexOf('1W') !== -1, '5 line ACs');
+print('ok 5 Jeff Lamb jobs newest first; date time team ACs amount');
+
 const bookingSrc = readSrc('booking.js');
 const appSrc = readSrc('app.js');
 const html = readSrc('../index.html');
 assert(bookingSrc.indexOf('uniqueClientsFrom') === -1, 'box does not search jobs');
 assert(bookingSrc.indexOf('searchBookingClients(allContacts()') !== -1, 'box searches contacts');
-assert(bookingSrc.indexOf('applyPickedContact') !== -1, 'pick applies the contact');
+assert(bookingSrc.indexOf('id="clientFlyout"') !== -1, 'hits open in a flyout');
+assert(bookingSrc.indexOf('class="typeahead-list"') === -1, 'hits not a list under the field');
+assert(bookingSrc.indexOf('jobsForContact') !== -1, 'helper jobsForContact');
+assert(bookingSrc.indexOf('contactJobLine') !== -1, 'job line helper');
+assert(bookingSrc.indexOf('Use this contact') !== -1, 'confirm click');
+const showAt = bookingSrc.indexOf('function showClientHit');
+assert(showAt !== -1, 'first click shows the contact');
+const showBody = bookingSrc.slice(showAt, bookingSrc.indexOf('function useClientHit'));
+assert(showBody.indexOf('applyPickedContact') === -1, 'first click must not fill the booking');
+assert(showBody.indexOf('paintClientFlyout') !== -1, 'first click paints the summary');
+const useAt = bookingSrc.indexOf('function useClientHit');
+const useBody = bookingSrc.slice(useAt, bookingSrc.indexOf('function paintClientFlyout'));
+assert(useBody.indexOf('applyPickedContact') !== -1, 'Use this contact fills');
+assert(useBody.indexOf('closeClientFlyout') !== -1, 'Use this contact closes the flyout');
 assert(bookingSrc.indexOf('form.hubspot_id = picked.hubspot_id') !== -1, 'pick keeps hubspot id');
+assert(bookingSrc.indexOf("from './contact-jobs.js?v=2'") !== -1, 'booking contact-jobs cache');
 assert(bookingSrc.indexOf("from './contacts-query.js?v=2'") !== -1, 'booking contacts-query cache');
-assert(appSrc.indexOf("from './booking.js?v=42'") !== -1, 'app booking cache');
+assert(appSrc.indexOf("from './booking.js?v=43'") !== -1, 'app booking cache');
 assert(appSrc.indexOf("from './contacts-query.js?v=2'") !== -1, 'app contacts-query cache');
-assert(html.indexOf('js/app.js?v=86') !== -1, 'index app cache');
+assert(html.indexOf('js/app.js?v=87') !== -1, 'index app cache');
+assert(html.indexOf('css/app.css?v=56') !== -1, 'index css cache');
 assert(!/api\.hubapi|hubspot\.com|createDeal|writeDeal/.test(bookingSrc), 'no HubSpot write');
-print('ok 5 cache bump; contacts search; no HubSpot write');
+print('ok 6 flyout; first click summary; Use this contact fills; no HubSpot write');
 
 print('ok booking-client cases');

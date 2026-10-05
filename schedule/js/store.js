@@ -18,7 +18,7 @@ import { appendChange, asChanges, fromScheduleJob } from '../../shared/job.js';
 import { matchHubspotIdByPhone, parsePhone } from '../../shared/phone-parse.js';
 import { allContacts } from './contacts-store.js?v=1';
 import { CONTACTS_COLLECTION, isJeffEmail, isOfficeEmail, JOBS_COLLECTION, shouldUseFirestore } from '../../shared/firebase-config.js';
-import { CREW_SOURCE, canPlaceJobOnTeamDay, cellTeamMembers, crewNoteId, dayMarkOf, hongKongToday, isClosingDayMark, isCompanyDay, isCrewNote } from './team-day.js?v=4';
+import { CREW_SOURCE, canPlaceJobOnTeamDay, cellTeamMembers, crewNoteId, dayMarkOf, hongKongToday, isClosingDayMark, isCompanyDay, isCrewNote } from './team-day.js?v=5';
 import { planSlotTake, slotCountFor, slotFloor } from './capacity.js';
 
 const listeners = new Set();
@@ -458,6 +458,7 @@ const EMPTY_MARK = {
   day_mark: '',
   day_mark_name: '',
   day_mark_time: '',
+  day_mark_end: '',
   day_mark_all_day: false,
 };
 
@@ -508,6 +509,7 @@ function writeCrewNote(date, team, extra) {
     day_mark: prevNote && prevNote.day_mark || '',
     day_mark_name: prevNote && prevNote.day_mark_name || '',
     day_mark_time: prevNote && prevNote.day_mark_time || '',
+    day_mark_end: prevNote && prevNote.day_mark_end || '',
     day_mark_all_day: !!(prevNote && prevNote.day_mark_all_day),
     ...(extra || {}),
   }, prevNote));
@@ -529,12 +531,17 @@ export function setDateMark(date, spec, actorEmail) {
   if (kind !== 'holiday' && !ticked.length) return;
   let name = '';
   let time = '';
+  let end = '';
   let allDay = false;
   if (kind === 'holiday') {
     name = String(spec.name == null ? '' : spec.name).trim() || 'Public holiday';
   } else if (kind === 'meeting') {
-    time = formatTime24(spec.time);
-    if (!time) return;
+    allDay = !!spec.allDay;
+    if (!allDay) {
+      time = formatTime24(spec.time);
+      end = formatTime24(spec.end);
+      if (!time || !end) return;
+    }
   } else {
     allDay = !!spec.allDay;
     if (!allDay) {
@@ -554,6 +561,7 @@ export function setDateMark(date, spec, actorEmail) {
         day_mark: kind,
         day_mark_name: name,
         day_mark_time: time,
+        day_mark_end: end,
         day_mark_all_day: allDay,
         day_unlocked: closes ? false : !!(prev && prev.day_unlocked),
       });

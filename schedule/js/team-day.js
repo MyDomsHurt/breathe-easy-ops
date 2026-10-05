@@ -14,6 +14,7 @@ export {
   isClosingDayMark,
   holidayNameOf,
   holidayNameOnDate,
+  allDayMeeting,
   timedDayMark,
   dateMarkState,
   hongKongToday,
@@ -21,4 +22,4 @@ export {
   canPlaceJobOnTeamDay,
   consensusTeamMembers,
   cellTeamMembers,
-} from '../../shared/team-day.js?v=4';
+} from '../../shared/team-day.js?v=5';

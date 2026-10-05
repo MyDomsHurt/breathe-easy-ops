@@ -113,12 +113,18 @@ export function holidayNameOnDate(jobs, date) {
   return '';
 }
 
+export function allDayMeeting(note) {
+  return dayMarkOf(note) === 'meeting' && flagOn(note && note.day_mark_all_day);
+}
+
 export function timedDayMark(note) {
   const m = dayMarkOf(note);
   if (m === 'meeting') {
+    if (flagOn(note && note.day_mark_all_day)) return null;
     const time = note && note.day_mark_time != null ? String(note.day_mark_time).trim() : '';
     if (!time) return null;
-    return { kind: 'meeting', time, name: 'Team meeting' };
+    const end = note && note.day_mark_end != null ? String(note.day_mark_end).trim() : '';
+    return { kind: 'meeting', time, end, name: 'Team meeting' };
   }
   if (m === 'building' && !flagOn(note && note.day_mark_all_day)) {
     const time = note && note.day_mark_time != null ? String(note.day_mark_time).trim() : '';
@@ -134,6 +140,7 @@ export function dateMarkState(jobs, date) {
   let kind = '';
   let name = '';
   let time = '';
+  let end = '';
   let allDay = false;
   for (const job of jobs || []) {
     if (job.deleted) continue;
@@ -144,11 +151,12 @@ export function dateMarkState(jobs, date) {
       kind = m;
       name = m === 'holiday' ? holidayNameOf(job) : '';
       time = job.day_mark_time != null ? String(job.day_mark_time).trim() : '';
-      allDay = m === 'building' && flagOn(job.day_mark_all_day);
+      end = job.day_mark_end != null ? String(job.day_mark_end).trim() : '';
+      allDay = (m === 'building' || m === 'meeting') && flagOn(job.day_mark_all_day);
     }
     if (m === kind && job.team_lead) teams.push(job.team_lead);
   }
-  return { kind, name, time, allDay, teams };
+  return { kind, name, time, end, allDay, teams };
 }
 
 /** Calendar day in Asia/Hong_Kong as YYYY-MM-DD. */
@@ -230,6 +238,7 @@ const api = {
   isClosingDayMark,
   holidayNameOf,
   holidayNameOnDate,
+  allDayMeeting,
   timedDayMark,
   dateMarkState,
   hongKongToday,

@@ -1,15 +1,15 @@
 import { DISTRICTS, JOB_TYPES, TEAMS } from './config.js?v=3';
-import { canPlaceJobOnTeamDay, dateMarkState, findCrewNote, hongKongToday, isCompanyDay, isCrewNote, isTeamDayFull } from './team-day.js?v=4';
+import { canPlaceJobOnTeamDay, dateMarkState, findCrewNote, hongKongToday, isCompanyDay, isCrewNote, isTeamDayFull } from './team-day.js?v=5';
 import { addDays, formatDay, formatTime24, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, normalizeLunch, parseISO, shortTime, weekDays, workWeekDays } from './utils.js';
-import { allJobs, applyCleanPhones, applyCleanTimes, applySeptemberFixes, applySeptemberLoad, clearDateMark, getJob, listContactsForPhoneClean, listJobsForTimeClean, placeJobInSlot, redo, removeJob, setDateMark, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js?v=11';
+import { allJobs, applyCleanPhones, applyCleanTimes, applySeptemberFixes, applySeptemberLoad, clearDateMark, getJob, listContactsForPhoneClean, listJobsForTimeClean, placeJobInSlot, redo, removeJob, setDateMark, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js?v=12';
 import { isOfficeEmail } from '../../shared/firebase-config.js';
 import { startScheduleAuth } from './auth.js';
 import { daySlotsOf, firstEmptySlotIndex, hasTimeConflict, jobsForTeamDay, layoutSlots, slotIndex } from './capacity.js?v=4';
-import { clientCardName, pulseRemaining, renderDayBoard, renderWeekBoard, weekDragSlotsHtml } from './board.js?v=28';
+import { clientCardName, pulseRemaining, renderDayBoard, renderWeekBoard, weekDragSlotsHtml } from './board.js?v=29';
 import { applyJobDrop, armClickSuppress, beginDrag, capturedDragId, clearCapturedDrag, consumeClickSuppress, jobDropKind, pointerJobUp, pointerMoved, resolveDropId } from './board-drag.js?v=2';
-import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=41';
+import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=42';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js?v=2';
-import { exportMasterRoster } from './export-roster.js?v=31';
+import { exportMasterRoster } from './export-roster.js?v=32';
 import { allContacts, initContactsStore, subscribeContacts } from './contacts-store.js?v=1';
 import { fillContactFilterSelect, importHubspotFile, renderContacts } from './contacts.js?v=4';
 import { uniqueContactValues } from './contacts-query.js?v=2';
@@ -451,7 +451,18 @@ function dayMarkMenuEl() {
     }
   });
   el.addEventListener('change', (e) => {
-    if (e.target.name === 'dayMarkScope') {
+    if (e.target.name !== 'dayMarkScope') return;
+    const kind = (el.querySelector('[data-day-mark-kind]') || {}).dataset.dayMarkKind;
+    if (kind === 'meeting') {
+      paintDayMarkForm('meeting', {
+        allDay: e.target.value === 'all',
+        teams: tickedTeamsFromMenu(el),
+        time: (el.querySelector('[data-day-mark-time]') || {}).value || '',
+        end: (el.querySelector('[data-day-mark-end]') || {}).value || '',
+      });
+      return;
+    }
+    if (kind === 'building') {
       paintDayMarkForm('building', {
         allDay: e.target.value === 'all',
         teams: tickedTeamsFromMenu(el),
@@ -496,11 +507,20 @@ function paintDayMarkForm(kind, over) {
       <input type="text" data-day-mark-name value="${escAttr(name)}" aria-label="Public holiday name">
     </label>`;
   } else if (kind === 'meeting') {
-    const time = same ? state.time : '';
+    const allDay = over && over.allDay != null ? !!over.allDay : (same ? !!state.allDay : true);
+    const time = over && over.time != null ? over.time : (same && !allDay ? state.time : '');
+    const end = over && over.end != null ? over.end : (same && !allDay ? state.end : '');
     body = `${teamTickHtml(ticked)}
-      <label class="day-mark-field">Start
+      <div class="day-mark-scope">
+        <label><input type="radio" name="dayMarkScope" value="timed"${allDay ? '' : ' checked'}> Timed</label>
+        <label><input type="radio" name="dayMarkScope" value="all"${allDay ? ' checked' : ''}> Whole day</label>
+      </div>
+      ${allDay ? '' : `<label class="day-mark-field">Start
         <input type="text" data-day-mark-time value="${escAttr(time)}" placeholder="09:00" aria-label="Team meeting start">
-      </label>`;
+      </label>
+      <label class="day-mark-field">End
+        <input type="text" data-day-mark-end value="${escAttr(end)}" placeholder="10:30" aria-label="Team meeting end">
+      </label>`}`;
   } else if (kind === 'building') {
     const allDay = over && over.allDay != null ? !!over.allDay : (same ? !!state.allDay : false);
     const time = same && !allDay ? state.time : '';
@@ -557,17 +577,28 @@ function saveDayMarkForm() {
     }
   } else if (kind === 'meeting') {
     const teams = tickedTeamsFromMenu(el);
-    const time = formatTime24((el.querySelector('[data-day-mark-time]') || {}).value);
     if (!teams.length) {
       toast('Tick a team');
       return;
     }
-    if (!time) {
-      toast('Start time is required');
-      return;
+    const allDay = !!(el.querySelector('input[name="dayMarkScope"][value="all"]') || {}).checked;
+    if (allDay) {
+      setDateMark(date, { kind: 'meeting', teams, allDay: true });
+      toast('Team meeting');
+    } else {
+      const time = formatTime24((el.querySelector('[data-day-mark-time]') || {}).value);
+      const end = formatTime24((el.querySelector('[data-day-mark-end]') || {}).value);
+      if (!time) {
+        toast('Start time is required');
+        return;
+      }
+      if (!end) {
+        toast('End time is required');
+        return;
+      }
+      setDateMark(date, { kind: 'meeting', teams, time, end, allDay: false });
+      toast(`Team meeting ${time}–${end}`);
     }
-    setDateMark(date, { kind: 'meeting', teams, time });
-    toast(`Team meeting ${time}`);
   } else if (kind === 'building') {
     const teams = tickedTeamsFromMenu(el);
     if (!teams.length) {

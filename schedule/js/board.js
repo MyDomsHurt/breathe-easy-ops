@@ -1,6 +1,6 @@
 import { DISTRICTS, TEAM_META } from './config.js?v=3';
 import { conflictingJobIds, daySlotsOf, districtsForTeamOnDay, firstEmptySlotIndex, jobsForTeamDay, layoutSlots, slotFloor } from './capacity.js';
-import { cellTeamMembers, findCrewNote, holidayNameOnDate, hongKongToday, isTeamDayFull, timedDayMark } from './team-day.js?v=4';
+import { allDayMeeting, cellTeamMembers, findCrewNote, holidayNameOnDate, hongKongToday, isTeamDayFull, timedDayMark } from './team-day.js?v=5';
 import { acsLabel, districtChipsHtml, esc, formatDay, isWeekend, jobStatus, jobTypeOf, normalizeLunch, parseAcs, parseISO, shortTime, startMinutes } from './utils.js';
 import { jobOnSiteMinutes } from './job-duration.js';
 
@@ -206,10 +206,18 @@ function weekLunchBarHtml(time) {
 }
 
 function weekMarkBarHtml(kind, time, name) {
+  const clock = time ? `<span class="lunch-time">${esc(time)}</span>` : '';
   return `<div class="lunch-card" data-day-mark-bar="${esc(kind)}">
     <span class="lunch-label">${esc(name)}</span>
-    <span class="lunch-time">${esc(time)}</span>
+    ${clock}
   </div>`;
+}
+
+function markClockLabel(mark) {
+  const start = normalizeLunch(mark && mark.time);
+  if (!start) return '';
+  const end = mark.end ? normalizeLunch(mark.end) : '';
+  return end ? `${start}–${end}` : start;
 }
 
 function timedBarsForNote(lunchTime, note) {
@@ -222,9 +230,10 @@ function timedBarsForNote(lunchTime, note) {
   const mark = timedDayMark(note);
   if (mark) {
     const time = normalizeLunch(mark.time);
-    if (time) {
+    const clock = markClockLabel(mark);
+    if (time && clock) {
       const mins = startMinutes({ time });
-      if (mins != null) bars.push({ mins, key: 'mark', html: weekMarkBarHtml(mark.kind, time, mark.name) });
+      if (mins != null) bars.push({ mins, key: 'mark', html: weekMarkBarHtml(mark.kind, clock, mark.name) });
     }
   }
   bars.sort((a, b) => a.mins - b.mins || (a.key === 'lunch' ? -1 : 1));
@@ -261,6 +270,7 @@ function renderWeekStack(jobs, lunchTime, conflicts, date, team, full, note) {
   const ordered = weekClockJobs(jobs);
   const bars = timedBarsForNote(lunchTime, note);
   const out = [];
+  if (allDayMeeting(note)) out.push(weekMarkBarHtml('meeting', '', 'Team meeting'));
   let bi = 0;
   let prevTimed = null;
   let prevJob = null;
@@ -297,16 +307,18 @@ function renderSlotStack(slots, lunchTime, conflicts, mode, full, date, team, lu
   const mark = timedDayMark(note);
   const markTime = mark ? normalizeLunch(mark.time) : '';
   const markMins = markTime ? startMinutes({ time: markTime }) : null;
+  const markClock = mark ? markClockLabel(mark) : '';
   const week = mode === 'week';
   const renderJob = (j) => boardCardHtml(j, conflicts.has(j.job_id), week);
   const out = [];
+  if (allDayMeeting(note)) out.push(weekMarkBarHtml('meeting', '', 'Team meeting'));
   let placedLunch = !time;
   let placedMark = !markTime;
 
   function placeMarkIfDue(jobMins) {
     if (placedMark || markMins == null) return;
     if (jobMins == null || markMins <= jobMins) {
-      out.push(weekMarkBarHtml(mark.kind, markTime, mark.name));
+      out.push(weekMarkBarHtml(mark.kind, markClock, mark.name));
       placedMark = true;
     }
   }

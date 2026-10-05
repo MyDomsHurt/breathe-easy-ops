@@ -414,32 +414,52 @@ assert(storeSrc.indexOf('day_unlocked: !lockOn && (past || isClosingDayMark(prev
 assert(storeSrc.indexOf('Saturday') === -1, '15 no Saturday rule in store');
 print('ok 15 store writes the mark on the crew note');
 
-const meetNote = crew(hDate, 'Josh', {
+const meetAll = crew(hDate, 'Josh', {
   day_mark: 'meeting',
-  day_mark_time: '09:00',
+  day_mark_all_day: true,
   lunch: '13:00',
 });
-const meetJobs = [meetNote, { job_id: 'job-am', date: hDate, team_lead: 'Josh', client_name: 'Ada', time: '08:00', source: 'local' }];
-assert(!isTeamDayFull(meetJobs, hDate, 'Josh', today), '16 meeting does not close');
-assert(canPlaceJobOnTeamDay(meetJobs, hDate, 'Josh', null, today), '16 meeting still takes jobs');
-const meetHtml = rosterCellHtml(meetJobs, meetJobs, hDate, 'Josh', 'week', meetJobs, today);
-assert(meetHtml.indexOf('Open') !== -1, '16 meeting Open');
-assert(meetHtml.indexOf('is-full') === -1, '16 meeting not grey');
-assert(meetHtml.indexOf('Team meeting') !== -1, '16 meeting bar');
-assert(meetHtml.indexOf('09:00') !== -1, '16 meeting time');
-assert(meetHtml.indexOf('data-day-mark-bar="meeting"') !== -1, '16 meeting bar mark');
-assert(meetHtml.indexOf('Lunch') !== -1, '16 lunch stays');
-assert(meetHtml.indexOf('13:00') !== -1, '16 lunch time stays');
-const meetBoard = { innerHTML: '' };
-renderWeekBoard(meetBoard, {
-  jobs: meetJobs,
+const meetAllJobs = [meetAll, { job_id: 'job-am', date: hDate, team_lead: 'Josh', client_name: 'Ada', time: '08:00', source: 'local' }];
+assert(!isTeamDayFull(meetAllJobs, hDate, 'Josh', today), '16 whole-day meeting does not close');
+assert(canPlaceJobOnTeamDay(meetAllJobs, hDate, 'Josh', null, today), '16 whole-day meeting still takes jobs');
+const meetAllHtml = rosterCellHtml(meetAllJobs, meetAllJobs, hDate, 'Josh', 'week', meetAllJobs, today);
+assert(meetAllHtml.indexOf('Open') !== -1, '16 whole-day meeting Open');
+assert(meetAllHtml.indexOf('is-full') === -1, '16 whole-day meeting not grey');
+assert(meetAllHtml.indexOf('Team meeting') !== -1, '16 whole-day meeting bar');
+assert(meetAllHtml.indexOf('data-day-mark-bar="meeting"') !== -1, '16 whole-day meeting bar mark');
+const meetBarAt = meetAllHtml.indexOf('data-day-mark-bar="meeting"');
+const meetBar = meetAllHtml.slice(meetBarAt, meetAllHtml.indexOf('</div>', meetBarAt) + 6);
+assert(meetBar.indexOf('lunch-time') === -1, '16 whole-day meeting no clock');
+assert(meetAllHtml.indexOf('Lunch') !== -1, '16 lunch stays');
+assert(meetAllHtml.indexOf('13:00') !== -1, '16 lunch time stays');
+const meetAllBoard = { innerHTML: '' };
+renderWeekBoard(meetAllBoard, {
+  jobs: meetAllJobs,
   days: [hDate, '2026-12-26'],
   teams: ['Josh', 'Matthew'],
   today,
 });
-assert(meetBoard.innerHTML.indexOf('day-mark-name') === -1, '16 meeting not a word under the date');
-assert(meetBoard.innerHTML.indexOf('Holiday') === -1, '16 no Holiday word');
-print('ok 16 team meeting shows at its time and does not close the day');
+assert(meetAllBoard.innerHTML.indexOf('day-mark-name') === -1, '16 meeting not a word under the date');
+assert(meetAllBoard.innerHTML.indexOf('Holiday') === -1, '16 no Holiday word');
+print('ok 16 whole-day team meeting shows with no clock and does not close');
+
+const meetNote = crew(hDate, 'Josh', {
+  day_mark: 'meeting',
+  day_mark_time: '09:00',
+  day_mark_end: '10:30',
+  day_mark_all_day: false,
+  lunch: '13:00',
+});
+const meetJobs = [meetNote, { job_id: 'job-am', date: hDate, team_lead: 'Josh', client_name: 'Ada', time: '08:00', source: 'local' }];
+assert(!isTeamDayFull(meetJobs, hDate, 'Josh', today), '16 timed meeting does not close');
+assert(canPlaceJobOnTeamDay(meetJobs, hDate, 'Josh', null, today), '16 timed meeting still takes jobs');
+const meetHtml = rosterCellHtml(meetJobs, meetJobs, hDate, 'Josh', 'week', meetJobs, today);
+assert(meetHtml.indexOf('Open') !== -1, '16 timed meeting Open');
+assert(meetHtml.indexOf('is-full') === -1, '16 timed meeting not grey');
+assert(meetHtml.indexOf('Team meeting') !== -1, '16 timed meeting bar');
+assert(meetHtml.indexOf('09:00–10:30') !== -1, '16 timed meeting range');
+assert(meetHtml.indexOf('data-day-mark-bar="meeting"') !== -1, '16 timed meeting bar mark');
+print('ok 16 timed team meeting shows 09:00–10:30 and still takes a job');
 
 const buildAll = [crew(hDate, 'Josh', { day_mark: 'building', day_mark_all_day: true })];
 assert(isTeamDayFull(buildAll, hDate, 'Josh', today), '17 whole-day building Closed');
@@ -451,4 +471,12 @@ assert(buildHtml.indexOf('Team building') !== -1, '17 timed building bar');
 assert(buildHtml.indexOf('10:00') !== -1, '17 timed building time');
 print('ok 17 team building timed stays Open; whole day closes ticked only');
 
-print('ok 17 week-lock cases');
+assert(storeSrc.indexOf("const closes = kind === 'holiday' || (kind === 'building' && allDay);") !== -1, '18 meeting allDay does not set Closed');
+assert(storeSrc.indexOf('day_mark_end') !== -1, '18 stores end on crew note');
+const appSrc = readSrc('app.js');
+assert(appSrc.indexOf("same ? !!state.allDay : true") !== -1, '18 meeting opens Whole day');
+assert(appSrc.indexOf('data-day-mark-end') !== -1, '18 meeting end field');
+assert(appSrc.indexOf('End time is required') !== -1, '18 timed meeting needs end');
+print('ok 18 Whole day meeting default; end stored; Closed stays off');
+
+print('ok 18 week-lock cases');

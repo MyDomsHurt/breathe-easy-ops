@@ -8,7 +8,7 @@ import { TEAMS } from './config.js';
 import { isCrewNote, isCompanyDay, cellTeamMembers } from './team-day.js';
 import { pad, timeToMinutes } from './utils.js';
 import { isJeffEmail } from '../../shared/firebase-config.js';
-import { allJobs, initStore, listContactsForPhoneClean, usingFirestore } from './store.js?v=11';
+import { allJobs, initStore, listContactsForPhoneClean, usingFirestore } from './store.js?v=12';
 
 const SHEETJS_SRC = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
 const LEAD_MAP = {

@@ -1,7 +1,7 @@
 import { DISTRICTS, JOB_TYPES, PAYMENTS, TEAMS, TEAM_META, UNIT_TYPES } from './config.js?v=3';
 import { overlapWarning, stackOrderOnSave, suggestTeams, teamMembersOnDay } from './capacity.js';
-import { canPlaceJobOnTeamDay } from './team-day.js?v=4';
-import { addJob, allJobs, isStoreReady, removeJob, updateJob } from './store.js?v=11';
+import { canPlaceJobOnTeamDay } from './team-day.js?v=5';
+import { addJob, allJobs, isStoreReady, removeJob, updateJob } from './store.js?v=12';
 import { allContacts } from './contacts-store.js?v=1';
 import { bookingFieldsFromContact, searchBookingClients } from './contacts-query.js?v=2';
 import { contactDisplayName } from '../../shared/contact.js';

@@ -164,9 +164,9 @@ assert(bookingSrc.indexOf('searchBookingClients(allContacts()') !== -1, 'box sea
 assert(bookingSrc.indexOf('applyPickedContact') !== -1, 'pick applies the contact');
 assert(bookingSrc.indexOf('form.hubspot_id = picked.hubspot_id') !== -1, 'pick keeps hubspot id');
 assert(bookingSrc.indexOf("from './contacts-query.js?v=2'") !== -1, 'booking contacts-query cache');
-assert(appSrc.indexOf("from './booking.js?v=41'") !== -1, 'app booking cache');
+assert(appSrc.indexOf("from './booking.js?v=42'") !== -1, 'app booking cache');
 assert(appSrc.indexOf("from './contacts-query.js?v=2'") !== -1, 'app contacts-query cache');
-assert(html.indexOf('js/app.js?v=85') !== -1, 'index app cache');
+assert(html.indexOf('js/app.js?v=86') !== -1, 'index app cache');
 assert(!/api\.hubapi|hubspot\.com|createDeal|writeDeal/.test(bookingSrc), 'no HubSpot write');
 print('ok 5 cache bump; contacts search; no HubSpot write');
 

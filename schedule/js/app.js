@@ -154,9 +154,45 @@ function visibleBoardTeams() {
   return visibleTeamOrder(teamOrder(), state.teams);
 }
 
+function boardScrollState() {
+  const wrap = typeof document !== 'undefined'
+    ? document.querySelector('#boardMount .board-wrap')
+    : null;
+  if (wrap && (wrap.scrollTop || wrap.scrollLeft
+    || wrap.scrollHeight > wrap.clientHeight + 1
+    || wrap.scrollWidth > wrap.clientWidth + 1)) {
+    return { kind: 'wrap', top: wrap.scrollTop, left: wrap.scrollLeft };
+  }
+  const page = typeof document !== 'undefined'
+    ? (document.scrollingElement || document.documentElement)
+    : null;
+  return { kind: 'page', top: page ? page.scrollTop : 0, left: page ? page.scrollLeft : 0 };
+}
+
+function restoreBoardScroll(saved) {
+  if (!saved) return;
+  if (saved.kind === 'wrap') {
+    const wrap = typeof document !== 'undefined'
+      ? document.querySelector('#boardMount .board-wrap')
+      : null;
+    if (wrap) {
+      wrap.scrollTop = saved.top;
+      wrap.scrollLeft = saved.left;
+      return;
+    }
+  }
+  const page = typeof document !== 'undefined'
+    ? (document.scrollingElement || document.documentElement)
+    : null;
+  if (!page) return;
+  page.scrollTop = saved.top;
+  page.scrollLeft = saved.left;
+}
+
 function paintBoard() {
   const mount = $('boardMount');
   if (!mount) return;
+  const saved = boardScrollState();
   const jobs = filteredJobs();
   const rosterJobs = teamJobs();
   const teams = visibleBoardTeams();
@@ -165,6 +201,7 @@ function paintBoard() {
   } else {
     renderDayBoard(mount, { jobs: rosterJobs, chipJobs: jobs, date: state.day, teams, lookupJobs: allJobs(), today: TODAY });
   }
+  restoreBoardScroll(saved);
 }
 
 function paintContacts() {
@@ -409,8 +446,10 @@ function bindBoardClicks() {
         toast('Only office can unlock');
         return;
       }
+      const saved = boardScrollState();
       setTeamDayFull(dayFull.dataset.dayFull, dayFull.dataset.dayFullTeam, on);
       paint();
+      restoreBoardScroll(saved);
       return;
     }
     const addSlot = e.target.closest('[data-add-slot]');

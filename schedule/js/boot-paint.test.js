@@ -51,6 +51,19 @@ assert(boardFn !== -1, '4 no paintBoard');
 const boardBody = src.slice(boardFn, src.indexOf('function paintContacts', boardFn));
 assert(boardBody.indexOf('allContacts') === -1, '4 paintBoard reads allContacts');
 assert(boardBody.indexOf('renderWeekBoard') !== -1, '4 paintBoard missing week grid');
+assert(boardBody.indexOf('boardScrollState()') !== -1, '4 paintBoard saves scroll');
+assert(boardBody.indexOf('restoreBoardScroll(saved)') !== -1, '4 paintBoard restores scroll');
 print('ok 4 week grid paint does not read contacts');
 
-print('ok 4 boot-paint cases');
+const lockAt = src.indexOf("closest('[data-day-full]')");
+assert(lockAt !== -1, '5 no lock click');
+const lockBody = src.slice(lockAt, src.indexOf('const addSlot', lockAt));
+assert(lockBody.indexOf('boardScrollState()') !== -1, '5 lock saves scroll');
+assert(lockBody.indexOf('setTeamDayFull') !== -1, '5 lock still writes');
+assert(lockBody.indexOf('paint()') !== -1, '5 lock paints');
+assert(lockBody.indexOf('restoreBoardScroll(saved)') !== -1, '5 lock restores after paint');
+assert(lockBody.indexOf('scrollIntoView') === -1, '5 lock scrollIntoView');
+assert(src.indexOf('isTeamDayFull') !== -1, '5 check stays');
+print('ok 5 lock click keeps board scroll');
+
+print('ok 5 boot-paint cases');

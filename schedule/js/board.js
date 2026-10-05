@@ -363,8 +363,7 @@ function cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs, today) {
       <button type="button" class="add-slot-btn" data-remove-slot="${esc(date)}" data-remove-slot-team="${esc(team)}" data-remove-slot-count="${slots}" data-remove-slot-floor="${floor}" title="Remove an empty slot"${slots <= floor ? ' disabled' : ''}>− slot</button>
     </div>`;
   const todayCls = date === todayIso ? ' today' : '';
-  const weekendCls = isWeekend(date) ? ' weekend' : '';
-  return `<div class="roster-cell ${empty ? 'empty' : 'has-jobs'}${full ? ' is-full' : ''} ${week ? 'week-cell' : 'day-cell'}${todayCls}${weekendCls}" data-date="${date}" data-team="${team}">
+  return `<div class="roster-cell ${empty ? 'empty' : 'has-jobs'}${full ? ' is-full' : ''} ${week ? 'week-cell' : 'day-cell'}${todayCls}" data-date="${date}" data-team="${team}">
     <div class="cell-top">
       <div class="cell-head-left">
         <span class="cell-status">${status}</span>

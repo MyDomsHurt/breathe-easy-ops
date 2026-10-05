@@ -614,7 +614,6 @@ button.day-col-head:hover { background: #e0f2fe; }
   box-shadow: inset 0 0 0 1px #bbf7d0;
 }
 .day-col-head.today .dom { color: #166534; }
-.day-col-head.weekend { background: #e8eef3; }
 
 .team-row-label {
   position: sticky;
@@ -643,10 +642,8 @@ button.day-col-head:hover { background: #e0f2fe; }
 }
 
 .roster-cell.empty { background: white; }
-.roster-cell.is-full,
-.roster-cell.weekend { background: #e8eef3; }
-.roster-cell.is-full .job-card.job-card-detailed,
-.roster-cell.weekend .job-card.job-card-detailed {
+.roster-cell.is-full { background: #e8eef3; }
+.roster-cell.is-full .job-card.job-card-detailed {
   background: #fff;
 }
 .roster-cell:hover { outline: 2px solid #7dd3fc; outline-offset: -2px; z-index: 1; }

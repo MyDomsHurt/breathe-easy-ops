@@ -234,12 +234,17 @@ assert(!isOfficeEmail('joshua@breathe-easyhk.com'), '10 josh not office');
 assert(!isOfficeEmail('matthewgross2001@gmail.com'), '10 tech not office');
 print('ok 10 unlock office only');
 
-// 11. Saturday uses the weekend class so it paints the same grey as Closed.
+// 11. Open Saturday is Open and not closed. Past Saturday is Closed because it is past.
 const sat = '2026-12-19';
 const satHtml = weekHtml([], sat);
-assert(satHtml.indexOf('weekend') !== -1, '11 sat weekend');
 assert(satHtml.indexOf('Open') !== -1, '11 sat Open');
 assert(satHtml.indexOf('is-full') === -1, '11 sat not closed');
-print('ok 11 Saturday weekend class');
+assert(satHtml.indexOf('weekend') === -1, '11 sat cell no weekend grey');
+const pastSat = '2026-10-03';
+const pastSatHtml = weekHtml([], pastSat);
+assert(isTeamDayFull([], pastSat, team, today), '11 past sat closed by date');
+assert(pastSatHtml.indexOf('Closed') !== -1, '11 past sat Closed');
+assert(pastSatHtml.indexOf('is-full') !== -1, '11 past sat grey from Closed');
+print('ok 11 Saturday colour follows Closed/Open');
 
 print('ok 11 week-lock cases');

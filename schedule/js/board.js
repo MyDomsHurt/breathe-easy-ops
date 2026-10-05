@@ -1,7 +1,7 @@
 import { DISTRICTS, TEAM_META } from './config.js?v=3';
 import { conflictingJobIds, daySlotsOf, districtsForTeamOnDay, firstEmptySlotIndex, jobsForTeamDay, layoutSlots, slotFloor } from './capacity.js';
-import { cellTeamMembers, findCrewNote } from './team-day.js?v=1';
-import { acsLabel, districtChipsHtml, esc, formatDay, isWeekend, jobStatus, jobTypeOf, normalizeLunch, pad, parseAcs, parseISO, shortTime, startMinutes } from './utils.js';
+import { cellTeamMembers, findCrewNote, hongKongToday, isTeamDayFull } from './team-day.js?v=2';
+import { acsLabel, districtChipsHtml, esc, formatDay, isWeekend, jobStatus, jobTypeOf, normalizeLunch, parseAcs, parseISO, shortTime, startMinutes } from './utils.js';
 import { jobOnSiteMinutes } from './job-duration.js';
 
 function teamColor(name) {
@@ -9,8 +9,7 @@ function teamColor(name) {
 }
 
 function calendarDay() {
-  const d = new Date();
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  return hongKongToday();
 }
 
 export function clientCardName(name) {
@@ -301,7 +300,7 @@ export function weekDragSlotsHtml(allJobs, date, team) {
 }
 
 export function weekLockBit(empty, full, count) {
-  return full ? 'Full' : (empty ? 'Open' : String(count));
+  return full ? 'Locked' : (empty ? 'Open' : String(count));
 }
 
 export function weekCellTitle(date, empty, full, count) {
@@ -324,7 +323,8 @@ function cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs, today) {
   const note = findCrewNote(lookup, date, team);
   const lunch = normalizeLunch(note && note.lunch);
   const slots = daySlotsOf(note);
-  const full = !!(note && (note.day_full === true || note.day_full === 'true'));
+  const todayIso = today || calendarDay();
+  const full = isTeamDayFull(lookup, date, team, todayIso);
   const laid = layoutSlots(shown, slots);
   const lunchSlotRaw = Number(note && note.lunch_slot);
   const lunchSlot = Number.isFinite(lunchSlotRaw) ? lunchSlotRaw : null;
@@ -340,7 +340,7 @@ function cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs, today) {
   const dayNum = Number(date.slice(8));
   const status = week
     ? `${esc(dow)} ${dayNum} · <button type="button" class="cell-lock" data-day-full="${esc(date)}" data-day-full-team="${esc(team)}" aria-pressed="${full ? 'true' : 'false'}">${esc(lockBit)}</button>`
-    : esc(full ? 'Full' : (empty ? 'Open' : list.length + ' job' + (list.length === 1 ? '' : 's')));
+    : esc(full ? 'Locked' : (empty ? 'Open' : list.length + ' job' + (list.length === 1 ? '' : 's')));
   const addBtn = full
     ? ''
     : `<button class="cell-add" data-book-date="${date}" data-book-team="${team}" data-slot="${firstEmptySlotIndex(list, date, team, null, slots)}" type="button" aria-label="Add booking">+</button>`;
@@ -358,11 +358,10 @@ function cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs, today) {
     </div>`;
   const floor = slotFloor(list, date, team);
   const dayTools = week ? '' : `<div class="cell-day-tools">
-      <button type="button" class="day-full-btn${full ? ' on' : ''}" data-day-full="${esc(date)}" data-day-full-team="${esc(team)}" aria-pressed="${full ? 'true' : 'false'}">Day full</button>
+      <button type="button" class="day-full-btn${full ? ' on' : ''}" data-day-full="${esc(date)}" data-day-full-team="${esc(team)}" aria-pressed="${full ? 'true' : 'false'}">Locked</button>
       <button type="button" class="add-slot-btn" data-add-slot="${esc(date)}" data-add-slot-team="${esc(team)}" data-add-slot-count="${slots}" title="Add a slot">+ slot</button>
       <button type="button" class="add-slot-btn" data-remove-slot="${esc(date)}" data-remove-slot-team="${esc(team)}" data-remove-slot-count="${slots}" data-remove-slot-floor="${floor}" title="Remove an empty slot"${slots <= floor ? ' disabled' : ''}>− slot</button>
     </div>`;
-  const todayIso = today || calendarDay();
   const todayCls = date === todayIso ? ' today' : '';
   return `<div class="roster-cell ${empty ? 'empty' : 'has-jobs'}${full ? ' is-full' : ''} ${week ? 'week-cell' : 'day-cell'}${todayCls}" data-date="${date}" data-team="${team}">
     <div class="cell-top">

@@ -225,7 +225,7 @@ print('ok 2 team rebuild restores scroll');
 let threw = false;
 let r3;
 try {
-  r3 = commitBooking(blankForm({ date: '2026-09-25', team_lead: 'Josh' }), 'confirmed', {
+  r3 = commitBooking(blankForm({ date: '2026-12-15', team_lead: 'Josh' }), 'confirmed', {
     allJobs: () => [],
     allContacts: () => [],
     addJob() { throw new Error('Firestore boom'); },
@@ -241,17 +241,17 @@ print('ok 3 addJob throw becomes { error }');
 
 // 4. Blank name + date + team on Open day → job with job_id, client_name "".
 const io4 = memoryIo([]);
-const r4 = commitBooking(blankForm({ date: '2026-09-25', team_lead: 'Josh' }), 'confirmed', io4);
+const r4 = commitBooking(blankForm({ date: '2026-12-15', team_lead: 'Josh' }), 'confirmed', io4);
 assert(!r4.error, '4 error ' + (r4 && r4.error));
 assert(r4.job.client_name === '', '4 name');
-assert(typeof r4.job.job_id === 'string' && r4.job.job_id.indexOf('2026-09-25-josh-') === 0, '4 job_id ' + r4.job.job_id);
-assert(mintJobId({ date: '2026-09-25', team_lead: 'Josh' }).indexOf('2026-09-25-josh-') === 0, '4 mint shape');
+assert(typeof r4.job.job_id === 'string' && r4.job.job_id.indexOf('2026-12-15-josh-') === 0, '4 job_id ' + r4.job.job_id);
+assert(mintJobId({ date: '2026-12-15', team_lead: 'Josh' }).indexOf('2026-12-15-josh-') === 0, '4 mint shape');
 print('ok 4 minted id ' + r4.job.job_id);
 
-// 5. New job onto a Full day → { error: "That day is full" }.
+// 5. New job onto a Full day → { error: "That day is locked" }.
 const fullJobs = [{
-  job_id: crewNoteId('2026-09-22', 'Josh'),
-  date: '2026-09-22',
+  job_id: crewNoteId('2026-12-15', 'Josh'),
+  date: '2026-12-15',
   team_lead: 'Josh',
   source: CREW_SOURCE,
   client_name: '',
@@ -259,8 +259,8 @@ const fullJobs = [{
 }];
 const io5 = memoryIo(fullJobs);
 const before = fullJobs.length;
-const r5 = commitBooking(blankForm({ date: '2026-09-22', team_lead: 'Josh', client_name: 'Ada' }), 'confirmed', io5);
-assert(r5.error === 'That day is full', '5 error ' + (r5 && r5.error));
+const r5 = commitBooking(blankForm({ date: '2026-12-15', team_lead: 'Josh', client_name: 'Ada' }), 'confirmed', io5);
+assert(r5.error === 'That day is locked', '5 error ' + (r5 && r5.error));
 assert(!r5.job, '5 wrote');
 assert(fullJobs.length === before, '5 count');
 print('ok 5 full day no write');

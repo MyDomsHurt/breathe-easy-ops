@@ -17,8 +17,8 @@ import {
 import { appendChange, asChanges, fromScheduleJob } from '../../shared/job.js';
 import { matchHubspotIdByPhone, parsePhone } from '../../shared/phone-parse.js';
 import { allContacts } from './contacts-store.js?v=1';
-import { CONTACTS_COLLECTION, isJeffEmail, JOBS_COLLECTION, shouldUseFirestore } from '../../shared/firebase-config.js';
-import { CREW_SOURCE, cellTeamMembers, crewNoteId, isCrewNote } from './team-day.js';
+import { CONTACTS_COLLECTION, isJeffEmail, isOfficeEmail, JOBS_COLLECTION, shouldUseFirestore } from '../../shared/firebase-config.js';
+import { CREW_SOURCE, canPlaceJobOnTeamDay, cellTeamMembers, crewNoteId, hongKongToday, isCrewNote } from './team-day.js';
 import { planSlotTake, slotCountFor, slotFloor } from './capacity.js';
 
 const listeners = new Set();
@@ -327,6 +327,7 @@ export function addJob(input) {
 export function placeJobInSlot(jobId, date, team, targetSlot) {
   const job = getJob(jobId);
   if (!job) return null;
+  if (!canPlaceJobOnTeamDay(allJobs(), date, team, job)) return job;
   const destJobs = allJobs().filter((j) => !isCrewNote(j) && j.date === date && j.team_lead === team);
   const currentSlots = slotCountFor(allJobs(), date, team);
   const plan = planSlotTake(destJobs, currentSlots, jobId, targetSlot);
@@ -417,9 +418,15 @@ export function setTeamDayHighlight(date, team, on) {
   emit();
 }
 
-export function setTeamDayFull(date, team, on) {
+export function setTeamDayFull(date, team, on, actorEmail) {
   const noteId = crewNoteId(date, team);
   const prevNote = getJob(noteId);
+  const today = hongKongToday();
+  const past = String(date || '') < String(today);
+  const lockOn = !!on;
+  if (lockOn && past && !prevNote) return;
+  const actor = actorEmail !== undefined ? actorEmail : currentActorEmail();
+  if (!lockOn && !isOfficeEmail(actor)) return;
   const members = prevNote
     ? String(prevNote.team_members || '').trim()
     : cellTeamMembers(allJobs(), date, team);
@@ -437,8 +444,11 @@ export function setTeamDayFull(date, team, on) {
     status: 'confirmed',
     highlight_members: prevNote ? !!prevNote.highlight_members : false,
     lunch: prevNote && prevNote.lunch || null,
+    lunch_slot: prevNote && prevNote.lunch_slot,
     day_slots: prevNote && prevNote.day_slots,
-    day_full: !!on,
+    day_full: lockOn,
+    day_locked: lockOn,
+    day_unlocked: past && !lockOn,
   }, prevNote));
   emit();
 }
@@ -466,8 +476,11 @@ export function setTeamDaySlots(date, team, count) {
     status: 'confirmed',
     highlight_members: prevNote ? !!prevNote.highlight_members : false,
     lunch: prevNote && prevNote.lunch || null,
+    lunch_slot: prevNote && prevNote.lunch_slot,
     day_slots: slots,
     day_full: !!(prevNote && prevNote.day_full),
+    day_locked: !!(prevNote && prevNote.day_locked),
+    day_unlocked: !!(prevNote && prevNote.day_unlocked),
   }, prevNote));
   emit();
 }
@@ -494,6 +507,9 @@ export function setTeamDayLunch(date, team, lunch, slot) {
     highlight_members: prevNote ? !!prevNote.highlight_members : false,
     lunch: lunch || null,
     lunch_slot: lunch && Number.isFinite(slotN) ? slotN : null,
+    day_full: !!(prevNote && prevNote.day_full),
+    day_locked: !!(prevNote && prevNote.day_locked),
+    day_unlocked: !!(prevNote && prevNote.day_unlocked),
   }, prevNote));
   emit();
 }

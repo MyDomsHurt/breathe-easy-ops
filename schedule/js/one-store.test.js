@@ -1,5 +1,5 @@
 import { emptyUnits } from './utils.js';
-import { addJob, allJobs, initStore, isStoreReady, writeJob } from './store.js?v=8';
+import { addJob, allJobs, initStore, isStoreReady, writeJob } from './store.js?v=9';
 import { commitBooking } from './booking.js';
 
 function fail(msg) {
@@ -59,7 +59,7 @@ assert(!isStoreReady(), '3 store should start empty');
 let threw = false;
 let out;
 try {
-  out = writeJob({ job_id: 'x', date: '2026-09-25', team_lead: 'Josh', client_name: '' }, 'created');
+  out = writeJob({ job_id: 'x', date: '2026-12-15', team_lead: 'Josh', client_name: '' }, 'created');
 } catch (err) {
   threw = true;
   assert(String(err && err.message || err).indexOf('upsertJob') === -1, '3 threw upsertJob ' + err);
@@ -71,7 +71,7 @@ const notReady = commitBooking({
   job_id: '',
   client_name: '',
   units: emptyUnits(),
-  date: '2026-09-25',
+  date: '2026-12-15',
   team_lead: 'Josh',
   job_type: 'cleaning',
   payment: 'Unpaid',
@@ -94,7 +94,7 @@ const form = {
   address_extra: '',
   district: '',
   units: emptyUnits(),
-  date: '2026-09-25',
+  date: '2026-12-15',
   time: '',
   team_lead: 'Josh',
   job_type: 'cleaning',

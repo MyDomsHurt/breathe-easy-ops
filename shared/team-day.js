@@ -40,14 +40,39 @@ export function findCrewNote(jobs, date, team) {
   return found;
 }
 
-export function isTeamDayFull(jobs, date, team) {
-  const note = findCrewNote(jobs, date, team);
-  return !!(note && (note.day_full === true || note.day_full === 'true'));
+function flagOn(value) {
+  return value === true || value === 'true';
 }
 
-export function canPlaceJobOnTeamDay(jobs, date, team, existing) {
-  if (existing && String(existing.date) === String(date) && String(existing.team_lead) === String(team)) return true;
-  return !isTeamDayFull(jobs, date, team);
+/** Calendar day in Asia/Hong_Kong as YYYY-MM-DD. */
+export function hongKongToday(now) {
+  const d = now instanceof Date ? now : new Date();
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Hong_Kong',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(d);
+}
+
+/**
+ * Locked when day_unlocked is off and any of: date before HKT today,
+ * day_full, day_locked. Unlock beats the past-day rule and day_locked.
+ * A past day needs no crew note.
+ */
+export function isTeamDayFull(jobs, date, team, today) {
+  const note = findCrewNote(jobs, date, team);
+  if (note && flagOn(note.day_unlocked)) return false;
+  const todayIso = today || hongKongToday();
+  if (String(date || '') < String(todayIso)) return true;
+  if (note && (flagOn(note.day_full) || flagOn(note.day_locked))) return true;
+  return false;
+}
+
+/** Locked days block new bookings, drag on, drag off, and card save. */
+export function canPlaceJobOnTeamDay(jobs, date, team, existing, today) {
+  if (existing && isTeamDayFull(jobs, existing.date, existing.team_lead, today)) return false;
+  return !isTeamDayFull(jobs, date, team, today);
 }
 
 /** Most common non-empty team_members among real jobs that team-day. */
@@ -85,6 +110,7 @@ const api = {
   isCrewNote,
   realJobs,
   findCrewNote,
+  hongKongToday,
   isTeamDayFull,
   canPlaceJobOnTeamDay,
   consensusTeamMembers,

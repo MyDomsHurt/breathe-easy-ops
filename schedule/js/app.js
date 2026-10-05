@@ -1,14 +1,15 @@
 import { DISTRICTS, JOB_TYPES, TEAMS } from './config.js?v=3';
-import { canPlaceJobOnTeamDay, findCrewNote, isCrewNote, isTeamDayFull } from './team-day.js?v=1';
-import { addDays, formatDay, formatTime24, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, normalizeLunch, pad, parseISO, shortTime, weekDays, workWeekDays } from './utils.js';
-import { allJobs, applyCleanPhones, applyCleanTimes, applySeptemberFixes, applySeptemberLoad, getJob, listContactsForPhoneClean, listJobsForTimeClean, placeJobInSlot, redo, removeJob, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js?v=8';
+import { canPlaceJobOnTeamDay, findCrewNote, hongKongToday, isCrewNote, isTeamDayFull } from './team-day.js?v=2';
+import { addDays, formatDay, formatTime24, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, normalizeLunch, parseISO, shortTime, weekDays, workWeekDays } from './utils.js';
+import { allJobs, applyCleanPhones, applyCleanTimes, applySeptemberFixes, applySeptemberLoad, getJob, listContactsForPhoneClean, listJobsForTimeClean, placeJobInSlot, redo, removeJob, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js?v=9';
+import { isOfficeEmail } from '../../shared/firebase-config.js';
 import { startScheduleAuth } from './auth.js';
 import { daySlotsOf, firstEmptySlotIndex, hasTimeConflict, jobsForTeamDay, layoutSlots, slotIndex } from './capacity.js?v=4';
-import { clientCardName, pulseRemaining, renderDayBoard, renderWeekBoard, weekDragSlotsHtml } from './board.js?v=22';
+import { clientCardName, pulseRemaining, renderDayBoard, renderWeekBoard, weekDragSlotsHtml } from './board.js?v=23';
 import { applyJobDrop, armClickSuppress, beginDrag, capturedDragId, clearCapturedDrag, consumeClickSuppress, jobDropKind, pointerJobUp, pointerMoved, resolveDropId } from './board-drag.js?v=2';
-import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=35';
+import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=36';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js?v=2';
-import { exportMasterRoster } from './export-roster.js?v=28';
+import { exportMasterRoster } from './export-roster.js?v=29';
 import { allContacts, initContactsStore, subscribeContacts } from './contacts-store.js?v=1';
 import { fillContactFilterSelect, importHubspotFile, renderContacts } from './contacts.js?v=3';
 import { uniqueContactValues } from './contacts-query.js?v=1';
@@ -43,8 +44,7 @@ import {
 } from './clean-phones.js?v=1';
 
 function calendarToday() {
-  const d = new Date();
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  return hongKongToday();
 }
 
 const TODAY = calendarToday();
@@ -405,6 +405,10 @@ function bindBoardClicks() {
       e.preventDefault();
       e.stopPropagation();
       const on = dayFull.getAttribute('aria-pressed') !== 'true';
+      if (!on && !isOfficeEmail(signedInEmail)) {
+        toast('Only office can unlock');
+        return;
+      }
       setTeamDayFull(dayFull.dataset.dayFull, dayFull.dataset.dayFullTeam, on);
       paint();
       return;

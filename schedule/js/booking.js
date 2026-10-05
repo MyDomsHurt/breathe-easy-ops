@@ -1,7 +1,7 @@
 import { DISTRICTS, JOB_TYPES, PAYMENTS, TEAMS, TEAM_META, UNIT_TYPES } from './config.js?v=3';
 import { overlapWarning, stackOrderOnSave, suggestTeams, teamMembersOnDay } from './capacity.js';
-import { canPlaceJobOnTeamDay } from './team-day.js?v=1';
-import { addJob, allJobs, isStoreReady, removeJob, updateJob } from './store.js?v=8';
+import { canPlaceJobOnTeamDay } from './team-day.js?v=2';
+import { addJob, allJobs, isStoreReady, removeJob, updateJob } from './store.js?v=9';
 import { allContacts } from './contacts-store.js?v=1';
 import { uniqueClientsFrom } from './seed.js';
 import { displayNameForEmail } from '../../shared/firebase-config.js';
@@ -760,7 +760,7 @@ export function commitBooking(formState, status = 'confirmed', io = {}) {
     const jobs = listFn();
     const prev = formState.job_id ? jobs.find((j) => j.job_id === formState.job_id) : null;
     if (!canPlaceJobOnTeamDay(jobs, formState.date, formState.team_lead, prev)) {
-      return { error: 'That day is full' };
+      return { error: 'That day is locked' };
     }
     const notesRaw = formState.job_type === 'influencer' && !/influencer/i.test(formState.notes || '')
       ? `Influencer (Free)${formState.notes ? ' — ' + formState.notes : ''}`

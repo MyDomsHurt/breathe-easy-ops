@@ -66,7 +66,7 @@ function memoryIo() {
 }
 
 const io = memoryIo();
-const today = '2026-09-25';
+const today = '2026-12-15';
 const boardTeams = [...TEAMS];
 
 // 1. New booking → team and date. Type nothing. Save. Job on that team/day. Name is —.

@@ -6,9 +6,9 @@
  * Does not auto-upload the historical archive on boot.
  */
 
-import { JOB_TYPES, TEAM_META } from './config.js';
+import { JOB_TYPES, TEAM_META, TEAMS } from './config.js';
 import { loadSeedJobs, buildSeedJobs } from './seed.js';
-import { acsLabel, jobTypeOf } from './utils.js';
+import { acsLabel, formatTime24, jobTypeOf } from './utils.js';
 import {
   createStore,
   defaultAdapter,
@@ -18,7 +18,7 @@ import { appendChange, asChanges, fromScheduleJob } from '../../shared/job.js';
 import { matchHubspotIdByPhone, parsePhone } from '../../shared/phone-parse.js';
 import { allContacts } from './contacts-store.js?v=1';
 import { CONTACTS_COLLECTION, isJeffEmail, isOfficeEmail, JOBS_COLLECTION, shouldUseFirestore } from '../../shared/firebase-config.js';
-import { COMPANY_SOURCE, CREW_SOURCE, canPlaceJobOnTeamDay, cellTeamMembers, crewNoteId, findCompanyDay, holidayId, hongKongToday, isCompanyDay, isCrewNote } from './team-day.js?v=3';
+import { CREW_SOURCE, canPlaceJobOnTeamDay, cellTeamMembers, crewNoteId, dayMarkOf, hongKongToday, isClosingDayMark, isCompanyDay, isCrewNote } from './team-day.js?v=4';
 import { planSlotTake, slotCountFor, slotFloor } from './capacity.js';
 
 const listeners = new Set();
@@ -449,49 +449,134 @@ export function setTeamDayFull(date, team, on, actorEmail) {
     day_slots: prevNote && prevNote.day_slots,
     day_full: lockOn,
     day_locked: lockOn,
-    day_unlocked: !lockOn && (past || !!findCompanyDay(allJobs(), date)),
+    day_unlocked: !lockOn && (past || isClosingDayMark(prevNote)),
   }, prevNote));
   emit();
 }
 
-export function setCompanyDay(date, name, actorEmail) {
+const EMPTY_MARK = {
+  day_mark: '',
+  day_mark_name: '',
+  day_mark_time: '',
+  day_mark_all_day: false,
+};
+
+function teamsForDate(date) {
+  const seen = new Set();
+  const out = [];
+  function add(name) {
+    const t = String(name || '').trim();
+    if (!t || seen.has(t)) return;
+    seen.add(t);
+    out.push(t);
+  }
+  TEAMS.forEach(add);
+  const d = String(date || '').trim();
+  for (const job of allJobs()) {
+    if (job.deleted) continue;
+    if (!isCrewNote(job) || job.date !== d) continue;
+    add(job.team_lead);
+  }
+  return out;
+}
+
+function writeCrewNote(date, team, extra) {
+  const noteId = crewNoteId(date, team);
+  const prevNote = getJob(noteId);
+  const members = prevNote
+    ? String(prevNote.team_members || '').trim()
+    : cellTeamMembers(allJobs(), date, team);
+  return writeJob(toCanonical({
+    job_id: noteId,
+    date,
+    team_lead: team,
+    team_members: members,
+    client_name: '',
+    time: '',
+    acs: '',
+    job_type: 'cleaning',
+    is_return: false,
+    source: CREW_SOURCE,
+    status: 'confirmed',
+    highlight_members: prevNote ? !!prevNote.highlight_members : false,
+    lunch: prevNote && prevNote.lunch || null,
+    lunch_slot: prevNote && prevNote.lunch_slot,
+    day_slots: prevNote && prevNote.day_slots,
+    day_full: !!(prevNote && prevNote.day_full),
+    day_locked: !!(prevNote && prevNote.day_locked),
+    day_unlocked: !!(prevNote && prevNote.day_unlocked),
+    day_mark: prevNote && prevNote.day_mark || '',
+    day_mark_name: prevNote && prevNote.day_mark_name || '',
+    day_mark_time: prevNote && prevNote.day_mark_time || '',
+    day_mark_all_day: !!(prevNote && prevNote.day_mark_all_day),
+    ...(extra || {}),
+  }, prevNote));
+}
+
+export function setDateMark(date, spec, actorEmail) {
   const actor = actorEmail !== undefined ? actorEmail : currentActorEmail();
   if (!isOfficeEmail(actor)) return;
   const d = String(date || '').trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
-  const label = String(name == null ? '' : name).trim() || 'Public holiday';
-  const id = holidayId(d);
-  const prev = getJob(id) || findCompanyDay(allJobs(), d);
-  writeJob(toCanonical({
-    job_id: id,
-    date: d,
-    team_lead: '',
-    team_members: '',
-    client_name: '',
-    mobile: '',
-    phone_cc: '',
-    phone_national: '',
-    amount: '',
-    units: {},
-    acs: '',
-    time: '',
-    notes: label,
-    notes_long: '',
-    job_type: 'cleaning',
-    is_return: false,
-    source: COMPANY_SOURCE,
-    status: 'confirmed',
-  }, prev && prev.job_id === id ? prev : null));
+  const kind = spec && spec.kind;
+  if (kind !== 'holiday' && kind !== 'meeting' && kind !== 'building') return;
+  const known = new Set(TEAMS);
+  const ticked = kind === 'holiday'
+    ? TEAMS.slice()
+    : (Array.isArray(spec.teams) ? spec.teams : [])
+      .map((t) => String(t || '').trim())
+      .filter((t) => known.has(t));
+  if (kind !== 'holiday' && !ticked.length) return;
+  let name = '';
+  let time = '';
+  let allDay = false;
+  if (kind === 'holiday') {
+    name = String(spec.name == null ? '' : spec.name).trim() || 'Public holiday';
+  } else if (kind === 'meeting') {
+    time = formatTime24(spec.time);
+    if (!time) return;
+  } else {
+    allDay = !!spec.allDay;
+    if (!allDay) {
+      time = formatTime24(spec.time);
+      if (!time) return;
+    }
+  }
+  const targets = new Set(kind === 'holiday' ? teamsForDate(d) : ticked);
+  const consider = new Set(teamsForDate(d));
+  ticked.forEach((t) => consider.add(t));
+  const closes = kind === 'holiday' || (kind === 'building' && allDay);
+  recording = false;
+  consider.forEach((team) => {
+    const prev = getJob(crewNoteId(d, team));
+    if (targets.has(team)) {
+      writeCrewNote(d, team, {
+        day_mark: kind,
+        day_mark_name: name,
+        day_mark_time: time,
+        day_mark_all_day: allDay,
+        day_unlocked: closes ? false : !!(prev && prev.day_unlocked),
+      });
+    } else if (prev && dayMarkOf(prev)) {
+      writeCrewNote(d, team, EMPTY_MARK);
+    }
+  });
+  recording = true;
   emit();
 }
 
-export function clearCompanyDay(date, actorEmail) {
+export function clearDateMark(date, actorEmail) {
   const actor = actorEmail !== undefined ? actorEmail : currentActorEmail();
   if (!isOfficeEmail(actor)) return;
   const d = String(date || '').trim();
-  const found = getJob(holidayId(d)) || findCompanyDay(allJobs(), d);
-  if (!found || !isCompanyDay(found)) return;
-  removeJob(found.job_id);
+  recording = false;
+  for (const team of teamsForDate(d)) {
+    const prev = getJob(crewNoteId(d, team));
+    if (!prev || !dayMarkOf(prev)) continue;
+    writeCrewNote(d, team, EMPTY_MARK);
+  }
+  recording = true;
+  emit();
 }
 
 export function setTeamDaySlots(date, team, count) {

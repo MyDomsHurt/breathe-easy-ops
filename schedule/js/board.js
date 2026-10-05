@@ -1,6 +1,6 @@
 import { DISTRICTS, TEAM_META } from './config.js?v=3';
 import { conflictingJobIds, daySlotsOf, districtsForTeamOnDay, firstEmptySlotIndex, jobsForTeamDay, layoutSlots, slotFloor } from './capacity.js';
-import { cellTeamMembers, findCrewNote, hongKongToday, isTeamDayFull } from './team-day.js?v=2';
+import { cellTeamMembers, companyDayName, findCompanyDay, findCrewNote, hongKongToday, isTeamDayFull } from './team-day.js?v=3';
 import { acsLabel, districtChipsHtml, esc, formatDay, isWeekend, jobStatus, jobTypeOf, normalizeLunch, parseAcs, parseISO, shortTime, startMinutes } from './utils.js';
 import { jobOnSiteMinutes } from './job-duration.js';
 
@@ -381,16 +381,25 @@ function cellHtml(allJobs, displayJobs, date, team, mode, lookupJobs, today) {
   </div>`;
 }
 
+function holidayHeadHtml(lookup, date) {
+  const rec = findCompanyDay(lookup, date);
+  const name = rec ? companyDayName(rec) : '';
+  const label = name || 'Holiday';
+  const empty = name ? '' : ' is-empty';
+  return `<button type="button" class="day-holiday${empty}" data-holiday-date="${esc(date)}" data-holiday-name="${esc(name)}" title="Public holiday">${esc(label)}</button>`;
+}
+
 export function renderWeekBoard(el, { jobs, chipJobs, days, teams, lookupJobs, today }) {
   const shown = chipJobs || jobs;
   const lookup = lookupJobs || jobs;
   const todayIso = today || calendarDay();
   const heads = days.map((d) => {
     const cls = [d === todayIso ? 'today' : '', isWeekend(d) ? 'weekend' : ''].join(' ');
-    return `<button class="day-col-head ${cls}" data-open-day="${d}" type="button">
+    return `<div class="day-col-head ${cls}" data-open-day="${d}">
       <div class="dow">${formatDay(d, { weekday: 'short', month: 'short' }).split(' ')[0]}</div>
       <div class="dom">${Number(d.slice(8))}</div>
-    </button>`;
+      ${holidayHeadHtml(lookup, d)}
+    </div>`;
   }).join('');
 
   const rows = teams.map((team) => {
@@ -424,7 +433,7 @@ export function renderDayBoard(el, { jobs, chipJobs, date, teams, lookupJobs, to
   }).join('');
 
   el.innerHTML = `<div class="board-wrap">
-    <div class="day-roster-head">${formatDay(date, { weekday: 'long' })}</div>
+    <div class="day-roster-head">${formatDay(date, { weekday: 'long' })}${holidayHeadHtml(lookup, date)}</div>
     <div class="day-roster" style="--cols:${teams.length}">${cols}</div>
   </div>`;
 }

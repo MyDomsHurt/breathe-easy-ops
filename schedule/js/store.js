@@ -18,7 +18,7 @@ import { appendChange, asChanges, fromScheduleJob } from '../../shared/job.js';
 import { matchHubspotIdByPhone, parsePhone } from '../../shared/phone-parse.js';
 import { allContacts } from './contacts-store.js?v=1';
 import { CONTACTS_COLLECTION, isJeffEmail, isOfficeEmail, JOBS_COLLECTION, shouldUseFirestore } from '../../shared/firebase-config.js';
-import { CREW_SOURCE, canPlaceJobOnTeamDay, cellTeamMembers, crewNoteId, hongKongToday, isCrewNote } from './team-day.js';
+import { COMPANY_SOURCE, CREW_SOURCE, canPlaceJobOnTeamDay, cellTeamMembers, crewNoteId, findCompanyDay, holidayId, hongKongToday, isCompanyDay, isCrewNote } from './team-day.js?v=3';
 import { planSlotTake, slotCountFor, slotFloor } from './capacity.js';
 
 const listeners = new Set();
@@ -268,10 +268,11 @@ function stampAudit(job, prev, action) {
   next.updated_by = email;
   next.updated_at = now;
   const prior = prev && prev.changes != null ? prev.changes : next.changes;
-  const diffs = action && !isCrewNote(next) ? fieldDiffs(prev, next) : [];
-  if (action === 'created' && !isCrewNote(next)) {
+  const skipAudit = isCrewNote(next) || isCompanyDay(next);
+  const diffs = action && !skipAudit ? fieldDiffs(prev, next) : [];
+  if (action === 'created' && !skipAudit) {
     next.changes = appendChange(prior, { at: now, by: email, action, diffs });
-  } else if (action && diffs.length && !isCrewNote(next)) {
+  } else if (action && diffs.length && !skipAudit) {
     next.changes = appendChange(prior, { at: now, by: email, action, diffs });
   } else {
     next.changes = asChanges(prior);
@@ -328,7 +329,7 @@ export function placeJobInSlot(jobId, date, team, targetSlot) {
   const job = getJob(jobId);
   if (!job) return null;
   if (!canPlaceJobOnTeamDay(allJobs(), date, team, job)) return job;
-  const destJobs = allJobs().filter((j) => !isCrewNote(j) && j.date === date && j.team_lead === team);
+  const destJobs = allJobs().filter((j) => !isCrewNote(j) && !isCompanyDay(j) && j.date === date && j.team_lead === team);
   const currentSlots = slotCountFor(allJobs(), date, team);
   const plan = planSlotTake(destJobs, currentSlots, jobId, targetSlot);
   const destChanged = job.date !== date || job.team_lead !== team;
@@ -358,7 +359,7 @@ export function setTeamDayMembers(date, team, members) {
   const value = String(members || '').trim();
   const noteId = crewNoteId(date, team);
   const prevNote = getJob(noteId);
-  const list = allJobs().filter((j) => !isCrewNote(j) && j.date === date && j.team_lead === team);
+  const list = allJobs().filter((j) => !isCrewNote(j) && !isCompanyDay(j) && j.date === date && j.team_lead === team);
   const befores = [];
   const afters = [];
   recording = false;
@@ -448,9 +449,49 @@ export function setTeamDayFull(date, team, on, actorEmail) {
     day_slots: prevNote && prevNote.day_slots,
     day_full: lockOn,
     day_locked: lockOn,
-    day_unlocked: past && !lockOn,
+    day_unlocked: !lockOn && (past || !!findCompanyDay(allJobs(), date)),
   }, prevNote));
   emit();
+}
+
+export function setCompanyDay(date, name, actorEmail) {
+  const actor = actorEmail !== undefined ? actorEmail : currentActorEmail();
+  if (!isOfficeEmail(actor)) return;
+  const d = String(date || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
+  const label = String(name == null ? '' : name).trim() || 'Public holiday';
+  const id = holidayId(d);
+  const prev = getJob(id) || findCompanyDay(allJobs(), d);
+  writeJob(toCanonical({
+    job_id: id,
+    date: d,
+    team_lead: '',
+    team_members: '',
+    client_name: '',
+    mobile: '',
+    phone_cc: '',
+    phone_national: '',
+    amount: '',
+    units: {},
+    acs: '',
+    time: '',
+    notes: label,
+    notes_long: '',
+    job_type: 'cleaning',
+    is_return: false,
+    source: COMPANY_SOURCE,
+    status: 'confirmed',
+  }, prev && prev.job_id === id ? prev : null));
+  emit();
+}
+
+export function clearCompanyDay(date, actorEmail) {
+  const actor = actorEmail !== undefined ? actorEmail : currentActorEmail();
+  if (!isOfficeEmail(actor)) return;
+  const d = String(date || '').trim();
+  const found = getJob(holidayId(d)) || findCompanyDay(allJobs(), d);
+  if (!found || !isCompanyDay(found)) return;
+  removeJob(found.job_id);
 }
 
 export function setTeamDaySlots(date, team, count) {
@@ -565,7 +606,7 @@ export async function applyPhonePatch() {
       missing += 1;
       continue;
     }
-    if (isCrewNote(job)) continue;
+    if (isCrewNote(job) || isCompanyDay(job)) continue;
     const mobile = String(row.mobile || '').trim();
     const cc = String(row.phoneCc || row.phone_cc || '').trim();
     const nat = String(row.phoneNational || row.phone_national || '').trim();
@@ -607,7 +648,7 @@ export function formatLiveJobPhones() {
   let skipped = 0;
   recording = false;
   for (const job of allJobs()) {
-    if (isCrewNote(job)) continue;
+    if (isCrewNote(job) || isCompanyDay(job)) continue;
     const raw = String(job.mobile || '').trim();
     if (!raw) {
       skipped += 1;
@@ -644,7 +685,7 @@ export function attachLiveJobContacts() {
   let ambiguous = 0;
   recording = false;
   for (const job of allJobs()) {
-    if (isCrewNote(job)) continue;
+    if (isCrewNote(job) || isCompanyDay(job)) continue;
     const hit = matchHubspotIdByPhone(job.mobile, contacts);
     const nextId = hit.status === 'one' ? hit.hubspot_id : '';
     const prevId = String(job.hubspot_id || '').trim();
@@ -860,7 +901,7 @@ export async function applyCleanTimes(updates) {
       if (!row || !row.job_id) continue;
       const prev = ops.getJob(row.job_id) || row.base;
       if (!prev || prev.deleted === true || prev.deleted === 'true') continue;
-      if (isCrewNote(prev)) continue;
+      if (isCrewNote(prev) || isCompanyDay(prev)) continue;
       const next = { ...prev, time: row.time };
       if (row.arrow) {
         next.changes = appendChange(prev.changes, {
@@ -903,7 +944,7 @@ export async function applySeptemberFixes(updates) {
       if (!inSeptember(row.date)) continue;
       const prev = ops.getJob(row.job_id) || row.base;
       if (!prev || prev.deleted === true || prev.deleted === 'true') continue;
-      if (isCrewNote(prev)) continue;
+      if (isCrewNote(prev) || isCompanyDay(prev)) continue;
       if (!inSeptember(prev.date)) continue;
       await ops.upsertJob({
         ...prev,
@@ -940,7 +981,7 @@ export async function applyCleanPhones(updates) {
       if (!row || !row.job_id) continue;
       const prev = ops.getJob(row.job_id) || row.base;
       if (!prev || prev.deleted === true || prev.deleted === 'true') continue;
-      if (isCrewNote(prev)) continue;
+      if (isCrewNote(prev) || isCompanyDay(prev)) continue;
       const saved = await ops.upsertJob({
         ...prev,
         job_id: prev.job_id,

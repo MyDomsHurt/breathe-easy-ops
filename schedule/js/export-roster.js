@@ -5,10 +5,10 @@
  * Contacts come from the Firestore contacts collection. No HubSpot writes.
  */
 import { TEAMS } from './config.js';
-import { isCrewNote, cellTeamMembers } from './team-day.js';
+import { isCrewNote, isCompanyDay, cellTeamMembers } from './team-day.js';
 import { pad, timeToMinutes } from './utils.js';
 import { isJeffEmail } from '../../shared/firebase-config.js';
-import { allJobs, initStore, listContactsForPhoneClean, usingFirestore } from './store.js?v=9';
+import { allJobs, initStore, listContactsForPhoneClean, usingFirestore } from './store.js?v=10';
 
 const SHEETJS_SRC = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
 const LEAD_MAP = {
@@ -404,7 +404,7 @@ function listExportContacts(contacts) {
 
 function listExportJobs(jobs) {
   const real = (jobs || []).filter((j) => {
-    if (!j || j.deleted || isCrewNote(j)) return false;
+    if (!j || j.deleted || isCrewNote(j) || isCompanyDay(j)) return false;
     const date = String(j.date || '').trim();
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
     return Boolean(canonicalLead(j));

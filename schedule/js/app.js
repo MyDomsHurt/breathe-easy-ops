@@ -1,6 +1,6 @@
 import { DISTRICTS, JOB_TYPES, TEAMS } from './config.js?v=3';
 import { canPlaceJobOnTeamDay, dateMarkState, findCrewNote, hongKongToday, isCompanyDay, isCrewNote, isTeamDayFull } from './team-day.js?v=5';
-import { addDays, formatDay, formatTime24, formatWeekLabel, jobTypeOf, mondayOf, mondayOfMonth, monthKey, normalizeLunch, parseISO, shortTime, weekDays, workWeekDays } from './utils.js';
+import { addDays, formatDay, formatTime24, jobTypeOf, mondayOf, normalizeLunch, parseISO, shortTime, weekDays, workWeekDays } from './utils.js';
 import { allJobs, applyCleanAcs, applyCleanPhones, applyCleanTimes, applySeptemberFixes, applySeptemberLoad, clearDateMark, getJob, listContactsForPhoneClean, listJobsForTimeClean, placeJobInSlot, redo, removeJob, setDateMark, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js?v=13';
 import { isOfficeEmail } from '../../shared/firebase-config.js';
 import { startScheduleAuth } from './auth.js';
@@ -78,6 +78,9 @@ const state = {
   query: '',
   focusJobId: '',
   showSunday: false,
+  calYear: Number(TODAY.slice(0, 4)),
+  calMonth: Number(TODAY.slice(5, 7)),
+  calMenu: '',
   contactQuery: '',
   contactId: '',
   contactAll: false,
@@ -96,10 +99,6 @@ function $(id) {
   return document.getElementById(id);
 }
 
-function sundayOfWeek(mondayIso) {
-  return addDays(mondayIso, 6);
-}
-
 function isSunday(iso) {
   return isSundayDate(iso);
 }
@@ -108,37 +107,162 @@ function boardDays() {
   return state.showSunday ? weekDays(state.monday) : workWeekDays(state.monday);
 }
 
+const CAL_MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+const CAL_DOW = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+function padCal(n) {
+  return String(n).padStart(2, '0');
+}
+
+function calendarDays(year, month) {
+  const first = `${year}-${padCal(month)}-01`;
+  const start = mondayOf(first);
+  return Array.from({ length: 42 }, (_, i) => addDays(start, i));
+}
+
+function dateControlHtml(opts = {}) {
+  const year = Number(opts.year);
+  const month = Number(opts.month);
+  const today = String(opts.today || '');
+  const monday = String(opts.monday || '');
+  const menu = opts.menu || '';
+  const monthLabel = CAL_MONTHS[month - 1] || '';
+  const days = calendarDays(year, month);
+  const yearOpen = menu === 'year';
+  const monthOpen = menu === 'month';
+  const yearFrom = Math.min(2018, year);
+  const yearTo = Math.max(2036, year);
+  const years = [];
+  for (let y = yearFrom; y <= yearTo; y += 1) years.push(y);
+  const yearList = yearOpen
+    ? `<div class="cal-year-list" id="calYearList">${years.map((y) => (
+      `<button type="button" class="cal-choice${y === year ? ' on' : ''}" data-cal-year="${y}">${y}</button>`
+    )).join('')}</div>`
+    : '<div class="cal-year-list" id="calYearList" hidden></div>';
+  const monthList = monthOpen
+    ? `<div class="cal-month-list" id="calMonthList">${CAL_MONTHS.map((name, i) => (
+      `<button type="button" class="cal-choice${i + 1 === month ? ' on' : ''}" data-cal-month="${i + 1}">${name}</button>`
+    )).join('')}</div>`
+    : '<div class="cal-month-list" id="calMonthList" hidden></div>';
+  const head = `<div class="cal-head">
+      <button type="button" class="cal-year" id="calYearBtn" aria-haspopup="listbox" aria-expanded="${yearOpen ? 'true' : 'false'}">${year}</button>
+      <button type="button" class="cal-month" id="calMonthBtn" aria-haspopup="listbox" aria-expanded="${monthOpen ? 'true' : 'false'}">${monthLabel}</button>
+      ${yearList}${monthList}
+    </div>`;
+  const dow = CAL_DOW.map((d) => `<span class="cal-dow">${d}</span>`).join('');
+  const cells = days.map((iso) => {
+    const inMonth = iso.slice(0, 7) === `${year}-${padCal(month)}`;
+    const inWeek = mondayOf(iso) === monday;
+    const isToday = iso === today;
+    const cls = ['cal-day'];
+    if (!inMonth) cls.push('muted');
+    if (inWeek) cls.push('in-week');
+    if (isToday) cls.push('is-today');
+    return `<button type="button" class="${cls.join(' ')}" data-cal-day="${iso}">${Number(iso.slice(8, 10))}</button>`;
+  }).join('');
+  return `${head}<div class="cal-grid">${dow}${cells}</div><button type="button" class="cal-today" id="calToday">Today</button>`;
+}
+
+function paintDateControl() {
+  const el = $('dateControl');
+  if (!el) return;
+  el.innerHTML = dateControlHtml({
+    year: state.calYear,
+    month: state.calMonth,
+    today: TODAY,
+    monday: state.monday,
+    menu: state.calMenu,
+  });
+}
+
+function closeCalLists() {
+  if (!state.calMenu) return;
+  state.calMenu = '';
+  paintDateControl();
+}
+
+function pickCalDay(iso) {
+  const day = String(iso || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return;
+  state.mode = 'week';
+  state.monday = mondayOf(day);
+  state.day = day;
+  state.calMenu = '';
+  if (isSunday(day)) state.showSunday = true;
+  paint();
+}
+
+function goCalToday() {
+  state.mode = 'week';
+  state.monday = mondayOf(TODAY);
+  state.day = TODAY;
+  state.calYear = Number(TODAY.slice(0, 4));
+  state.calMonth = Number(TODAY.slice(5, 7));
+  state.calMenu = '';
+  paint();
+}
+
+function bindDateControl() {
+  const el = $('dateControl');
+  if (!el || el.dataset.bound) return;
+  el.dataset.bound = '1';
+  el.addEventListener('click', (e) => {
+    const yearBtn = e.target.closest('#calYearBtn');
+    if (yearBtn) {
+      e.preventDefault();
+      state.calMenu = state.calMenu === 'year' ? '' : 'year';
+      paintDateControl();
+      return;
+    }
+    const monthBtn = e.target.closest('#calMonthBtn');
+    if (monthBtn) {
+      e.preventDefault();
+      state.calMenu = state.calMenu === 'month' ? '' : 'month';
+      paintDateControl();
+      return;
+    }
+    const yearPick = e.target.closest('[data-cal-year]');
+    if (yearPick) {
+      e.preventDefault();
+      state.calYear = Number(yearPick.dataset.calYear);
+      state.calMenu = '';
+      paintDateControl();
+      return;
+    }
+    const monthPick = e.target.closest('[data-cal-month]');
+    if (monthPick) {
+      e.preventDefault();
+      state.calMonth = Number(monthPick.dataset.calMonth);
+      state.calMenu = '';
+      paintDateControl();
+      return;
+    }
+    const todayBtn = e.target.closest('#calToday');
+    if (todayBtn) {
+      e.preventDefault();
+      goCalToday();
+      return;
+    }
+    const dayBtn = e.target.closest('[data-cal-day]');
+    if (dayBtn) {
+      e.preventDefault();
+      pickCalDay(dayBtn.dataset.calDay);
+    }
+  });
+}
+
 function visibleDates() {
   return state.mode === 'day' ? [state.day] : boardDays();
 }
 
-function sundayJobCount() {
-  const sun = sundayOfWeek(state.monday);
-  return allJobs().filter((j) => {
-    if (isCrewNote(j) || isCompanyDay(j)) return false;
-    if (j.date !== sun) return false;
-    if (state.teams.length && !state.teams.includes(j.team_lead)) return false;
-    if (state.districts.length && !state.districts.includes(j.district)) return false;
-    if (state.types.length && !state.types.includes(jobTypeOf(j))) return false;
-    return true;
-  }).length;
-}
-
 function syncSundayUi() {
   const btn = $('sundayToggle');
-  if (btn) {
-    btn.classList.toggle('on', state.showSunday);
-    btn.setAttribute('aria-pressed', state.showSunday ? 'true' : 'false');
-  }
-  const cue = $('sundayCue');
-  if (!cue) return;
-  const n = state.showSunday ? 0 : sundayJobCount();
-  if (n > 0) {
-    cue.hidden = false;
-    cue.textContent = `${n} on Sunday`;
-  } else {
-    cue.hidden = true;
-  }
+  if (!btn) return;
+  btn.classList.toggle('on', state.showSunday);
+  btn.setAttribute('aria-pressed', state.showSunday ? 'true' : 'false');
 }
 
 function teamJobs() {
@@ -232,17 +356,10 @@ function paintContacts() {
 }
 
 function paint() {
-  const label = $('weekLabel');
   const mount = $('boardMount');
-  if (!label || !mount) return;
+  if (!mount) return;
   const jobs = filteredJobs();
-  label.textContent = state.mode === 'day'
-    ? formatDay(state.day, { weekday: 'short', year: 'numeric' })
-    : formatWeekLabel(state.monday, state.showSunday);
-  $('prevWeek').setAttribute('aria-label', state.mode === 'day' ? 'Previous day' : 'Previous week');
-  $('nextWeek').setAttribute('aria-label', state.mode === 'day' ? 'Next day' : 'Next week');
-  const monthSel = $('monthSelect');
-  if (monthSel) monthSel.value = monthKey(state.mode === 'day' ? state.day : state.monday);
+  paintDateControl();
   $('viewBoard').hidden = state.view !== 'board';
   $('viewJobs').hidden = state.view !== 'jobs';
   if ($('viewContacts')) $('viewContacts').hidden = state.view !== 'contacts';
@@ -250,9 +367,6 @@ function paint() {
   if (root) root.dataset.view = state.view;
   document.querySelectorAll('[data-nav]').forEach((el) => {
     el.classList.toggle('on', el.dataset.nav === state.view);
-  });
-  document.querySelectorAll('[data-mode]').forEach((el) => {
-    el.classList.toggle('on', el.dataset.mode === state.mode);
   });
 
   if (state.view === 'board') {
@@ -339,12 +453,6 @@ function hideSearchHits() {
   const box = $('searchHits');
   if (!box) return;
   box.hidden = true;
-}
-
-function fillMonthSelect() {
-  const sel = $('monthSelect');
-  if (!sel) return;
-  sel.value = monthKey(state.mode === 'day' ? state.day : state.monday);
 }
 
 function startVanEdit(btn) {
@@ -1168,12 +1276,7 @@ function closeFilterMenus(except) {
   });
 }
 
-function closeDatePanel() {
-  const panel = $('datePanel');
-  const btn = $('weekLabel');
-  if (panel) panel.hidden = true;
-  if (btn) btn.setAttribute('aria-expanded', 'false');
-}
+
 
 function closeUserMenu() {
   const menu = $('userMenu');
@@ -1325,7 +1428,7 @@ function paintSettingsPanel() {
 
 function openSettingsPanel() {
   closeFilterMenus();
-  closeDatePanel();
+  closeCalLists();
   closeUserMenu();
   paintSettingsPanel();
   const root = $('settingsRoot');
@@ -1335,24 +1438,13 @@ function openSettingsPanel() {
   }
 }
 
-function toggleDatePanel() {
-  const panel = $('datePanel');
-  const btn = $('weekLabel');
-  if (!panel || !btn) return;
-  const open = panel.hidden;
-  closeFilterMenus();
-  closeUserMenu();
-  panel.hidden = !open;
-  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-}
-
 function toggleUserMenu() {
   const menu = $('userMenu');
   const btn = $('userMenuBtn');
   if (!menu || !btn) return;
   const open = menu.hidden;
   closeFilterMenus();
-  closeDatePanel();
+  closeCalLists();
   menu.hidden = !open;
   btn.setAttribute('aria-expanded', open ? 'true' : 'false');
 }
@@ -1482,14 +1574,14 @@ function bindFilters() {
 
   document.addEventListener('mousedown', (e) => {
     if (!e.target.closest('.filter-dd')) closeFilterMenus();
-    if (!e.target.closest('.date-cluster')) closeDatePanel();
+    if (!e.target.closest('.cal-block')) closeCalLists();
     if (!e.target.closest('.auth-slot')) closeUserMenu();
     if (!e.target.closest('#dayMarkMenu') && !e.target.closest('[data-day-mark]')) closeDayMarkMenu();
   });
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
     closeFilterMenus();
-    closeDatePanel();
+    closeCalLists();
     closeUserMenu();
     closeSettingsPanel();
     closeDayMarkMenu();
@@ -1523,24 +1615,6 @@ function bindChrome() {
       paint();
     });
   });
-  document.querySelectorAll('[data-mode]').forEach((el) => {
-    el.addEventListener('click', () => {
-      state.mode = el.dataset.mode;
-      if (state.mode === 'day') {
-        const days = boardDays();
-        state.day = days.includes(TODAY) ? TODAY : state.monday;
-      }
-      paint();
-    });
-  });
-  const weekLabel = $('weekLabel');
-  if (weekLabel) {
-    weekLabel.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      toggleDatePanel();
-    });
-  }
   const userMenuBtn = $('userMenuBtn');
   if (userMenuBtn) {
     userMenuBtn.addEventListener('click', (e) => {
@@ -1549,46 +1623,9 @@ function bindChrome() {
       toggleUserMenu();
     });
   }
-  $('prevWeek').addEventListener('click', () => {
-    if (state.mode === 'day') {
-      state.day = addDays(state.day, -1);
-      state.monday = mondayOf(state.day);
-    } else {
-      state.monday = addDays(state.monday, -7);
-      state.day = state.monday;
-    }
-    paint();
-  });
-  $('nextWeek').addEventListener('click', () => {
-    if (state.mode === 'day') {
-      state.day = addDays(state.day, 1);
-      state.monday = mondayOf(state.day);
-    } else {
-      state.monday = addDays(state.monday, 7);
-      state.day = state.monday;
-    }
-    paint();
-  });
-  $('thisWeek').addEventListener('click', () => {
-    state.monday = mondayOf(TODAY);
-    state.day = TODAY;
-    paint();
-  });
-  $('monthSelect').addEventListener('change', (e) => {
-    const value = e.target.value;
-    if (!value) return;
-    if (state.mode === 'day') {
-      state.day = value + '-01';
-      state.monday = mondayOf(state.day);
-    } else {
-      state.monday = mondayOfMonth(value);
-      state.day = state.monday;
-    }
-    state.focusJobId = '';
-    paint();
-  });
+  bindDateControl();
   $('newBooking').addEventListener('click', () => {
-    const date = state.mode === 'day' ? state.day : TODAY;
+    const date = TODAY;
     const boardTeams = visibleBoardTeams();
     openBooking(newBookingPrefill({ date, boardTeams: boardTeams.length ? boardTeams : teamOrder() }));
   });
@@ -1596,13 +1633,6 @@ function bindChrome() {
   if (sundayBtn) {
     sundayBtn.addEventListener('click', () => {
       state.showSunday = !state.showSunday;
-      paint();
-    });
-  }
-  const sundayCue = $('sundayCue');
-  if (sundayCue) {
-    sundayCue.addEventListener('click', () => {
-      state.showSunday = true;
       paint();
     });
   }
@@ -2295,7 +2325,6 @@ function bindOwnerTools() {
   }
 }
 
-fillMonthSelect();
 bindFilters();
 bindChrome();
 bindSettingsPanel();

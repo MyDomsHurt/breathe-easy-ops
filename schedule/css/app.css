@@ -1826,10 +1826,11 @@ button, input, select, textarea { font-family: inherit; }
   top: 0;
 }
 .contacts-table td {
-  padding: 9px 12px;
+  padding: 10px 12px;
   border-top: 1px solid #eef2f6;
   font-size: 13px;
-  vertical-align: top;
+  vertical-align: middle;
+  line-height: 1.3;
 }
 .contacts-table tr.contacts-row { cursor: pointer; }
 .contacts-table tr.contacts-row:hover td { background: #f8fafc; }

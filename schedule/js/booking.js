@@ -4,8 +4,14 @@ import { canPlaceJobOnTeamDay } from './team-day.js?v=5';
 import { addJob, allJobs, isStoreReady, removeJob, updateJob } from './store.js?v=13';
 import { allContacts } from './contacts-store.js?v=1';
 import { bookingFieldsFromContact, matchesBookingClient } from './contacts-query.js?v=2';
-import { jobsForContact } from './contact-jobs.js?v=4';
-import { paneHtml } from './contacts.js?v=6';
+import {
+  contactJobFields,
+  contactJobHref,
+  contactJobsSummary,
+  formatContactJobDate,
+  jobsForContact,
+  splitJobsForContact,
+} from './contact-jobs.js?v=4';
 import { contactDisplayName } from '../../shared/contact.js';
 import { displayNameForEmail } from '../../shared/firebase-config.js';
 import { highlightOf } from '../../shared/job.js';
@@ -49,7 +55,6 @@ let form = {
 };
 
 let phoneSnap = null;
-let sideView = 'card';
 let addrSnap = null;
 let lastTeamLead = '';
 
@@ -254,6 +259,98 @@ function findContactByHubspotId(contacts, id) {
   return found || { hubspot_id: sid };
 }
 
+function fieldText(value) {
+  return value == null ? '' : String(value).trim();
+}
+
+function hasWord(block, word) {
+  const w = fieldText(word);
+  if (!w) return true;
+  return fieldText(block).toLowerCase().indexOf(w.toLowerCase()) !== -1;
+}
+
+function addressBlock(c) {
+  const full = fieldText(c && c.address);
+  const line1 = fieldText(c && c.address_line1);
+  const street = fieldText(c && c.address_street);
+  const place = fieldText(c && c.address_place);
+  const territory = fieldText(c && c.address_territory);
+  let block = full || [line1, street].filter(Boolean).join(', ');
+  if (place && !hasWord(block, place)) block = block ? block + ', ' + place : place;
+  if (territory && !hasWord(block, territory)) block = block ? block + ', ' + territory : territory;
+  return block;
+}
+
+function kvRow(label, value) {
+  const v = fieldText(value);
+  if (!v) return '';
+  return `<div class="contact-kv"><dt>${escapeAttr(label)}</dt><dd>${escapeAttr(v)}</dd></div>`;
+}
+
+function bookingJobLine(job) {
+  const f = contactJobFields(job);
+  let amount = '';
+  if (job && job.amount != null && job.amount !== '') {
+    const n = Number(job.amount);
+    if (Number.isFinite(n)) amount = String(Math.round(n));
+  }
+  return [f.day || f.date, f.time, f.team, f.units, amount, f.notes].filter((x) => x !== '').join(' · ');
+}
+
+function bookingJobRow(j) {
+  const href = contactJobHref(j);
+  if (!href) return '';
+  return `<li><a class="contact-job contact-job-line" href="${escapeAttr(href)}" target="_blank" rel="noopener noreferrer">${escapeAttr(bookingJobLine(j))}</a></li>`;
+}
+
+function bookingJobsHtml(c, jobs, today) {
+  const id = c && c.hubspot_id;
+  jobsForContact(jobs, id);
+  const grouped = splitJobsForContact(jobs, id, today);
+  const sum = contactJobsSummary(jobs, id);
+  if (!sum.count) {
+    return '<p class="contacts-empty-sub">no job has this contact id</p>';
+  }
+  const count = sum.count === 1 ? '1 job' : sum.count + ' jobs';
+  const last = sum.last ? 'last ' + formatContactJobDate(sum.last) : '';
+  const total = 'total ' + Math.round(sum.total);
+  const head = [count, last, total].filter(Boolean).join(' · ');
+  function section(title, list) {
+    if (!list || !list.length) return '';
+    return `<details class="contact-jobs" open>
+      <summary>${escapeAttr(title)}</summary>
+      <ul class="contact-jobs-list">${list.map(bookingJobRow).join('')}</ul>
+    </details>`;
+  }
+  return `<p class="contact-jobs-sum">${escapeAttr(head)}</p>`
+    + section('Next', grouped.next)
+    + section('Past', grouped.past);
+}
+
+function bookingCardHtml(c, opts) {
+  if (!c) return '';
+  const name = contactDisplayName(c);
+  const nameHtml = name && name !== '—' ? `<h2>${escapeAttr(name)}</h2>` : '';
+  const phone = fieldText(c.phone);
+  const phoneDd = phone
+    ? `${escapeAttr(phone)} <button type="button" class="ghost-btn contact-copy" data-copy-phone="${escapeAttr(phone)}">Copy</button>`
+    : '';
+  const deals = (c.deals != null && c.deals !== '') ? String(c.deals) : '';
+  return `<div class="contact-pane-body">
+      ${nameHtml}
+      ${phoneDd ? `<div class="contact-kv"><dt>Phone</dt><dd>${phoneDd}</dd></div>` : ''}
+      ${kvRow('HubSpot id', c.hubspot_id)}
+      ${kvRow('Owner', c.owner)}
+      ${kvRow('Address', addressBlock(c))}
+      ${kvRow('Stream', c.stream)}
+      ${kvRow('Tag', c.tag)}
+      ${kvRow('Language', c.language)}
+      ${kvRow('Groups', c.groups)}
+      ${kvRow('HubSpot deals', deals)}
+      ${bookingJobsHtml(c, opts && opts.jobs, opts && opts.today)}
+    </div>`;
+}
+
 function hitButtonsHtml(hits, picked) {
   return (hits || []).map((c, i) => {
     const on = picked && String(picked.hubspot_id || '') === String(c.hubspot_id || '') && String(c.hubspot_id || '') !== '';
@@ -265,23 +362,13 @@ function hitButtonsHtml(hits, picked) {
   }).join('');
 }
 
-export function sidePanelHtml(opts = {}) {
-  const view = opts.view || 'card';
+function contactRailHtml(opts = {}) {
   const formState = opts.form || {};
-  const editing = opts.editing != null ? !!opts.editing : Boolean(formState.job_id);
   const contacts = opts.contacts || [];
   const jobs = opts.jobs || [];
   const hits = opts.hits || [];
   const picked = opts.picked || null;
   const attachedId = String(formState.hubspot_id || '').trim();
-  if (view === 'log' && editing) {
-    return `<aside class="log-rail" id="changeLog">
-      <div class="log-rail-head">
-        <h3>History</h3>
-      </div>
-      <div class="log-rail-body">${changeLogBody(formState.changes)}</div>
-    </aside>`;
-  }
   const searching = hits.length > 0;
   const cardContact = picked
     || (!searching && attachedId ? findContactByHubspotId(contacts, attachedId) : null);
@@ -292,18 +379,36 @@ export function sidePanelHtml(opts = {}) {
     ? '<button type="button" class="primary-btn" data-use-contact>Use this contact</button>'
     : '';
   const card = cardContact
-    ? `<div class="contact-pane">${paneHtml(cardContact, { jobs, today: opts.today })}${use}</div>`
+    ? `<div class="contact-pane">${bookingCardHtml(cardContact, { jobs, today: opts.today })}${use}</div>`
     : '';
   if (!hitStrip && !card) {
-    return '<aside class="log-rail" id="changeLog" hidden></aside>';
+    return '<aside class="contact-rail" id="contactRail" hidden></aside>';
   }
-  return `<aside class="log-rail" id="changeLog">
-      <div class="log-rail-body">${hitStrip}${card}</div>
+  return `<aside class="contact-rail" id="contactRail">
+      <div class="contact-rail-body">${hitStrip}${card}</div>
     </aside>`;
 }
 
+function logRailHtml(opts = {}) {
+  const formState = opts.form || {};
+  const editing = opts.editing != null ? !!opts.editing : Boolean(formState.job_id);
+  if (!editing) {
+    return '<aside class="log-rail" id="changeLog" hidden></aside>';
+  }
+  return `<aside class="log-rail" id="changeLog">
+      <div class="log-rail-head">
+        <h3>History</h3>
+      </div>
+      <div class="log-rail-body">${changeLogBody(formState.changes)}</div>
+    </aside>`;
+}
+
+export function sidePanelHtml(opts = {}) {
+  return contactRailHtml(opts) + logRailHtml(opts);
+}
+
 function changeRailHtml() {
-  return '<aside class="log-rail" id="changeLog" hidden></aside>';
+  return '<aside class="contact-rail" id="contactRail" hidden></aside><aside class="log-rail" id="changeLog" hidden></aside>';
 }
 
 function bindSidePanel(el) {
@@ -339,19 +444,10 @@ function bindSidePanel(el) {
   });
 }
 
-function paintSidePanel() {
-  const el = $('#changeLog');
+function paintOneRail(id, html) {
+  const el = $('#' + id);
   if (!el) return;
-  const html = sidePanelHtml({
-    view: sideView,
-    form,
-    contacts: allContacts(),
-    jobs: allJobs(),
-    hits: clientHitRows,
-    picked: clientHitPicked,
-    editing: Boolean(form.job_id),
-  });
-  const hide = html.indexOf('id="changeLog" hidden') !== -1;
+  const hide = html.indexOf('id="' + id + '" hidden') !== -1;
   if (hide) {
     if (el.setAttribute) el.setAttribute('hidden', '');
     el.hidden = true;
@@ -363,9 +459,22 @@ function paintSidePanel() {
     const close = html.lastIndexOf('</aside>');
     el.innerHTML = openEnd >= 0 && close > openEnd ? html.slice(openEnd + 1, close) : '';
   }
-  bindSidePanel(el);
+}
+
+function paintSidePanel() {
+  const opts = {
+    form,
+    contacts: allContacts(),
+    jobs: allJobs(),
+    hits: clientHitRows,
+    picked: clientHitPicked,
+    editing: Boolean(form.job_id),
+  };
+  paintOneRail('contactRail', contactRailHtml(opts));
+  paintOneRail('changeLog', logRailHtml(opts));
+  bindSidePanel($('#contactRail'));
   const logBtn = $('#toggleLog');
-  if (logBtn) logBtn.setAttribute('aria-expanded', sideView === 'log' ? 'true' : 'false');
+  if (logBtn) logBtn.setAttribute('aria-expanded', Boolean(form.job_id) ? 'true' : 'false');
 }
 
 function sizeFullBox(el, minRows, maxRows) {
@@ -418,7 +527,6 @@ function logButtonHtml() {
 }
 
 export function openBooking(prefill = {}) {
-  sideView = 'card';
   closeClientSearch();
   const jobs = allJobs();
   const editing = Boolean(prefill.job_id);
@@ -497,7 +605,6 @@ export function openBooking(prefill = {}) {
 export function closeBooking() {
   restorePhoneIfPending();
   restoreAddrIfPending();
-  sideView = 'card';
   closeClientSearch();
   const root = $('#bookingRoot');
   root.classList.remove('open', 'log-open');
@@ -712,8 +819,6 @@ export function bindForm() {
     logBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      sideView = sideView === 'log' ? 'card' : 'log';
-      if (sideView === 'log') closeClientSearch();
       paintSidePanel();
     });
   }
@@ -875,7 +980,6 @@ function ensureClientFlyoutEsc() {
 function showClientHit(client) {
   if (!client) return;
   clientHitPicked = client;
-  sideView = 'card';
   paintSidePanel();
 }
 
@@ -883,7 +987,6 @@ function useClientHit() {
   if (!clientHitPicked) return;
   applyPickedContact(clientHitPicked);
   closeClientSearch();
-  sideView = 'card';
   renderForm();
 }
 
@@ -905,7 +1008,6 @@ function renderHits(q) {
       ? (hits.find((c) => String(c.hubspot_id || '') === id) || null)
       : null;
   }
-  sideView = 'card';
   paintSidePanel();
 }
 

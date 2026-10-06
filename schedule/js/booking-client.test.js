@@ -187,108 +187,105 @@ assert(contactJobLine(jeffListed[0]).indexOf('Josh') !== -1, '5 line team');
 assert(contactJobLine(jeffListed[0]).indexOf('1W') !== -1, '5 line ACs');
 print('ok 5 Jeff Lamb jobs newest first; date time team ACs amount');
 
-const hiromi = {
-  first_name: 'Hiromi',
-  last_name: 'Sato',
-  hubspot_id: '467916890857',
-  phone: '+85261101111',
-  address: '9 Ice House Street, Central',
-  address_street: 'Ice House Street',
-  address_place: 'Central',
+const kay = {
+  first_name: 'Kay',
+  last_name: 'Lo',
+  hubspot_id: '468000000001',
+  phone: '+85261108888',
+  address: '88 Foo Road, Tai Po',
+  address_street: '88 Foo Road',
+  address_place: 'Tai Po',
+  address_territory: 'New Territories',
+  deals: 2,
 };
-const hiromiJob = {
-  job_id: '2026-10-05-matthew-1',
-  date: '2026-10-05',
-  time: '09:30',
-  team_lead: 'Matthew',
+const kayJob = {
+  job_id: '2026-10-08-alun-1',
+  date: '2026-10-08',
+  time: '16:30',
+  team_lead: 'Alun',
   acs: '2S',
   amount: 1800,
-  payment: 'Paid',
   notes: 'side gate',
-  hubspot_id: '467916890857',
-  client_name: 'Hiromi Sato',
+  hubspot_id: '468000000001',
+  client_name: 'Kay Lo',
 };
 const nameOnly = {
-  job_id: '2026-10-05-name-only',
-  date: '2026-10-05',
+  job_id: '2026-10-08-name-only',
+  date: '2026-10-08',
   time: '11:00',
   team_lead: 'Josh',
   acs: '99S',
   amount: 1,
   hubspot_id: '999',
-  client_name: 'Hiromi Sato',
+  client_name: 'Kay Lo',
 };
-const hiromiForm = {
-  job_id: hiromiJob.job_id,
-  hubspot_id: '467916890857',
-  changes: [],
+const kayForm = {
+  job_id: kayJob.job_id,
+  hubspot_id: '468000000001',
+  changes: [
+    { at: '2026-10-01T10:00:00.000Z', by: 'jefflamb1992@gmail.com', action: 'created', diffs: [] },
+  ],
 };
-const hiromiCard = sidePanelHtml({
-  view: 'card',
-  form: hiromiForm,
-  contacts: [hiromi],
-  jobs: [hiromiJob, nameOnly],
+const kayHtml = sidePanelHtml({
+  form: kayForm,
+  contacts: [kay],
+  jobs: [kayJob, nameOnly],
   hits: [],
   picked: null,
   editing: true,
   today: '2026-10-06',
 });
-assert(hiromiCard.indexOf('hidden') === -1, 'open job shows the card with no click');
-assert(hiromiCard.indexOf('Hiromi') !== -1, 'hiromi name');
-assert(hiromiCard.indexOf('467916890857') !== -1, 'hiromi hubspot id');
-assert(hiromiCard.indexOf('9 Ice House Street, Central') !== -1, 'hiromi address');
-assert(hiromiCard.indexOf('2026-10-05-matthew-1') !== -1, 'open job is on the card');
-assert(hiromiCard.indexOf('2S') !== -1, 'hiromi units');
-assert(hiromiCard.indexOf('Matthew') !== -1, 'hiromi team');
-assert(hiromiCard.indexOf('09:30') !== -1, 'hiromi time');
-assert(hiromiCard.indexOf('compact-row') !== -1, 'job row is a card');
-assert(hiromiCard.indexOf('Use this contact') === -1, 'job that already has the id has no use button');
-assert(hiromiCard.indexOf('99S') === -1, 'do not match jobs by name');
-assert(hiromiCard.indexOf('—') === -1, 'no dash rows ' + hiromiCard);
-const hiromiLog = sidePanelHtml({
-  view: 'log',
-  form: hiromiForm,
-  contacts: [hiromi],
-  jobs: [hiromiJob],
-  hits: [],
-  picked: null,
-  editing: true,
-});
-assert(hiromiLog.indexOf('History') !== -1, 'changelog control shows the change list');
-assert(hiromiLog.indexOf('Hiromi') === -1, 'changelog replaces the card');
-assert(hiromiLog.indexOf('contact-pane') === -1, 'card and changelog do not stack');
-const hiromiBack = sidePanelHtml({
-  view: 'card',
-  form: hiromiForm,
-  contacts: [hiromi],
-  jobs: [hiromiJob],
-  hits: [],
-  picked: null,
-  editing: true,
-});
-assert(hiromiBack.indexOf('Hiromi') !== -1, 'clicking changelog again returns the card');
+const railAt = kayHtml.indexOf('id="contactRail"');
+const logAt = kayHtml.indexOf('id="changeLog"');
+assert(railAt !== -1, 'contact card rail is present');
+assert(logAt > railAt, 'card then change log then drawer');
+assert(kayHtml.indexOf('id="contactRail" hidden') === -1, 'card stays open with the change log');
+assert(kayHtml.indexOf('id="changeLog" hidden') === -1, 'change log stays open with the card');
+assert(kayHtml.indexOf('Kay Lo') !== -1, 'kay name');
+assert(kayHtml.indexOf('468000000001') !== -1, 'kay hubspot id');
+assert(kayHtml.indexOf('88 Foo Road, Tai Po, New Territories') !== -1, 'one address block');
+assert(kayHtml.indexOf('Full address') === -1, 'full address is not its own row');
+assert(kayHtml.indexOf('>Street<') === -1, 'street is not its own row');
+assert(kayHtml.indexOf('Billing split') === -1, 'billing split is not its own row');
+assert(kayHtml.indexOf('>Place<') === -1, 'place is not its own row');
+assert(kayHtml.indexOf('>Territory<') === -1, 'territory is not its own row');
+assert(kayHtml.indexOf('HubSpot deals') !== -1, 'deals labelled HubSpot deals');
+assert(kayHtml.indexOf('contact-job-line') !== -1, 'job row is one line');
+assert(kayHtml.indexOf('compact-row') === -1, 'job row is not a compact card');
+const lineAt = kayHtml.indexOf('contact-job-line');
+const lineHtml = lineAt === -1 ? '' : kayHtml.slice(lineAt, kayHtml.indexOf('</a>', lineAt));
+assert(lineHtml.indexOf('8 Oct') !== -1, '8 Oct on the job line');
+assert(lineHtml.indexOf('16:30') !== -1, '16:30 on the job line');
+assert(lineHtml.indexOf('Alun') !== -1, 'Alun on the job line');
+assert(lineHtml.indexOf('2S') !== -1, '2S on the job line');
+assert(lineHtml.indexOf('1800') !== -1, '1800 on the job line');
+assert(lineHtml.indexOf('side gate') !== -1, 'note on the job line');
+assert(kayHtml.indexOf('History') !== -1, 'change log lists history');
+assert(kayHtml.indexOf('Job created') !== -1, 'change log lists the existing change');
+assert(kayHtml.indexOf('Use this contact') === -1, 'job that already has the id has no use button');
+assert(kayHtml.indexOf('99S') === -1, 'do not match jobs by name');
+assert(kayHtml.indexOf('—') === -1, 'no dash rows ' + kayHtml);
 const searchCard = sidePanelHtml({
-  view: 'card',
   form: { job_id: '', hubspot_id: '' },
-  contacts: [hiromi],
-  jobs: [hiromiJob],
-  hits: [hiromi],
-  picked: hiromi,
+  contacts: [kay],
+  jobs: [kayJob],
+  hits: [kay],
+  picked: kay,
   editing: false,
 });
 assert(searchCard.indexOf('Use this contact') !== -1, 'unconfirmed search still has Use this contact');
 const searchList = sidePanelHtml({
-  view: 'card',
-  form: hiromiForm,
-  contacts: [hiromi],
-  jobs: [hiromiJob],
-  hits: [hiromi, noJob],
+  form: kayForm,
+  contacts: [kay],
+  jobs: [kayJob],
+  hits: [kay, noJob],
   picked: null,
   editing: true,
 });
 assert(searchList.indexOf('data-pick-i') !== -1, 'search list before first click');
 assert(searchList.indexOf('Use this contact') === -1, 'list is not the summary');
-print('ok 6 Hiromi card opens with the job; changelog swaps the same panel');
+assert(searchList.indexOf('id="changeLog" hidden') === -1, 'search list keeps the change log');
+print('ok 6 Kay Lo card, change log, and drawer stay open together');
 
 const bookingSrc = readSrc('booking.js');
 const appSrc = readSrc('app.js');
@@ -303,10 +300,13 @@ assert(bookingSrc.indexOf("el.id = 'clientFlyout'") === -1, 'hits use the drawer
 assert(bookingSrc.indexOf('document.body.appendChild') === -1, 'panel is not a second flyout');
 assert(bookingSrc.indexOf('class="typeahead-list"') === -1, 'hits not a list under the field');
 assert(bookingSrc.indexOf('jobsForContact') !== -1, 'helper jobsForContact');
-assert(bookingSrc.indexOf('paneHtml') !== -1, 'reuse contact-card fields');
+assert(bookingSrc.indexOf('paneHtml') === -1, 'booking card is not the contacts pane');
+assert(bookingSrc.indexOf('function addressBlock') !== -1, 'one address block');
+assert(bookingSrc.indexOf('contact-job-line') !== -1, 'job row is one line');
+assert(bookingSrc.indexOf('HubSpot deals') !== -1, 'deals labelled HubSpot deals');
 assert(bookingSrc.indexOf('Use this contact') !== -1, 'confirm click');
 assert(bookingSrc.indexOf('hits.length > 1') !== -1, 'first click shows that contact only');
-assert(bookingSrc.indexOf("root.classList.add('log-open')") === -1, 'drawer does not move when the panel switches');
+assert(bookingSrc.indexOf("root.classList.add('log-open')") === -1, 'drawer does not move');
 const openAt = bookingSrc.indexOf('function bookingClientHits');
 const openBody = bookingSrc.slice(openAt, bookingSrc.indexOf('function renderHits'));
 assert(openBody.indexOf('applyPickedContact') === -1, 'opening the list must not fill the booking');
@@ -321,13 +321,18 @@ assert(useBody.indexOf('applyPickedContact') !== -1, 'Use this contact fills');
 assert(useBody.indexOf('closeClientSearch') !== -1, 'Use this contact closes the search');
 assert(bookingSrc.indexOf('form.hubspot_id = picked.hubspot_id') !== -1, 'pick keeps hubspot id');
 assert(bookingSrc.indexOf("from './contact-jobs.js?v=4'") !== -1, 'booking contact-jobs cache');
-assert(bookingSrc.indexOf("from './contacts.js?v=6'") !== -1, 'booking contacts cache');
+assert(bookingSrc.indexOf("from './contacts.js") === -1, 'booking does not import contacts pane');
 assert(bookingSrc.indexOf("from './contacts-query.js?v=2'") !== -1, 'booking contacts-query cache');
-assert(appSrc.indexOf("from './booking.js?v=49'") !== -1, 'app booking cache');
+assert(appSrc.indexOf("from './booking.js?v=50'") !== -1, 'app booking cache');
 assert(appSrc.indexOf("from './contacts-query.js?v=2'") !== -1, 'app contacts-query cache');
-assert(html.indexOf('js/app.js?v=93') !== -1, 'index app cache');
-assert(html.indexOf('css/app.css?v=59') !== -1, 'index css cache');
+assert(html.indexOf('js/app.js?v=94') !== -1, 'index app cache');
+assert(html.indexOf('css/app.css?v=60') !== -1, 'index css cache');
+const cssSrc = readSrc('../css/app.css');
+assert(cssSrc.indexOf('width: 520px') !== -1, 'card is wide enough for a job line');
+assert(cssSrc.indexOf('.contact-job-line') !== -1, 'job line class');
+assert(cssSrc.indexOf('white-space: nowrap') !== -1, 'job line stays on one line');
+assert(cssSrc.indexOf('right: calc(min(540px, 100%) + 300px)') !== -1, 'card sits left of the change log');
 assert(!/api\.hubapi|hubspot\.com|createDeal|writeDeal/.test(bookingSrc), 'no HubSpot write');
-print('ok 7 panel; first click summary; Use this contact fills; no HubSpot write');
+print('ok 7 three panels; first click summary; Use this contact fills; no HubSpot write');
 
 print('ok booking-client cases');

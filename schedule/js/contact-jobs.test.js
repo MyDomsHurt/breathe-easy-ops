@@ -3,6 +3,9 @@ import {
   contactJobFields,
   contactJobHref,
   contactJobLine,
+  contactJobPay,
+  contactJobsSummary,
+  formatContactJobDate,
   isSundayDate,
   jobsForContact,
   readJobLink,
@@ -100,6 +103,11 @@ assert(line.indexOf('gate code') === -1, 'no notes');
 assert(line.indexOf('61105262') === -1, 'no phone');
 assert(line.toLowerCase().indexOf('inv') === -1, 'no invoice');
 assert(line.indexOf('Ann') === -1, 'no client name');
+assert(fields.units === '2S', 'units');
+assert(fields.day === '22 Sep 2026', 'day ' + fields.day);
+assert(contactJobPay({ payment: 'Paid' }) === 'Paid', 'paid');
+assert(contactJobPay({ payment: 'Unpaid' }) === 'Unpaid', 'unpaid');
+assert(contactJobPay({ payment: '' }) === '', 'blank pay omitted');
 print('ok 3 row is date, time, team, ACs, amount');
 
 assert(contactJobHref(job()) === '/?date=2026-09-22&job=2026-09-22-josh-1', 'href');
@@ -151,6 +159,56 @@ assert(jeffHtml.indexOf('2026-10-20') === -1, 'name-matched job stays out');
 assert(jeffHtml.indexOf('Stream') === -1 && jeffHtml.indexOf('Deals') === -1, 'empty fields omitted');
 print('ok 5b Jeff Lamb record: HubSpot id, New Territories, no job, no dashes');
 
+assert(formatContactJobDate('2026-03-25') === '25 Mar 2026', 'kwan last date ' + formatContactJobDate('2026-03-25'));
+const kwan = {
+  first_name: 'Jeff',
+  last_name: 'Kwan',
+  hubspot_id: '459344538322',
+  address: 'House 8, 12 Foo Road, Sha Tin',
+  address_street: '12 Foo Road',
+  address_place: 'Sha Tin',
+  deals: 4,
+  revenue: 12000,
+};
+const kwanJob = job({
+  job_id: '2026-03-25-matthew-1',
+  date: '2026-03-25',
+  time: '10:00',
+  team_lead: 'Matthew',
+  acs: '6S',
+  amount: 4860,
+  payment: 'Paid',
+  notes: 'front gate',
+  hubspot_id: '459344538322',
+});
+const kwanHtml = paneHtml(kwan, {
+  today,
+  jobs: [
+    kwanJob,
+    job({ job_id: 'name-only-kwan', date: '2026-03-25', hubspot_id: '999', client_name: 'Jeff Kwan', acs: '99S', amount: 1 }),
+  ],
+});
+const kwanSum = contactJobsSummary([kwanJob], '459344538322');
+assert(kwanSum.count === 1 && kwanSum.last === '2026-03-25' && kwanSum.total === 4860, 'kwan summary');
+assert(kwanHtml.indexOf('Jeff Kwan') !== -1, 'kwan name');
+assert(kwanHtml.indexOf('459344538322') !== -1, 'kwan hubspot id');
+assert(kwanHtml.indexOf('House 8, 12 Foo Road, Sha Tin') !== -1, 'kwan address');
+assert(kwanHtml.indexOf('1 job') !== -1, 'kwan 1 job');
+assert(kwanHtml.indexOf('last 25 Mar 2026') !== -1, 'kwan last');
+assert(kwanHtml.indexOf('total 4860') !== -1, 'kwan total');
+assert(kwanHtml.indexOf('6S') !== -1, 'kwan units');
+assert(kwanHtml.indexOf('10:00') !== -1, 'kwan time');
+assert(kwanHtml.indexOf('Matthew') !== -1, 'kwan team');
+assert(kwanHtml.indexOf('compact-row') !== -1, 'kwan row is a card');
+assert(kwanHtml.indexOf('compact-units') !== -1, 'units in their cell');
+assert(kwanHtml.indexOf('front gate') !== -1, 'one note line');
+assert(kwanHtml.indexOf('Paid') !== -1, 'paid mark');
+assert(kwanHtml.indexOf('99S') === -1, 'do not match jobs by name');
+assert(kwanHtml.indexOf('HubSpot') !== -1, 'deals labelled HubSpot');
+assert(kwanHtml.indexOf('>Deals<') === -1, 'deals not the job count label');
+assert(kwanHtml.indexOf('—') === -1, 'no dash rows on kwan');
+print('ok 5c Jeff Kwan record: id, address, 1 job, last 25 Mar 2026, total 4860');
+
 const appSrc = readSrc('app.js');
 assert(appSrc.indexOf('readJobLink(window.location.search)') !== -1, 'boot reads params');
 assert(appSrc.indexOf('consumePendingJobLink') !== -1, 'consume on boot paint');
@@ -164,10 +222,13 @@ print('ok 6 boot URL reader and new tab leaves Contacts');
 
 const html = readSrc('../index.html');
 assert(html.indexOf('id="viewContacts"') !== -1, 'same contacts page');
-assert(html.indexOf('js/app.js?v=91') !== -1, 'app cache');
-assert(html.indexOf('css/app.css?v=58') !== -1, 'css cache');
-assert(appSrc.indexOf("from './contacts.js?v=5'") !== -1, 'contacts cache');
-assert(appSrc.indexOf("from './contact-jobs.js?v=3'") !== -1, 'contact-jobs cache');
+assert(html.indexOf('js/app.js?v=92') !== -1, 'app cache');
+assert(html.indexOf('css/app.css?v=59') !== -1, 'css cache');
+assert(appSrc.indexOf("from './contacts.js?v=6'") !== -1, 'contacts cache');
+assert(appSrc.indexOf("from './contact-jobs.js?v=4'") !== -1, 'contact-jobs cache');
+const cssSrc = readSrc('../css/app.css');
+assert(cssSrc.indexOf('minmax(200px, 280px) minmax(0, 1fr)') !== -1, 'table narrows; card fills');
+assert(cssSrc.indexOf('minmax(260px, 340px)') === -1, 'old card max width gone');
 assert(!/api\.hubapi|hubspot\.com|createDeal|writeDeal/.test(contactsSrc), 'no HubSpot writes in contacts');
 assert(!/api\.hubapi|hubspot\.com|createDeal|writeDeal/.test(appSrc), 'no HubSpot writes in app');
 print('ok 7 cache bump; no HubSpot write; no second page');

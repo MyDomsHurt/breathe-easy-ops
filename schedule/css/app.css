@@ -1797,7 +1797,7 @@ button, input, select, textarea { font-family: inherit; }
 }
 .contacts-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+  grid-template-columns: minmax(200px, 280px) minmax(0, 1fr);
   gap: 16px;
   min-height: 62vh;
   align-items: start;
@@ -1831,6 +1831,9 @@ button, input, select, textarea { font-family: inherit; }
   font-size: 13px;
   vertical-align: middle;
   line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .contacts-table tr.contacts-row { cursor: pointer; }
 .contacts-table tr.contacts-row:hover td { background: #f8fafc; }
@@ -1847,6 +1850,8 @@ button, input, select, textarea { font-family: inherit; }
   box-shadow: var(--shadow);
   padding: 20px 22px;
   min-height: 240px;
+  min-width: 0;
+  width: 100%;
 }
 .contact-pane h2 {
   margin: 0 0 8px;
@@ -1884,6 +1889,43 @@ button, input, select, textarea { font-family: inherit; }
   border-top: 1px solid #eef2f6;
 }
 .contact-job:hover { background: #f8fafc; }
+.contact-jobs-sum {
+  margin: 12px 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--brand-ink);
+}
+.contact-pane .contact-job.job-card-detailed {
+  margin: 0;
+  padding: 0;
+  border-top: 0;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+.contact-pane .contact-jobs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.contact-pane .contact-job.job-card-detailed .compact-row {
+  grid-template-columns: minmax(10ch, 14ch) minmax(0, 1fr) max-content;
+}
+.contact-pane .contact-job.job-card-detailed .compact-col-time {
+  width: auto;
+  max-width: none;
+}
+.contact-pane .contact-job.job-card-detailed .compact-time {
+  width: auto;
+  font-size: 14px;
+}
+.contact-pane .contact-job.job-card-detailed .compact-units {
+  max-width: none;
+}
+.contact-pane .contact-job.job-card-detailed .compact-notes {
+  -webkit-line-clamp: 1;
+  max-height: 1.4em;
+}
 .contact-kv {
   display: grid;
   grid-template-columns: 120px minmax(0, 1fr);

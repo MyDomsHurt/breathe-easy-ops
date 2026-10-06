@@ -3,7 +3,7 @@
  * Match is job.hubspot_id === contact hubspot_id only.
  */
 import { hongKongToday, isCompanyDay, isCrewNote } from './team-day.js';
-import { formatMoney } from './utils.js';
+import { formatMoney, notes1Text } from './utils.js';
 
 function parseQuery(search) {
   const s = String(search || '').replace(/^\?/, '');
@@ -62,14 +62,53 @@ export function contactJobAmount(job) {
   return Number.isFinite(n) ? formatMoney(n) : '';
 }
 
+export function formatContactJobDate(iso) {
+  const s = String(iso || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return '';
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-HK', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+export function contactJobPay(job) {
+  const pay = String(job && job.payment || '').trim();
+  if (!pay) return '';
+  const lower = pay.toLowerCase();
+  if (lower === 'free') return '';
+  if (lower === 'unpaid') return 'Unpaid';
+  return 'Paid';
+}
+
+export function contactJobsSummary(jobs, hubspotId) {
+  const listed = jobsForContact(jobs, hubspotId);
+  let last = '';
+  let total = 0;
+  listed.forEach((j) => {
+    const date = String(j && j.date || '').trim();
+    if (date && (!last || date > last)) last = date;
+    if (!j || j.amount == null || j.amount === '') return;
+    const n = Number(j.amount);
+    if (Number.isFinite(n)) total += n;
+  });
+  return { count: listed.length, last, total };
+}
+
 export function contactJobFields(job) {
   const j = job && typeof job === 'object' ? job : {};
+  const acs = j.acs == null ? '' : String(j.acs);
   return {
     date: j.date == null ? '' : String(j.date),
+    day: formatContactJobDate(j.date),
     time: j.time == null ? '' : String(j.time),
     team: j.team_lead == null ? '' : String(j.team_lead),
-    acs: j.acs == null ? '' : String(j.acs),
+    acs,
+    units: acs.trim(),
     amount: contactJobAmount(j),
+    pay: contactJobPay(j),
+    notes: notes1Text(j),
   };
 }
 

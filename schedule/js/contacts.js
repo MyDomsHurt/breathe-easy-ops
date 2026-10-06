@@ -2,8 +2,14 @@ import { contactDisplayName } from '../../shared/contact.js';
 import { allContacts, importContacts, usingContactsFirestore } from './contacts-store.js?v=1';
 import { contactsFromCsv } from './contacts-import.js?v=2';
 import { queryContacts, uniqueContactValues } from './contacts-query.js?v=2';
-import { contactJobHref, contactJobLine, splitJobsForContact } from './contact-jobs.js?v=3';
-import { esc } from './utils.js';
+import {
+  contactJobFields,
+  contactJobHref,
+  contactJobsSummary,
+  formatContactJobDate,
+  splitJobsForContact,
+} from './contact-jobs.js?v=4';
+import { esc, formatMoney } from './utils.js';
 
 export { queryContacts, uniqueContactValues };
 
@@ -17,9 +23,7 @@ function kv(label, value) {
   return `<div class="contact-kv"><dt>${esc(label)}</dt><dd>${esc(v)}</dd></div>`;
 }
 
-function addressLine(c) {
-  const full = text(c && c.address);
-  if (full) return full;
+function billingSplit(c) {
   return [
     c && c.address_line1,
     c && c.address_street,
@@ -28,28 +32,70 @@ function addressLine(c) {
   ].map(text).filter(Boolean).join(', ');
 }
 
-function jobRows(jobs) {
-  return (jobs || []).map((j) => {
-    const href = contactJobHref(j);
-    if (!href) return '';
-    return `<li><a class="contact-job" href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(contactJobLine(j))}</a></li>`;
-  }).join('');
+function hubspotRow(c) {
+  const bits = [];
+  if (c && c.deals != null && c.deals !== '') bits.push(String(c.deals));
+  if (c && c.revenue != null && c.revenue !== '') {
+    const n = Number(c.revenue);
+    if (Number.isFinite(n)) bits.push(formatMoney(n));
+  }
+  if (!bits.length) return '';
+  return kv('HubSpot', bits.join(' · '));
+}
+
+function payClass(pay) {
+  if (pay === 'Unpaid') return 'is-unpaid';
+  if (pay === 'Paid') return 'is-paid';
+  return '';
+}
+
+function jobRow(j) {
+  const href = contactJobHref(j);
+  if (!href) return '';
+  const f = contactJobFields(j);
+  const payBit = f.pay
+    ? `<span class="compact-pay ${payClass(f.pay)}">${esc(f.pay)}</span>`
+    : '';
+  return `<li><a class="contact-job job-card job-card-detailed" href="${esc(href)}" target="_blank" rel="noopener noreferrer">
+      <div class="compact-row">
+        <div class="compact-col compact-col-time">
+          ${f.day ? `<span class="compact-time">${esc(f.day)}</span>` : ''}
+          ${text(f.time) ? `<span class="detailed-phone">${esc(f.time)}</span>` : ''}
+        </div>
+        <div class="compact-col compact-col-main">
+          ${text(f.team) ? `<span class="compact-name">${esc(f.team)}</span>` : ''}
+          ${f.units ? `<span class="compact-units">${esc(f.units)}</span>` : ''}
+          ${f.amount ? `<p class="detailed-phone">${esc(f.amount)}</p>` : ''}
+          ${f.notes ? `<p class="compact-notes">${esc(f.notes)}</p>` : ''}
+        </div>
+        <div class="compact-col compact-col-meta">${payBit}</div>
+      </div>
+    </a></li>`;
 }
 
 function jobsSection(title, jobs) {
   if (!jobs || !jobs.length) return '';
   return `<details class="contact-jobs" open>
       <summary>${esc(title)}</summary>
-      <ul class="contact-jobs-list">${jobRows(jobs)}</ul>
+      <ul class="contact-jobs-list">${jobs.map(jobRow).join('')}</ul>
     </details>`;
 }
 
 function jobsHtml(c, opts) {
-  const grouped = splitJobsForContact(opts && opts.jobs, c && c.hubspot_id, opts && opts.today);
-  if (!grouped.next.length && !grouped.past.length) {
+  const jobs = opts && opts.jobs;
+  const id = c && c.hubspot_id;
+  const grouped = splitJobsForContact(jobs, id, opts && opts.today);
+  const sum = contactJobsSummary(jobs, id);
+  if (!sum.count) {
     return `<p class="contacts-empty-sub">no job has this contact id</p>`;
   }
-  return jobsSection('Next', grouped.next) + jobsSection('Past', grouped.past);
+  const count = sum.count === 1 ? '1 job' : sum.count + ' jobs';
+  const last = sum.last ? 'last ' + formatContactJobDate(sum.last) : '';
+  const total = 'total ' + Math.round(sum.total);
+  const head = [count, last, total].filter(Boolean).join(' · ');
+  return `<p class="contact-jobs-sum">${esc(head)}</p>`
+    + jobsSection('Next', grouped.next)
+    + jobsSection('Past', grouped.past);
 }
 
 export function paneHtml(c, opts) {
@@ -66,7 +112,17 @@ export function paneHtml(c, opts) {
       ${phoneDd ? `<div class="contact-kv"><dt>Phone</dt><dd>${phoneDd}</dd></div>` : ''}
       ${kv('HubSpot id', c.hubspot_id)}
       ${kv('Owner', c.owner)}
-      ${kv('Address', addressLine(c))}
+      ${kv('Full address', c.address)}
+      ${kv('Line 1', c.address_line1)}
+      ${kv('Street', c.address_street)}
+      ${kv('Place', c.address_place)}
+      ${kv('Territory', c.address_territory)}
+      ${kv('Billing split', billingSplit(c))}
+      ${kv('Stream', c.stream)}
+      ${kv('Tag', c.tag)}
+      ${kv('Language', c.language)}
+      ${kv('Groups', c.groups)}
+      ${hubspotRow(c)}
       ${jobsHtml(c, opts)}
     </div>`;
 }

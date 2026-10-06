@@ -1,5 +1,5 @@
 import { bookingFieldsFromContact, matchesBookingClient, searchBookingClients } from './contacts-query.js';
-import { commitBooking } from './booking.js';
+import { commitBooking, sidePanelHtml } from './booking.js';
 import { contactJobLine, jobsForContact } from './contact-jobs.js';
 import { emptyUnits } from './utils.js';
 
@@ -187,6 +187,109 @@ assert(contactJobLine(jeffListed[0]).indexOf('Josh') !== -1, '5 line team');
 assert(contactJobLine(jeffListed[0]).indexOf('1W') !== -1, '5 line ACs');
 print('ok 5 Jeff Lamb jobs newest first; date time team ACs amount');
 
+const hiromi = {
+  first_name: 'Hiromi',
+  last_name: 'Sato',
+  hubspot_id: '467916890857',
+  phone: '+85261101111',
+  address: '9 Ice House Street, Central',
+  address_street: 'Ice House Street',
+  address_place: 'Central',
+};
+const hiromiJob = {
+  job_id: '2026-10-05-matthew-1',
+  date: '2026-10-05',
+  time: '09:30',
+  team_lead: 'Matthew',
+  acs: '2S',
+  amount: 1800,
+  payment: 'Paid',
+  notes: 'side gate',
+  hubspot_id: '467916890857',
+  client_name: 'Hiromi Sato',
+};
+const nameOnly = {
+  job_id: '2026-10-05-name-only',
+  date: '2026-10-05',
+  time: '11:00',
+  team_lead: 'Josh',
+  acs: '99S',
+  amount: 1,
+  hubspot_id: '999',
+  client_name: 'Hiromi Sato',
+};
+const hiromiForm = {
+  job_id: hiromiJob.job_id,
+  hubspot_id: '467916890857',
+  changes: [],
+};
+const hiromiCard = sidePanelHtml({
+  view: 'card',
+  form: hiromiForm,
+  contacts: [hiromi],
+  jobs: [hiromiJob, nameOnly],
+  hits: [],
+  picked: null,
+  editing: true,
+  today: '2026-10-06',
+});
+assert(hiromiCard.indexOf('hidden') === -1, 'open job shows the card with no click');
+assert(hiromiCard.indexOf('Hiromi') !== -1, 'hiromi name');
+assert(hiromiCard.indexOf('467916890857') !== -1, 'hiromi hubspot id');
+assert(hiromiCard.indexOf('9 Ice House Street, Central') !== -1, 'hiromi address');
+assert(hiromiCard.indexOf('2026-10-05-matthew-1') !== -1, 'open job is on the card');
+assert(hiromiCard.indexOf('2S') !== -1, 'hiromi units');
+assert(hiromiCard.indexOf('Matthew') !== -1, 'hiromi team');
+assert(hiromiCard.indexOf('09:30') !== -1, 'hiromi time');
+assert(hiromiCard.indexOf('compact-row') !== -1, 'job row is a card');
+assert(hiromiCard.indexOf('Use this contact') === -1, 'job that already has the id has no use button');
+assert(hiromiCard.indexOf('99S') === -1, 'do not match jobs by name');
+assert(hiromiCard.indexOf('—') === -1, 'no dash rows ' + hiromiCard);
+const hiromiLog = sidePanelHtml({
+  view: 'log',
+  form: hiromiForm,
+  contacts: [hiromi],
+  jobs: [hiromiJob],
+  hits: [],
+  picked: null,
+  editing: true,
+});
+assert(hiromiLog.indexOf('History') !== -1, 'changelog control shows the change list');
+assert(hiromiLog.indexOf('Hiromi') === -1, 'changelog replaces the card');
+assert(hiromiLog.indexOf('contact-pane') === -1, 'card and changelog do not stack');
+const hiromiBack = sidePanelHtml({
+  view: 'card',
+  form: hiromiForm,
+  contacts: [hiromi],
+  jobs: [hiromiJob],
+  hits: [],
+  picked: null,
+  editing: true,
+});
+assert(hiromiBack.indexOf('Hiromi') !== -1, 'clicking changelog again returns the card');
+const searchCard = sidePanelHtml({
+  view: 'card',
+  form: { job_id: '', hubspot_id: '' },
+  contacts: [hiromi],
+  jobs: [hiromiJob],
+  hits: [hiromi],
+  picked: hiromi,
+  editing: false,
+});
+assert(searchCard.indexOf('Use this contact') !== -1, 'unconfirmed search still has Use this contact');
+const searchList = sidePanelHtml({
+  view: 'card',
+  form: hiromiForm,
+  contacts: [hiromi],
+  jobs: [hiromiJob],
+  hits: [hiromi, noJob],
+  picked: null,
+  editing: true,
+});
+assert(searchList.indexOf('data-pick-i') !== -1, 'search list before first click');
+assert(searchList.indexOf('Use this contact') === -1, 'list is not the summary');
+print('ok 6 Hiromi card opens with the job; changelog swaps the same panel');
+
 const bookingSrc = readSrc('booking.js');
 const appSrc = readSrc('app.js');
 const html = readSrc('../index.html');
@@ -196,13 +299,14 @@ assert(bookingSrc.indexOf('matchesBookingClient') !== -1, 'same match as 6110526
 assert(bookingSrc.indexOf('s.length < 2') === -1, 'empty box stays open');
 assert(bookingSrc.indexOf("addEventListener('focus'") !== -1, 'focus opens the list');
 assert(bookingSrc.indexOf('.slice(0, 7)') === -1, 'no 7 cap');
-assert(bookingSrc.indexOf("el.id = 'clientFlyout'") !== -1, 'hits open in a flyout');
-assert(bookingSrc.indexOf('document.body.appendChild') !== -1, 'flyout beside the drawer');
+assert(bookingSrc.indexOf("el.id = 'clientFlyout'") === -1, 'hits use the drawer panel');
+assert(bookingSrc.indexOf('document.body.appendChild') === -1, 'panel is not a second flyout');
 assert(bookingSrc.indexOf('class="typeahead-list"') === -1, 'hits not a list under the field');
 assert(bookingSrc.indexOf('jobsForContact') !== -1, 'helper jobsForContact');
-assert(bookingSrc.indexOf('contactJobLine') !== -1, 'job line helper');
+assert(bookingSrc.indexOf('paneHtml') !== -1, 'reuse contact-card fields');
 assert(bookingSrc.indexOf('Use this contact') !== -1, 'confirm click');
 assert(bookingSrc.indexOf('hits.length > 1') !== -1, 'first click shows that contact only');
+assert(bookingSrc.indexOf("root.classList.add('log-open')") === -1, 'drawer does not move when the panel switches');
 const openAt = bookingSrc.indexOf('function bookingClientHits');
 const openBody = bookingSrc.slice(openAt, bookingSrc.indexOf('function renderHits'));
 assert(openBody.indexOf('applyPickedContact') === -1, 'opening the list must not fill the booking');
@@ -210,19 +314,20 @@ const showAt = bookingSrc.indexOf('function showClientHit');
 assert(showAt !== -1, 'first click shows the contact');
 const showBody = bookingSrc.slice(showAt, bookingSrc.indexOf('function useClientHit'));
 assert(showBody.indexOf('applyPickedContact') === -1, 'first click must not fill the booking');
-assert(showBody.indexOf('paintClientFlyout') !== -1, 'first click paints the summary');
+assert(showBody.indexOf('paintSidePanel') !== -1, 'first click paints the summary');
 const useAt = bookingSrc.indexOf('function useClientHit');
-const useBody = bookingSrc.slice(useAt, bookingSrc.indexOf('function paintClientFlyout'));
+const useBody = bookingSrc.slice(useAt, bookingSrc.indexOf('function bookingClientHits'));
 assert(useBody.indexOf('applyPickedContact') !== -1, 'Use this contact fills');
-assert(useBody.indexOf('closeClientFlyout') !== -1, 'Use this contact closes the flyout');
+assert(useBody.indexOf('closeClientSearch') !== -1, 'Use this contact closes the search');
 assert(bookingSrc.indexOf('form.hubspot_id = picked.hubspot_id') !== -1, 'pick keeps hubspot id');
 assert(bookingSrc.indexOf("from './contact-jobs.js?v=4'") !== -1, 'booking contact-jobs cache');
+assert(bookingSrc.indexOf("from './contacts.js?v=6'") !== -1, 'booking contacts cache');
 assert(bookingSrc.indexOf("from './contacts-query.js?v=2'") !== -1, 'booking contacts-query cache');
-assert(appSrc.indexOf("from './booking.js?v=48'") !== -1, 'app booking cache');
+assert(appSrc.indexOf("from './booking.js?v=49'") !== -1, 'app booking cache');
 assert(appSrc.indexOf("from './contacts-query.js?v=2'") !== -1, 'app contacts-query cache');
-assert(html.indexOf('js/app.js?v=92') !== -1, 'index app cache');
+assert(html.indexOf('js/app.js?v=93') !== -1, 'index app cache');
 assert(html.indexOf('css/app.css?v=59') !== -1, 'index css cache');
 assert(!/api\.hubapi|hubspot\.com|createDeal|writeDeal/.test(bookingSrc), 'no HubSpot write');
-print('ok 6 flyout; first click summary; Use this contact fills; no HubSpot write');
+print('ok 7 panel; first click summary; Use this contact fills; no HubSpot write');
 
 print('ok booking-client cases');

@@ -4,7 +4,8 @@ import { canPlaceJobOnTeamDay } from './team-day.js?v=5';
 import { addJob, allJobs, isStoreReady, removeJob, updateJob } from './store.js?v=13';
 import { allContacts } from './contacts-store.js?v=1';
 import { bookingFieldsFromContact, matchesBookingClient } from './contacts-query.js?v=2';
-import { contactJobLine, jobsForContact } from './contact-jobs.js?v=4';
+import { jobsForContact } from './contact-jobs.js?v=4';
+import { paneHtml } from './contacts.js?v=6';
 import { contactDisplayName } from '../../shared/contact.js';
 import { displayNameForEmail } from '../../shared/firebase-config.js';
 import { highlightOf } from '../../shared/job.js';
@@ -48,6 +49,7 @@ let form = {
 };
 
 let phoneSnap = null;
+let sideView = 'card';
 let addrSnap = null;
 let lastTeamLead = '';
 
@@ -230,30 +232,140 @@ function logFallback(action) {
   return 'Saved';
 }
 
-function changeRailHtml() {
-  const rows = Array.isArray(form.changes) ? form.changes.slice().reverse() : [];
-  let body;
-  if (!rows.length) {
-    body = '<p class="log-empty">No history yet</p>';
-  } else {
-    body = rows.map((row) => {
-      const diffs = Array.isArray(row.diffs) ? row.diffs : [];
-      const sentences = diffs.length
-        ? diffs.map((d) => diffSentenceHtml(d)).join('')
-        : `<p class="log-sentence log-fallback">${escapeAttr(logFallback(row.action))}</p>`;
-      return `<article class="log-entry">
+function changeLogBody(changes) {
+  const rows = Array.isArray(changes) ? changes.slice().reverse() : [];
+  if (!rows.length) return '<p class="log-empty">No history yet</p>';
+  return rows.map((row) => {
+    const diffs = Array.isArray(row.diffs) ? row.diffs : [];
+    const sentences = diffs.length
+      ? diffs.map((d) => diffSentenceHtml(d)).join('')
+      : `<p class="log-sentence log-fallback">${escapeAttr(logFallback(row.action))}</p>`;
+    return `<article class="log-entry">
         <p class="log-meta">${escapeAttr(formatLogAt(row.at))} · ${escapeAttr(displayNameForEmail(row.by))}</p>
         ${sentences}
       </article>`;
-    }).join('');
-  }
-  return `
-    <aside class="log-rail" id="changeLog" hidden>
+  }).join('');
+}
+
+function findContactByHubspotId(contacts, id) {
+  const sid = String(id || '').trim();
+  if (!sid) return null;
+  const found = (contacts || []).find((c) => String(c && c.hubspot_id || '') === sid);
+  return found || { hubspot_id: sid };
+}
+
+function hitButtonsHtml(hits, picked) {
+  return (hits || []).map((c, i) => {
+    const on = picked && String(picked.hubspot_id || '') === String(c.hubspot_id || '') && String(c.hubspot_id || '') !== '';
+    const same = picked === c || on;
+    return `<button type="button" class="client-flyout-hit${same ? ' on' : ''}" data-pick-i="${i}">
+      <strong>${escapeAttr(contactDisplayName(c))}</strong>
+      <span class="sub">${escapeAttr(c.phone || '')}</span>
+    </button>`;
+  }).join('');
+}
+
+export function sidePanelHtml(opts = {}) {
+  const view = opts.view || 'card';
+  const formState = opts.form || {};
+  const editing = opts.editing != null ? !!opts.editing : Boolean(formState.job_id);
+  const contacts = opts.contacts || [];
+  const jobs = opts.jobs || [];
+  const hits = opts.hits || [];
+  const picked = opts.picked || null;
+  const attachedId = String(formState.hubspot_id || '').trim();
+  if (view === 'log' && editing) {
+    return `<aside class="log-rail" id="changeLog">
       <div class="log-rail-head">
         <h3>History</h3>
       </div>
-      <div class="log-rail-body">${body}</div>
+      <div class="log-rail-body">${changeLogBody(formState.changes)}</div>
     </aside>`;
+  }
+  const searching = hits.length > 0;
+  const cardContact = picked
+    || (!searching && attachedId ? findContactByHubspotId(contacts, attachedId) : null);
+  const hitStrip = ((!picked || hits.length > 1) && hits.length)
+    ? `<div class="client-flyout-hits">${hitButtonsHtml(hits, picked)}</div>`
+    : '';
+  const use = picked && String(picked.hubspot_id || '').trim() !== attachedId
+    ? '<button type="button" class="primary-btn" data-use-contact>Use this contact</button>'
+    : '';
+  const card = cardContact
+    ? `<div class="contact-pane">${paneHtml(cardContact, { jobs, today: opts.today })}${use}</div>`
+    : '';
+  if (!hitStrip && !card) {
+    return '<aside class="log-rail" id="changeLog" hidden></aside>';
+  }
+  return `<aside class="log-rail" id="changeLog">
+      <div class="log-rail-body">${hitStrip}${card}</div>
+    </aside>`;
+}
+
+function changeRailHtml() {
+  return '<aside class="log-rail" id="changeLog" hidden></aside>';
+}
+
+function bindSidePanel(el) {
+  if (!el) return;
+  el.querySelectorAll('[data-pick-i]').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      showClientHit(clientHitRows[Number(btn.dataset.pickI)]);
+    });
+  });
+  const useBtn = el.querySelector('[data-use-contact]');
+  if (useBtn) {
+    useBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      useClientHit();
+    });
+  }
+  el.querySelectorAll('[data-copy-phone]').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const num = btn.dataset.copyPhone || '';
+      if (!num) return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(num);
+      }
+    });
+  });
+  el.querySelectorAll('a.contact-job').forEach((a) => {
+    a.addEventListener('click', (e) => e.stopPropagation());
+  });
+}
+
+function paintSidePanel() {
+  const el = $('#changeLog');
+  if (!el) return;
+  const html = sidePanelHtml({
+    view: sideView,
+    form,
+    contacts: allContacts(),
+    jobs: allJobs(),
+    hits: clientHitRows,
+    picked: clientHitPicked,
+    editing: Boolean(form.job_id),
+  });
+  const hide = html.indexOf('id="changeLog" hidden') !== -1;
+  if (hide) {
+    if (el.setAttribute) el.setAttribute('hidden', '');
+    el.hidden = true;
+    el.innerHTML = '';
+  } else {
+    if (el.removeAttribute) el.removeAttribute('hidden');
+    el.hidden = false;
+    const openEnd = html.indexOf('>');
+    const close = html.lastIndexOf('</aside>');
+    el.innerHTML = openEnd >= 0 && close > openEnd ? html.slice(openEnd + 1, close) : '';
+  }
+  bindSidePanel(el);
+  const logBtn = $('#toggleLog');
+  if (logBtn) logBtn.setAttribute('aria-expanded', sideView === 'log' ? 'true' : 'false');
 }
 
 function sizeFullBox(el, minRows, maxRows) {
@@ -306,7 +418,8 @@ function logButtonHtml() {
 }
 
 export function openBooking(prefill = {}) {
-  closeClientFlyout();
+  sideView = 'card';
+  closeClientSearch();
   const jobs = allJobs();
   const editing = Boolean(prefill.job_id);
   const units = (prefill.acs != null || editing)
@@ -384,12 +497,11 @@ export function openBooking(prefill = {}) {
 export function closeBooking() {
   restorePhoneIfPending();
   restoreAddrIfPending();
-  closeClientFlyout();
+  sideView = 'card';
+  closeClientSearch();
   const root = $('#bookingRoot');
   root.classList.remove('open', 'log-open');
   root.setAttribute('aria-hidden', 'true');
-  const logPanel = $('#changeLog');
-  if (logPanel) logPanel.setAttribute('hidden', '');
 }
 
 function others() {
@@ -412,7 +524,7 @@ export function renderForm() {
 
   $('#bookingRoot').innerHTML = `
     <div class="drawer-bg" data-close="1"></div>
-    ${editing ? changeRailHtml() : ''}
+    ${changeRailHtml()}
     <aside class="drawer" role="dialog" aria-label="${editing ? 'Edit booking' : 'New booking'}">
       <div class="drawer-head">
         <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start">
@@ -582,6 +694,7 @@ export function renderForm() {
     </aside>
   `;
   bindForm();
+  paintSidePanel();
   paintPhoneCleanColors();
   paintAddrCleanColors();
   sizePhoneAddrBoxes();
@@ -595,28 +708,22 @@ export function bindForm() {
     el.addEventListener('click', closeBooking);
   });
   const logBtn = $('#toggleLog');
-  const logPanel = $('#changeLog');
-  if (logBtn && logPanel) {
+  if (logBtn) {
     logBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      const open = logPanel.hasAttribute('hidden');
-      if (open) {
-        logPanel.removeAttribute('hidden');
-        root.classList.add('log-open');
-      } else {
-        logPanel.setAttribute('hidden', '');
-        root.classList.remove('log-open');
-      }
-      logBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      sideView = sideView === 'log' ? 'card' : 'log';
+      if (sideView === 'log') closeClientSearch();
+      paintSidePanel();
     });
   }
   root.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
-    if (clientFlyoutOpen()) {
+    if (clientSearchOpen()) {
       e.preventDefault();
       e.stopPropagation();
-      closeClientFlyout();
+      closeClientSearch();
+      paintSidePanel();
       return;
     }
     if (!phoneDirty() && !addrDirty()) return;
@@ -742,32 +849,13 @@ let clientHitRows = [];
 let clientHitPicked = null;
 let clientEscBound = false;
 
-function clientFlyoutEl() {
-  let el = document.getElementById('clientFlyout');
-  if (el) return el;
-  if (typeof document === 'undefined' || !document.createElement || !document.body) return null;
-  el = document.createElement('aside');
-  el.id = 'clientFlyout';
-  el.className = 'client-flyout';
-  el.hidden = true;
-  el.addEventListener('mousedown', (e) => e.stopPropagation());
-  el.addEventListener('click', (e) => e.stopPropagation());
-  document.body.appendChild(el);
-  return el;
+function clientSearchOpen() {
+  return clientHitRows.length > 0 || !!clientHitPicked;
 }
 
-function clientFlyoutOpen() {
-  const el = document.getElementById('clientFlyout');
-  return !!(el && !el.hidden);
-}
-
-function closeClientFlyout() {
+function closeClientSearch() {
   clientHitRows = [];
   clientHitPicked = null;
-  const el = document.getElementById('clientFlyout');
-  if (!el) return;
-  el.hidden = true;
-  el.innerHTML = '';
 }
 
 function ensureClientFlyoutEsc() {
@@ -776,74 +864,27 @@ function ensureClientFlyoutEsc() {
   clientEscBound = true;
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
-    if (!clientFlyoutOpen()) return;
+    if (!clientSearchOpen()) return;
     e.preventDefault();
     e.stopPropagation();
-    closeClientFlyout();
+    closeClientSearch();
+    paintSidePanel();
   }, true);
 }
 
 function showClientHit(client) {
   if (!client) return;
   clientHitPicked = client;
-  paintClientFlyout();
+  sideView = 'card';
+  paintSidePanel();
 }
 
 function useClientHit() {
   if (!clientHitPicked) return;
   applyPickedContact(clientHitPicked);
-  closeClientFlyout();
+  closeClientSearch();
+  sideView = 'card';
   renderForm();
-}
-
-function paintClientFlyout() {
-  const el = clientFlyoutEl();
-  if (!el) return;
-  const hits = clientHitRows;
-  const picked = clientHitPicked;
-  if (!hits.length && !picked) {
-    el.hidden = false;
-    el.innerHTML = '<div class="client-flyout-hits"></div>';
-    return;
-  }
-  const hitHtml = hits.map((c, i) => {
-    const on = picked && String(picked.hubspot_id || '') === String(c.hubspot_id || '') && String(c.hubspot_id || '') !== '';
-    const same = picked === c || on;
-    return `<button type="button" class="client-flyout-hit${same ? ' on' : ''}" data-pick-i="${i}">
-      <strong>${escapeAttr(contactDisplayName(c))}</strong>
-      <span class="sub">${escapeAttr(c.phone || '')}</span>
-    </button>`;
-  }).join('');
-  let html = `<div class="client-flyout-hits">${hitHtml}</div>`;
-  if (picked) {
-    const jobs = jobsForContact(allJobs(), picked.hubspot_id);
-    const lines = jobs.map((j) => `<li>${escapeAttr(contactJobLine(j))}</li>`).join('');
-    html = `${hits.length > 1 ? `<div class="client-flyout-hits">${hitHtml}</div>` : ''}<div class="client-flyout-card">
-      <h3>${escapeAttr(contactDisplayName(picked))}</h3>
-      <p class="client-flyout-phone">${escapeAttr(picked.phone || '—')}</p>
-      <p class="client-flyout-addr">${escapeAttr(picked.address || '—')}</p>
-      <p class="client-flyout-count">Jobs · ${jobs.length}</p>
-      <ul class="client-flyout-jobs">${lines}</ul>
-      <button type="button" class="primary-btn" data-use-contact>Use this contact</button>
-    </div>`;
-  }
-  el.hidden = false;
-  el.innerHTML = html;
-  el.querySelectorAll('[data-pick-i]').forEach((btn) => {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      showClientHit(hits[Number(btn.dataset.pickI)]);
-    });
-  });
-  const useBtn = el.querySelector('[data-use-contact]');
-  if (useBtn) {
-    useBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      useClientHit();
-    });
-  }
 }
 
 function bookingClientHits(q) {
@@ -864,7 +905,8 @@ function renderHits(q) {
       ? (hits.find((c) => String(c.hubspot_id || '') === id) || null)
       : null;
   }
-  paintClientFlyout();
+  sideView = 'card';
+  paintSidePanel();
 }
 
 export function commitBooking(formState, status = 'confirmed', io = {}) {

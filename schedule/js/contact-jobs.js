@@ -2,7 +2,7 @@
  * Contact pane job list and /?date=&job= deep link.
  * Match is job.hubspot_id === contact hubspot_id only.
  */
-import { isCompanyDay, isCrewNote } from './team-day.js';
+import { hongKongToday, isCompanyDay, isCrewNote } from './team-day.js';
 import { formatMoney } from './utils.js';
 
 function parseQuery(search) {
@@ -37,6 +37,23 @@ export function jobsForContact(jobs, hubspotId) {
     return String(a.job_id || '').localeCompare(String(b.job_id || ''));
   });
   return out;
+}
+
+function byDateTime(a, b, newestFirst) {
+  const dir = newestFirst ? -1 : 1;
+  const d = String(a.date || '').localeCompare(String(b.date || ''));
+  if (d) return d * dir;
+  const t = String(a.time || '').localeCompare(String(b.time || ''));
+  if (t) return t * dir;
+  return String(a.job_id || '').localeCompare(String(b.job_id || ''));
+}
+
+export function splitJobsForContact(jobs, hubspotId, today) {
+  const listed = jobsForContact(jobs, hubspotId);
+  const todayIso = String(today || hongKongToday());
+  const next = listed.filter((j) => String(j.date || '') >= todayIso).sort((a, b) => byDateTime(a, b, false));
+  const past = listed.filter((j) => String(j.date || '') < todayIso).sort((a, b) => byDateTime(a, b, true));
+  return { next, past };
 }
 
 export function contactJobAmount(job) {

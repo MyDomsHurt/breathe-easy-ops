@@ -2,63 +2,72 @@ import { contactDisplayName } from '../../shared/contact.js';
 import { allContacts, importContacts, usingContactsFirestore } from './contacts-store.js?v=1';
 import { contactsFromCsv } from './contacts-import.js?v=2';
 import { queryContacts, uniqueContactValues } from './contacts-query.js?v=2';
-import { contactJobHref, contactJobLine, jobsForContact } from './contact-jobs.js?v=1';
-import { esc, formatMoney } from './utils.js';
+import { contactJobHref, contactJobLine, splitJobsForContact } from './contact-jobs.js?v=3';
+import { esc } from './utils.js';
 
 export { queryContacts, uniqueContactValues };
 
+function text(value) {
+  return value == null ? '' : String(value).trim();
+}
+
 function kv(label, value) {
-  const v = value == null || value === '' ? '—' : String(value);
+  const v = text(value);
+  if (!v) return '';
   return `<div class="contact-kv"><dt>${esc(label)}</dt><dd>${esc(v)}</dd></div>`;
 }
 
-function jobsHtml(c, opts) {
-  const jobs = jobsForContact(opts && opts.jobs, c && c.hubspot_id);
-  const open = opts && opts.jobsOpen ? ' open' : '';
-  const rows = jobs.map((j) => {
+function addressLine(c) {
+  const full = text(c && c.address);
+  if (full) return full;
+  return [
+    c && c.address_line1,
+    c && c.address_street,
+    c && c.address_place,
+    c && c.address_territory,
+  ].map(text).filter(Boolean).join(', ');
+}
+
+function jobRows(jobs) {
+  return (jobs || []).map((j) => {
     const href = contactJobHref(j);
     if (!href) return '';
     return `<li><a class="contact-job" href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(contactJobLine(j))}</a></li>`;
   }).join('');
-  return `<details class="contact-jobs"${open}>
-      <summary>Jobs · ${jobs.length}</summary>
-      <ul class="contact-jobs-list">${rows}</ul>
+}
+
+function jobsSection(title, jobs) {
+  if (!jobs || !jobs.length) return '';
+  return `<details class="contact-jobs" open>
+      <summary>${esc(title)}</summary>
+      <ul class="contact-jobs-list">${jobRows(jobs)}</ul>
     </details>`;
 }
 
-function paneHtml(c, opts) {
+function jobsHtml(c, opts) {
+  const grouped = splitJobsForContact(opts && opts.jobs, c && c.hubspot_id, opts && opts.today);
+  if (!grouped.next.length && !grouped.past.length) {
+    return `<p class="contacts-empty-sub">no job has this contact id</p>`;
+  }
+  return jobsSection('Next', grouped.next) + jobsSection('Past', grouped.past);
+}
+
+export function paneHtml(c, opts) {
   if (!c) {
     return `<div class="contact-pane-empty">Select a contact</div>`;
   }
-  const split = [
-    c.address_line1,
-    c.address_street,
-    c.address_place,
-    c.address_territory,
-  ].filter((x) => x && String(x).trim());
-  const phone = c.phone || '';
+  const phone = text(c.phone);
+  const phoneDd = phone
+    ? `${esc(phone)} <button type="button" class="ghost-btn contact-copy" data-copy-phone="${esc(phone)}">Copy</button>`
+    : '';
   return `
     <div class="contact-pane-body">
       <h2>${esc(contactDisplayName(c))}</h2>
-      ${jobsHtml(c, opts)}
-      <div class="contact-kv">
-        <dt>Phone</dt>
-        <dd>${phone ? `${esc(phone)} <button type="button" class="ghost-btn contact-copy" data-copy-phone="${esc(phone)}">Copy</button>` : '—'}</dd>
-      </div>
-      ${kv('Full address', c.address)}
-      ${kv('Billing split', split.length ? split.join(', ') : '')}
-      ${kv('Line 1', c.address_line1)}
-      ${kv('Street', c.address_street)}
-      ${kv('Place', c.address_place)}
-      ${kv('Territory', c.address_territory)}
-      ${kv('Stream', c.stream)}
-      ${kv('Tag', c.tag)}
-      ${kv('Language', c.language)}
-      ${kv('Groups', c.groups)}
-      ${kv('Instagram', c.instagram)}
+      ${phoneDd ? `<div class="contact-kv"><dt>Phone</dt><dd>${phoneDd}</dd></div>` : ''}
+      ${kv('HubSpot id', c.hubspot_id)}
       ${kv('Owner', c.owner)}
-      ${kv('Deals', c.deals == null ? '' : c.deals)}
-      ${kv('Revenue', c.revenue == null ? '' : formatMoney(c.revenue))}
+      ${kv('Address', addressLine(c))}
+      ${jobsHtml(c, opts)}
     </div>`;
 }
 
@@ -92,10 +101,6 @@ export function renderContacts(el, opts = {}) {
             <tr>
               <th>Name</th>
               <th>Phone</th>
-              <th>Place</th>
-              <th>Stream</th>
-              <th>Tag</th>
-              <th>Deals</th>
             </tr>
           </thead>
           <tbody>
@@ -104,12 +109,8 @@ export function renderContacts(el, opts = {}) {
               return `<tr class="contacts-row${on}" data-contact="${esc(c.hubspot_id)}">
                 <td>${esc(contactDisplayName(c))}</td>
                 <td>${esc(c.phone || '')}</td>
-                <td>${esc(c.address_place || '')}</td>
-                <td>${esc(c.stream || '')}</td>
-                <td>${esc(c.tag || '')}</td>
-                <td>${c.deals == null ? '' : esc(c.deals)}</td>
               </tr>`;
-            }).join('') || `<tr><td colspan="6" class="contacts-empty-sub">No matches</td></tr>`}
+            }).join('') || `<tr><td colspan="2" class="contacts-empty-sub">No matches</td></tr>`}
           </tbody>
         </table>
       </div>

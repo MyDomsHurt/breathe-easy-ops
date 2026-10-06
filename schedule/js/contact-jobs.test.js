@@ -6,7 +6,9 @@ import {
   isSundayDate,
   jobsForContact,
   readJobLink,
+  splitJobsForContact,
 } from './contact-jobs.js';
+import { paneHtml } from './contacts.js';
 
 function fail(msg) {
   print('FAIL ' + msg);
@@ -75,6 +77,19 @@ assert(jobsForContact([job()], '201').length === 1, 'one match');
 assert(jobsForContact([], '201').length === 0, 'empty list is empty');
 print('ok 2 empty list when no matching jobs');
 
+const today = '2026-10-06';
+const grouped = splitJobsForContact([
+  job({ job_id: 'next-late', date: '2026-10-20', time: '11:00', acs: '1W', amount: 400 }),
+  job({ job_id: 'next-today', date: '2026-10-06', time: '09:00' }),
+  job({ job_id: 'past-new', date: '2026-10-01', time: '14:00' }),
+  job({ job_id: 'past-old', date: '2026-09-22', time: '09:00' }),
+  job({ job_id: 'by-name', date: '2026-10-20', hubspot_id: '999', client_name: 'Jeff Lamb' }),
+], contactId, today);
+assert(grouped.next.map((j) => j.job_id).join(',') === 'next-today,next-late', 'next soonest first ' + grouped.next.map((j) => j.job_id));
+assert(grouped.past.map((j) => j.job_id).join(',') === 'past-new,past-old', 'past newest first ' + grouped.past.map((j) => j.job_id));
+assert(!grouped.next.some((j) => j.job_id === 'by-name') && !grouped.past.some((j) => j.job_id === 'by-name'), 'do not match jobs by name');
+print('ok 2b next soonest; past newest; hubspot_id only');
+
 const fields = contactJobFields(job());
 assert(fields.date === '2026-09-22' && fields.time === '09:00', 'date time');
 assert(fields.team === 'Josh' && fields.acs === '2S', 'team acs');
@@ -98,12 +113,43 @@ assert(isSundayDate('2026-09-22') === false, 'tuesday');
 print('ok 4 /?date=&job= link');
 
 const contactsSrc = readSrc('contacts.js');
-assert(contactsSrc.indexOf('<h2>') !== -1 && contactsSrc.indexOf('jobsHtml') !== -1, 'jobs under name');
-assert(contactsSrc.indexOf('jobsHtml(c, opts)') !== -1, 'jobs after name');
+assert(contactsSrc.indexOf('<th>Name</th>') !== -1 && contactsSrc.indexOf('<th>Phone</th>') !== -1, 'table name phone');
+assert(contactsSrc.indexOf('<th>Place</th>') === -1, 'place left the table');
+assert(contactsSrc.indexOf('<th>Stream</th>') === -1, 'stream left the table');
+assert(contactsSrc.indexOf('<th>Tag</th>') === -1, 'tag left the table');
+assert(contactsSrc.indexOf('<th>Deals</th>') === -1, 'deals left the table');
 assert(contactsSrc.indexOf('target="_blank"') !== -1, 'new tab');
-assert(contactsSrc.indexOf('Jobs ·') !== -1, 'count on summary');
 assert(contactsSrc.indexOf('contact-jobs-list') !== -1, 'list');
-print('ok 5 pane Jobs control');
+assert(contactsSrc.indexOf('no job has this contact id') !== -1, 'zero jobs line');
+assert(contactsSrc.indexOf("client_name") === -1, 'contacts paint does not match jobs by name');
+print('ok 5 table Name and Phone only; jobs on the record');
+
+const jeff = {
+  first_name: 'Jeff',
+  last_name: 'Lamb',
+  hubspot_id: '501',
+  phone: '+85261105262',
+  address: '',
+  address_territory: 'New Territories',
+  owner: '',
+  stream: '',
+  tag: '',
+  deals: null,
+};
+const jeffHtml = paneHtml(jeff, {
+  today,
+  jobs: [
+    job({ job_id: 'name-only', date: '2026-10-20', hubspot_id: '999', client_name: 'Jeff Lamb' }),
+  ],
+});
+assert(jeffHtml.indexOf('Jeff Lamb') !== -1, 'jeff name');
+assert(jeffHtml.indexOf('501') !== -1, 'jeff hubspot id');
+assert(jeffHtml.indexOf('New Territories') !== -1, 'jeff address line');
+assert(jeffHtml.indexOf('no job has this contact id') !== -1, 'jeff zero jobs');
+assert(jeffHtml.indexOf('—') === -1, 'no dash rows ' + jeffHtml);
+assert(jeffHtml.indexOf('2026-10-20') === -1, 'name-matched job stays out');
+assert(jeffHtml.indexOf('Stream') === -1 && jeffHtml.indexOf('Deals') === -1, 'empty fields omitted');
+print('ok 5b Jeff Lamb record: HubSpot id, New Territories, no job, no dashes');
 
 const appSrc = readSrc('app.js');
 assert(appSrc.indexOf('readJobLink(window.location.search)') !== -1, 'boot reads params');
@@ -118,10 +164,10 @@ print('ok 6 boot URL reader and new tab leaves Contacts');
 
 const html = readSrc('../index.html');
 assert(html.indexOf('id="viewContacts"') !== -1, 'same contacts page');
-assert(html.indexOf('js/app.js?v=90') !== -1, 'app cache');
-assert(html.indexOf('css/app.css?v=57') !== -1, 'css cache');
-assert(appSrc.indexOf("from './contacts.js?v=4'") !== -1, 'contacts cache');
-assert(appSrc.indexOf("from './contact-jobs.js?v=2'") !== -1, 'contact-jobs cache');
+assert(html.indexOf('js/app.js?v=91') !== -1, 'app cache');
+assert(html.indexOf('css/app.css?v=58') !== -1, 'css cache');
+assert(appSrc.indexOf("from './contacts.js?v=5'") !== -1, 'contacts cache');
+assert(appSrc.indexOf("from './contact-jobs.js?v=3'") !== -1, 'contact-jobs cache');
 assert(!/api\.hubapi|hubspot\.com|createDeal|writeDeal/.test(contactsSrc), 'no HubSpot writes in contacts');
 assert(!/api\.hubapi|hubspot\.com|createDeal|writeDeal/.test(appSrc), 'no HubSpot writes in app');
 print('ok 7 cache bump; no HubSpot write; no second page');

@@ -230,21 +230,19 @@ button, input, select, textarea { font-family: inherit; }
 
 .cal-block {
   position: relative;
-  flex: 0 0 408px;
-  width: 408px;
-  min-width: 408px;
-  max-width: 408px;
-  padding: 5px 6px 6px;
+  flex: 0 0 auto;
+  width: max-content;
+  padding: 4px 6px 6px;
   background: white;
   border: 1px solid var(--line);
-  border-radius: 9px;
+  border-radius: 8px;
 }
 .cal-head {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 3px;
-  margin: 0 0 3px;
+  gap: 2px;
+  margin: 0 0 2px;
 }
 .cal-year,
 .cal-month {
@@ -252,11 +250,11 @@ button, input, select, textarea { font-family: inherit; }
   background: transparent;
   color: var(--ink);
   font: inherit;
-  font-size: 12px;
-  font-weight: 800;
+  font-size: 13px;
+  font-weight: 500;
   letter-spacing: -0.02em;
-  padding: 2px 5px;
-  border-radius: 6px;
+  padding: 2px 4px;
+  border-radius: 4px;
   cursor: pointer;
 }
 .cal-year:hover,
@@ -269,22 +267,22 @@ button, input, select, textarea { font-family: inherit; }
 .cal-year-list,
 .cal-month-list {
   position: absolute;
-  top: calc(100% + 3px);
+  top: calc(100% + 2px);
   left: 0;
   z-index: 55;
-  min-width: 90px;
-  max-height: 165px;
+  min-width: 88px;
+  max-height: 180px;
   overflow: auto;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 5px;
+  gap: 1px;
+  padding: 4px;
   background: white;
   border: 1px solid var(--line);
-  border-radius: 9px;
+  border-radius: 8px;
   box-shadow: var(--shadow);
 }
-.cal-month-list { left: 54px; }
+.cal-month-list { left: 48px; }
 .cal-year-list[hidden],
 .cal-month-list[hidden] { display: none; }
 .cal-choice {
@@ -292,10 +290,10 @@ button, input, select, textarea { font-family: inherit; }
   background: transparent;
   text-align: left;
   font: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 5px 6px;
-  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 4px 6px;
+  border-radius: 4px;
   cursor: pointer;
   color: var(--ink);
 }
@@ -306,26 +304,35 @@ button, input, select, textarea { font-family: inherit; }
 }
 .cal-grid {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 2px;
+  grid-template-columns: repeat(7, max-content);
+  gap: 0;
+  justify-content: start;
+}
+.cal-dow,
+.cal-day {
+  box-sizing: border-box;
+  width: calc(2ch + 4px);
+  min-width: calc(2ch + 4px);
+  max-width: calc(2ch + 4px);
+  padding: 2px;
+  text-align: center;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
 }
 .cal-dow {
-  text-align: center;
-  font-size: 9px;
-  font-weight: 700;
+  font-size: 10px;
+  font-weight: 500;
   color: var(--muted);
-  padding: 2px 0;
 }
 .cal-day {
   border: 0;
   background: transparent;
-  height: 18px;
-  padding: 0;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 650;
+  height: auto;
   color: var(--ink);
-  border-radius: 6px;
+  border-radius: 4px;
   cursor: pointer;
 }
 .cal-day:hover { background: #f8fafc; }
@@ -335,20 +342,20 @@ button, input, select, textarea { font-family: inherit; }
   box-shadow: inset 0 0 0 1px var(--brand);
 }
 .cal-today {
-  display: block;
-  width: 100%;
-  margin: 5px 0 0;
-  border: 1px solid var(--line);
-  background: white;
+  display: inline-block;
+  width: auto;
+  margin: 4px 0 0;
+  border: 0;
+  background: transparent;
   color: var(--brand-ink);
-  border-radius: 6px;
-  padding: 3px 6px;
+  border-radius: 0;
+  padding: 2px 0;
   font: inherit;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
 }
-.cal-today:hover { background: #f8fafc; }
+.cal-today:hover { background: transparent; text-decoration: underline; }
 
 .icon-btn, .ghost-btn, .primary-btn {
   border: 1px solid var(--line);

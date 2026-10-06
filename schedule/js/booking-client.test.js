@@ -352,7 +352,7 @@ assert(bookingSrc.indexOf('no changes yet') !== -1, 'empty log copy');
 assert(appSrc.indexOf("from './booking.js?v=51'") !== -1, 'app booking cache');
 assert(appSrc.indexOf("from './contacts-query.js?v=2'") !== -1, 'app contacts-query cache');
 assert(html.indexOf('js/app.js?v=96') !== -1, 'index app cache');
-assert(html.indexOf('css/app.css?v=63') !== -1, 'index css cache');
+assert(html.indexOf('css/app.css?v=64') !== -1, 'index css cache');
 const cssSrc = readSrc('../css/app.css');
 assert(cssSrc.indexOf('width: 520px') !== -1, 'card is wide enough for a job line');
 assert(cssSrc.indexOf('.contact-job-line') !== -1, 'job line class');

@@ -51,20 +51,23 @@ assert(boardPrefs !== -1 && sundayAt > boardPrefs && sundayAt < sepAt, '2 Sunday
 assert(html.slice(boardPrefs, sepAt).indexOf('Board') !== -1, '2 Board heading');
 print('ok 2 New booking far right; Sunday in Settings Board');
 
-assert(css.indexOf('flex: 0 0 408px') !== -1, '3 calendar 1.5 times current width');
-assert(css.indexOf('width: 408px') !== -1, '3 calendar width 408');
-assert(css.indexOf('flex: 0 0 272px') === -1, '3 small 272 calendar gone');
+assert(css.indexOf('width: max-content') !== -1, '3 calendar hugs the grid');
+assert(css.indexOf('repeat(7, max-content)') !== -1, '3 seven columns hug the days');
+assert(css.indexOf('calc(2ch + 4px)') !== -1, '3 day cell is two digits plus 2px padding');
+assert(css.indexOf('408px') === -1, '3 408px calendar gone');
 assert(css.indexOf('544px') === -1, '3 old 544px calendar gone');
-assert(css.indexOf('height: 18px') !== -1, '3 day cells 1.5 times height');
-assert(css.indexOf('height: 12px') === -1, '3 12px day cells gone');
-assert(css.indexOf('.cal-year') !== -1 && css.indexOf('font-size: 12px') !== -1, '3 year month and Today scale');
+assert(css.indexOf('height: auto') !== -1, '3 day cells size to the digits');
+assert(css.indexOf('font-size: 13px') !== -1, '3 day numbers 13px');
+assert(css.indexOf('font-weight: 500') !== -1, '3 day numbers weight 500');
+assert(css.indexOf('.cal-today') !== -1, '3 Today stays');
+assert(css.indexOf('.cal-today {\n  display: inline-block') !== -1, '3 Today is a text control');
+assert(css.indexOf('.cal-today {\n  display: block') === -1, '3 Today is not a full-width row');
 assert(css.indexOf('repeat(var(--days, 6), 272px)') !== -1, '3 day columns stay 272');
 assert(css.indexOf('.cal-year-list') !== -1, '3 year list');
 assert(css.indexOf('.cal-month-list') !== -1, '3 month list');
-assert(css.indexOf('top: calc(100% + 3px)') !== -1, '3 lists open down');
 assert(css.indexOf('.week-nav') === -1, '3 old week-nav gone');
 assert(css.indexOf('.date-panel') === -1, '3 old date-panel gone');
-print('ok 3 calendar 408px; day cells 18px; lists open down');
+print('ok 3 calendar hugs seven two-digit columns; Today is a word');
 
 assert(src.indexOf('function dateControlHtml') !== -1, '4 no dateControlHtml');
 assert(src.indexOf('function paintDateControl') !== -1, '4 no paintDateControl');
@@ -113,8 +116,8 @@ assert(bindBody.indexOf('pickCalDay') !== -1, '6 click calls pickCalDay');
 print('ok 6 clicking 8 Oct moves the week; calendar stays open');
 
 assert(html.indexOf('js/app.js?v=96') !== -1, '7 index app cache');
-assert(html.indexOf('css/app.css?v=63') !== -1, '7 index css cache');
+assert(html.indexOf('css/app.css?v=64') !== -1, '7 index css cache');
 assert(src.indexOf("from './booking.js?v=51'") !== -1, '7 booking cache stays');
-print('ok 7 cache app.js?v=96 app.css?v=63 booking.js?v=51');
+print('ok 7 cache app.js?v=96 app.css?v=64 booking.js?v=51');
 
 print('ok date-control cases');

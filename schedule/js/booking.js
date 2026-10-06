@@ -580,7 +580,6 @@ export function renderForm() {
         </div>
       </div>
     </aside>
-    <aside id="clientFlyout" class="client-flyout" hidden></aside>
   `;
   bindForm();
   paintPhoneCleanColors();
@@ -741,18 +740,28 @@ let clientHitPicked = null;
 let clientEscBound = false;
 
 function clientFlyoutEl() {
-  return $('#clientFlyout');
+  let el = document.getElementById('clientFlyout');
+  if (el) return el;
+  if (typeof document === 'undefined' || !document.createElement || !document.body) return null;
+  el = document.createElement('aside');
+  el.id = 'clientFlyout';
+  el.className = 'client-flyout';
+  el.hidden = true;
+  el.addEventListener('mousedown', (e) => e.stopPropagation());
+  el.addEventListener('click', (e) => e.stopPropagation());
+  document.body.appendChild(el);
+  return el;
 }
 
 function clientFlyoutOpen() {
-  const el = clientFlyoutEl();
+  const el = document.getElementById('clientFlyout');
   return !!(el && !el.hidden);
 }
 
 function closeClientFlyout() {
   clientHitRows = [];
   clientHitPicked = null;
-  const el = clientFlyoutEl();
+  const el = document.getElementById('clientFlyout');
   if (!el) return;
   el.hidden = true;
   el.innerHTML = '';
@@ -801,11 +810,11 @@ function paintClientFlyout() {
       <span class="sub">${escapeAttr(c.phone || '')}</span>
     </button>`;
   }).join('');
-  let summary = '';
+  let html = `<div class="client-flyout-hits">${hitHtml}</div>`;
   if (picked) {
     const jobs = jobsForContact(allJobs(), picked.hubspot_id);
     const lines = jobs.map((j) => `<li>${escapeAttr(contactJobLine(j))}</li>`).join('');
-    summary = `<div class="client-flyout-card">
+    html = `${hits.length > 1 ? `<div class="client-flyout-hits">${hitHtml}</div>` : ''}<div class="client-flyout-card">
       <h3>${escapeAttr(contactDisplayName(picked))}</h3>
       <p class="client-flyout-phone">${escapeAttr(picked.phone || '—')}</p>
       <p class="client-flyout-addr">${escapeAttr(picked.address || '—')}</p>
@@ -815,14 +824,22 @@ function paintClientFlyout() {
     </div>`;
   }
   el.hidden = false;
-  el.innerHTML = `<div class="client-flyout-hits">${hitHtml}</div>${summary}`;
+  el.innerHTML = html;
   el.querySelectorAll('[data-pick-i]').forEach((btn) => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       showClientHit(hits[Number(btn.dataset.pickI)]);
     });
   });
   const useBtn = el.querySelector('[data-use-contact]');
-  if (useBtn) useBtn.addEventListener('click', useClientHit);
+  if (useBtn) {
+    useBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      useClientHit();
+    });
+  }
 }
 
 function renderHits(q) {

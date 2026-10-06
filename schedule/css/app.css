@@ -62,7 +62,7 @@ button, input, select, textarea { font-family: inherit; }
   margin: 0;
   padding: 8px 12px;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   flex-wrap: nowrap;
   gap: 8px;
 }
@@ -77,7 +77,7 @@ button, input, select, textarea { font-family: inherit; }
 
 .header-right {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: flex-end;
   gap: 8px;
   flex: 1 1 0;
@@ -228,15 +228,40 @@ button, input, select, textarea { font-family: inherit; }
   font-weight: 600;
 }
 
-.cal-block {
+.date-control {
   position: relative;
   flex: 0 0 auto;
+}
+.date-btn {
+  border: 1px solid var(--line);
+  background: white;
+  color: var(--ink);
+  border-radius: 10px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.date-btn:hover { background: #f8fafc; }
+.date-btn[aria-expanded="true"] {
+  background: #e0f2fe;
+  color: var(--brand-ink);
+}
+.cal-popup {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 55;
   width: max-content;
-  padding: 4px 6px 6px;
+  padding: 6px 8px 8px;
   background: white;
   border: 1px solid var(--line);
   border-radius: 8px;
+  box-shadow: var(--shadow);
 }
+.cal-popup[hidden] { display: none; }
 .cal-head {
   position: relative;
   display: flex;
@@ -302,6 +327,7 @@ button, input, select, textarea { font-family: inherit; }
   background: #e0f2fe;
   color: var(--brand-ink);
 }
+.cal-dow-row,
 .cal-grid {
   display: grid;
   grid-template-columns: repeat(7, max-content);
@@ -1774,7 +1800,7 @@ button, input, select, textarea { font-family: inherit; }
 
 #appRoot[data-view="outliers"] .header-filters,
 #appRoot[data-view="outliers"] .board-filters,
-#appRoot[data-view="outliers"] .cal-block,
+#appRoot[data-view="outliers"] .date-control,
 #appRoot[data-view="outliers"] #newBooking,
 #appRoot[data-view="outliers"] .header-search,
 #appRoot[data-view="outliers"] .board-legend { display: none; }
@@ -1805,8 +1831,8 @@ button, input, select, textarea { font-family: inherit; }
 
 #appRoot[data-view="contacts"] .header-filters,
 #appRoot[data-view="contacts"] .board-filters,
-#appRoot[data-view="contacts"] .cal-block,
-#appRoot[data-view="jobs"] .cal-block,
+#appRoot[data-view="contacts"] .date-control,
+#appRoot[data-view="jobs"] .date-control,
 #appRoot[data-view="contacts"] #newBooking,
 #appRoot[data-view="contacts"] .header-search,
 #appRoot[data-view="contacts"] .board-legend,

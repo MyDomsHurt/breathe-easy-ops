@@ -218,9 +218,9 @@ assert(useBody.indexOf('closeClientFlyout') !== -1, 'Use this contact closes the
 assert(bookingSrc.indexOf('form.hubspot_id = picked.hubspot_id') !== -1, 'pick keeps hubspot id');
 assert(bookingSrc.indexOf("from './contact-jobs.js?v=2'") !== -1, 'booking contact-jobs cache');
 assert(bookingSrc.indexOf("from './contacts-query.js?v=2'") !== -1, 'booking contacts-query cache');
-assert(appSrc.indexOf("from './booking.js?v=45'") !== -1, 'app booking cache');
+assert(appSrc.indexOf("from './booking.js?v=46'") !== -1, 'app booking cache');
 assert(appSrc.indexOf("from './contacts-query.js?v=2'") !== -1, 'app contacts-query cache');
-assert(html.indexOf('js/app.js?v=89') !== -1, 'index app cache');
+assert(html.indexOf('js/app.js?v=90') !== -1, 'index app cache');
 assert(html.indexOf('css/app.css?v=57') !== -1, 'index css cache');
 assert(!/api\.hubapi|hubspot\.com|createDeal|writeDeal/.test(bookingSrc), 'no HubSpot write');
 print('ok 6 flyout; first click summary; Use this contact fills; no HubSpot write');

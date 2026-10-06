@@ -1,5 +1,5 @@
 import { emptyUnits } from './utils.js';
-import { addJob, allJobs, initStore, isStoreReady, writeJob } from './store.js?v=12';
+import { addJob, allJobs, initStore, isStoreReady, writeJob } from './store.js?v=13';
 import { commitBooking } from './booking.js';
 
 function fail(msg) {

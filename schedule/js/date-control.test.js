@@ -51,15 +51,18 @@ assert(boardPrefs !== -1 && sundayAt > boardPrefs && sundayAt < sepAt, '2 Sunday
 assert(html.slice(boardPrefs, sepAt).indexOf('Board') !== -1, '2 Board heading');
 print('ok 2 New booking far right; Sunday in Settings Board');
 
-assert(css.indexOf('flex: 0 0 544px') !== -1, '3 calendar two day-columns wide');
-assert(css.indexOf('width: 544px') !== -1, '3 calendar width 544');
+assert(css.indexOf('flex: 0 0 272px') !== -1, '3 calendar half of two day-columns');
+assert(css.indexOf('width: 272px') !== -1, '3 calendar width 272');
+assert(css.indexOf('544px') === -1, '3 old 544px calendar gone');
+assert(css.indexOf('height: 12px') !== -1, '3 day cells half height');
+assert(css.indexOf('.cal-year') !== -1 && css.indexOf('font-size: 8px') !== -1, '3 year month and Today scale');
 assert(css.indexOf('repeat(var(--days, 6), 272px)') !== -1, '3 day columns stay 272');
 assert(css.indexOf('.cal-year-list') !== -1, '3 year list');
 assert(css.indexOf('.cal-month-list') !== -1, '3 month list');
 assert(css.indexOf('top: calc(100% + 4px)') !== -1, '3 lists open down');
 assert(css.indexOf('.week-nav') === -1, '3 old week-nav gone');
 assert(css.indexOf('.date-panel') === -1, '3 old date-panel gone');
-print('ok 3 calendar 544px; day columns 272px; lists open down');
+print('ok 3 calendar 272px; day cells 12px; lists open down');
 
 assert(src.indexOf('function dateControlHtml') !== -1, '4 no dateControlHtml');
 assert(src.indexOf('function paintDateControl') !== -1, '4 no paintDateControl');
@@ -108,8 +111,8 @@ assert(bindBody.indexOf('pickCalDay') !== -1, '6 click calls pickCalDay');
 print('ok 6 clicking 8 Oct moves the week; calendar stays open');
 
 assert(html.indexOf('js/app.js?v=96') !== -1, '7 index app cache');
-assert(html.indexOf('css/app.css?v=61') !== -1, '7 index css cache');
+assert(html.indexOf('css/app.css?v=62') !== -1, '7 index css cache');
 assert(src.indexOf("from './booking.js?v=51'") !== -1, '7 booking cache stays');
-print('ok 7 cache app.js?v=96 app.css?v=61 booking.js?v=51');
+print('ok 7 cache app.js?v=96 app.css?v=62 booking.js?v=51');
 
 print('ok date-control cases');

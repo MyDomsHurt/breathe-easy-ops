@@ -230,21 +230,21 @@ button, input, select, textarea { font-family: inherit; }
 
 .cal-block {
   position: relative;
-  flex: 0 0 544px;
-  width: 544px;
-  min-width: 544px;
-  max-width: 544px;
-  padding: 6px 8px 8px;
+  flex: 0 0 272px;
+  width: 272px;
+  min-width: 272px;
+  max-width: 272px;
+  padding: 3px 4px 4px;
   background: white;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 6px;
 }
 .cal-head {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 4px;
-  margin: 0 0 4px;
+  gap: 2px;
+  margin: 0 0 2px;
 }
 .cal-year,
 .cal-month {
@@ -252,11 +252,11 @@ button, input, select, textarea { font-family: inherit; }
   background: transparent;
   color: var(--ink);
   font: inherit;
-  font-size: 13px;
+  font-size: 8px;
   font-weight: 800;
   letter-spacing: -0.02em;
-  padding: 2px 6px;
-  border-radius: 8px;
+  padding: 1px 3px;
+  border-radius: 4px;
   cursor: pointer;
 }
 .cal-year:hover,
@@ -269,22 +269,22 @@ button, input, select, textarea { font-family: inherit; }
 .cal-year-list,
 .cal-month-list {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + 2px);
   left: 0;
   z-index: 55;
-  min-width: 120px;
-  max-height: 220px;
+  min-width: 60px;
+  max-height: 110px;
   overflow: auto;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 6px;
+  gap: 1px;
+  padding: 3px;
   background: white;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 6px;
   box-shadow: var(--shadow);
 }
-.cal-month-list { left: 72px; }
+.cal-month-list { left: 36px; }
 .cal-year-list[hidden],
 .cal-month-list[hidden] { display: none; }
 .cal-choice {
@@ -292,10 +292,10 @@ button, input, select, textarea { font-family: inherit; }
   background: transparent;
   text-align: left;
   font: inherit;
-  font-size: 13px;
+  font-size: 8px;
   font-weight: 600;
-  padding: 6px 8px;
-  border-radius: 8px;
+  padding: 3px 4px;
+  border-radius: 4px;
   cursor: pointer;
   color: var(--ink);
 }
@@ -307,25 +307,25 @@ button, input, select, textarea { font-family: inherit; }
 .cal-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 2px;
+  gap: 1px;
 }
 .cal-dow {
   text-align: center;
-  font-size: 10px;
+  font-size: 6px;
   font-weight: 700;
   color: var(--muted);
-  padding: 2px 0;
+  padding: 1px 0;
 }
 .cal-day {
   border: 0;
   background: transparent;
-  height: 24px;
+  height: 12px;
   padding: 0;
   font: inherit;
-  font-size: 12px;
+  font-size: 8px;
   font-weight: 650;
   color: var(--ink);
-  border-radius: 7px;
+  border-radius: 4px;
   cursor: pointer;
 }
 .cal-day:hover { background: #f8fafc; }
@@ -337,14 +337,14 @@ button, input, select, textarea { font-family: inherit; }
 .cal-today {
   display: block;
   width: 100%;
-  margin: 6px 0 0;
+  margin: 3px 0 0;
   border: 1px solid var(--line);
   background: white;
   color: var(--brand-ink);
-  border-radius: 8px;
-  padding: 4px 8px;
+  border-radius: 4px;
+  padding: 2px 4px;
   font: inherit;
-  font-size: 12px;
+  font-size: 8px;
   font-weight: 700;
   cursor: pointer;
 }

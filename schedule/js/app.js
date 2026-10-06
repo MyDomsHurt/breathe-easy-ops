@@ -1,6 +1,6 @@
 import { DISTRICTS, JOB_TYPES, TEAMS } from './config.js?v=3';
 import { canPlaceJobOnTeamDay, dateMarkState, findCrewNote, hongKongToday, isCompanyDay, isCrewNote, isTeamDayFull } from './team-day.js?v=5';
-import { addDays, formatDay, formatTime24, jobTypeOf, mondayOf, normalizeLunch, parseISO, shortTime, weekDays, workWeekDays } from './utils.js';
+import { addDays, formatDay, formatTime24, formatWeekLabel, jobTypeOf, mondayOf, normalizeLunch, parseISO, shortTime, weekDays, workWeekDays } from './utils.js';
 import { allJobs, applyCleanAcs, applyCleanPhones, applyCleanTimes, applySeptemberFixes, applySeptemberLoad, clearDateMark, getJob, listContactsForPhoneClean, listJobsForTimeClean, placeJobInSlot, redo, removeJob, setDateMark, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js?v=13';
 import { isOfficeEmail } from '../../shared/firebase-config.js';
 import { startScheduleAuth } from './auth.js';
@@ -81,6 +81,7 @@ const state = {
   calYear: Number(TODAY.slice(0, 4)),
   calMonth: Number(TODAY.slice(5, 7)),
   calMenu: '',
+  calOpen: false,
   contactQuery: '',
   contactId: '',
   contactAll: false,
@@ -129,6 +130,10 @@ function dateControlHtml(opts = {}) {
   const today = String(opts.today || '');
   const monday = String(opts.monday || '');
   const menu = opts.menu || '';
+  const open = !!opts.open;
+  const label = formatWeekLabel(monday, !!opts.showSunday);
+  const btn = `<button type="button" class="date-btn" id="dateBtn" aria-haspopup="dialog" aria-expanded="${open ? 'true' : 'false'}">${label}</button>`;
+  if (!open) return btn;
   const monthLabel = CAL_MONTHS[month - 1] || '';
   const days = calendarDays(year, month);
   const yearOpen = menu === 'year';
@@ -163,7 +168,7 @@ function dateControlHtml(opts = {}) {
     if (isToday) cls.push('is-today');
     return `<button type="button" class="${cls.join(' ')}" data-cal-day="${iso}">${Number(iso.slice(8, 10))}</button>`;
   }).join('');
-  return `${head}<div class="cal-grid">${dow}${cells}</div><button type="button" class="cal-today" id="calToday">Today</button>`;
+  return `${btn}<div class="cal-popup" id="calPopup">${head}<div class="cal-dow-row">${dow}</div><div class="cal-grid">${cells}</div><button type="button" class="cal-today" id="calToday">Today</button></div>`;
 }
 
 function paintDateControl() {
@@ -175,11 +180,20 @@ function paintDateControl() {
     today: TODAY,
     monday: state.monday,
     menu: state.calMenu,
+    open: state.calOpen,
+    showSunday: state.showSunday,
   });
 }
 
 function closeCalLists() {
   if (!state.calMenu) return;
+  state.calMenu = '';
+  paintDateControl();
+}
+
+function closeCalPopup() {
+  if (!state.calOpen && !state.calMenu) return;
+  state.calOpen = false;
   state.calMenu = '';
   paintDateControl();
 }
@@ -191,6 +205,7 @@ function pickCalDay(iso) {
   state.monday = mondayOf(day);
   state.day = day;
   state.calMenu = '';
+  state.calOpen = false;
   if (isSunday(day)) state.showSunday = true;
   paint();
 }
@@ -202,6 +217,7 @@ function goCalToday() {
   state.calYear = Number(TODAY.slice(0, 4));
   state.calMonth = Number(TODAY.slice(5, 7));
   state.calMenu = '';
+  state.calOpen = false;
   paint();
 }
 
@@ -210,6 +226,14 @@ function bindDateControl() {
   if (!el || el.dataset.bound) return;
   el.dataset.bound = '1';
   el.addEventListener('click', (e) => {
+    const dateBtn = e.target.closest('#dateBtn');
+    if (dateBtn) {
+      e.preventDefault();
+      state.calOpen = !state.calOpen;
+      state.calMenu = '';
+      paintDateControl();
+      return;
+    }
     const yearBtn = e.target.closest('#calYearBtn');
     if (yearBtn) {
       e.preventDefault();
@@ -250,7 +274,9 @@ function bindDateControl() {
     if (dayBtn) {
       e.preventDefault();
       pickCalDay(dayBtn.dataset.calDay);
+      return;
     }
+    closeCalLists();
   });
 }
 
@@ -1428,7 +1454,7 @@ function paintSettingsPanel() {
 
 function openSettingsPanel() {
   closeFilterMenus();
-  closeCalLists();
+  closeCalPopup();
   closeUserMenu();
   paintSettingsPanel();
   const root = $('settingsRoot');
@@ -1444,7 +1470,7 @@ function toggleUserMenu() {
   if (!menu || !btn) return;
   const open = menu.hidden;
   closeFilterMenus();
-  closeCalLists();
+  closeCalPopup();
   menu.hidden = !open;
   btn.setAttribute('aria-expanded', open ? 'true' : 'false');
 }
@@ -1574,14 +1600,14 @@ function bindFilters() {
 
   document.addEventListener('mousedown', (e) => {
     if (!e.target.closest('.filter-dd')) closeFilterMenus();
-    if (!e.target.closest('.cal-block')) closeCalLists();
+    if (!e.target.closest('#dateControl')) closeCalPopup();
     if (!e.target.closest('.auth-slot')) closeUserMenu();
     if (!e.target.closest('#dayMarkMenu') && !e.target.closest('[data-day-mark]')) closeDayMarkMenu();
   });
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
     closeFilterMenus();
-    closeCalLists();
+    closeCalPopup();
     closeUserMenu();
     closeSettingsPanel();
     closeDayMarkMenu();

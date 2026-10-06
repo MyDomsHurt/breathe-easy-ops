@@ -3,7 +3,7 @@ import { overlapWarning, stackOrderOnSave, suggestTeams, teamMembersOnDay } from
 import { canPlaceJobOnTeamDay } from './team-day.js?v=5';
 import { addJob, allJobs, isStoreReady, removeJob, updateJob } from './store.js?v=12';
 import { allContacts } from './contacts-store.js?v=1';
-import { bookingFieldsFromContact, searchBookingClients } from './contacts-query.js?v=2';
+import { bookingFieldsFromContact, matchesBookingClient } from './contacts-query.js?v=2';
 import { contactJobLine, jobsForContact } from './contact-jobs.js?v=2';
 import { contactDisplayName } from '../../shared/contact.js';
 import { displayNameForEmail } from '../../shared/firebase-config.js';
@@ -626,6 +626,9 @@ export function bindForm() {
     restoreAddrIfPending();
   });
   ensureClientFlyoutEsc();
+  $('#clientSearch')?.addEventListener('focus', (e) => {
+    renderHits(e.target.value);
+  });
   $('#clientSearch')?.addEventListener('input', (e) => {
     form.client_name = e.target.value;
     renderHits(e.target.value);
@@ -797,11 +800,12 @@ function paintClientFlyout() {
   const el = clientFlyoutEl();
   if (!el) return;
   const hits = clientHitRows;
-  if (!hits.length) {
-    closeClientFlyout();
+  const picked = clientHitPicked;
+  if (!hits.length && !picked) {
+    el.hidden = false;
+    el.innerHTML = '<div class="client-flyout-hits"></div>';
     return;
   }
-  const picked = clientHitPicked;
   const hitHtml = hits.map((c, i) => {
     const on = picked && String(picked.hubspot_id || '') === String(c.hubspot_id || '') && String(c.hubspot_id || '') !== '';
     const same = picked === c || on;
@@ -842,17 +846,17 @@ function paintClientFlyout() {
   }
 }
 
-function renderHits(q) {
+function bookingClientHits(q) {
+  const list = allContacts();
+  const rows = Array.isArray(list) ? list : [];
   const s = String(q || '').trim();
-  if (s.length < 2) {
-    closeClientFlyout();
-    return;
-  }
-  const hits = searchBookingClients(allContacts(), s);
-  if (!hits.length) {
-    closeClientFlyout();
-    return;
-  }
+  const hits = s ? rows.filter((c) => matchesBookingClient(c, s)) : rows.slice();
+  hits.sort((a, b) => contactDisplayName(a).localeCompare(contactDisplayName(b)));
+  return hits;
+}
+
+function renderHits(q) {
+  const hits = bookingClientHits(q);
   clientHitRows = hits;
   if (clientHitPicked) {
     const id = String(clientHitPicked.hubspot_id || '');

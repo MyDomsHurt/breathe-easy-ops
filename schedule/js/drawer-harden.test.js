@@ -112,7 +112,7 @@ const ids = [
   'dateInput', 'timeInput', 'teamInput', 'typeInput', 'paymentSelect', 'amountInput',
   'notesInput', 'notesLongInput', 'invoiceInput', 'receiptInput', 'creditNoteInput',
   'saveTentative', 'saveBooking', 'deleteBooking',
-  'notes1Count', 'toggleLog', 'changeLog',
+  'notes1Count', 'toggleLog', 'changeLog', 'contactRail',
 ];
 ids.forEach((id) => { byId[id] = node({ id }); });
 

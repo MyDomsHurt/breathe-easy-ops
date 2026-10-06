@@ -7,13 +7,13 @@ import { startScheduleAuth } from './auth.js';
 import { daySlotsOf, firstEmptySlotIndex, hasTimeConflict, jobsForTeamDay, layoutSlots, slotIndex } from './capacity.js?v=4';
 import { clientCardName, pulseRemaining, renderDayBoard, renderWeekBoard, weekDragSlotsHtml } from './board.js?v=29';
 import { applyJobDrop, armClickSuppress, beginDrag, capturedDragId, clearCapturedDrag, consumeClickSuppress, jobDropKind, pointerJobUp, pointerMoved, resolveDropId } from './board-drag.js?v=2';
-import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=47';
+import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=48';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js?v=2';
 import { exportMasterRoster } from './export-roster.js?v=33';
 import { allContacts, initContactsStore, subscribeContacts } from './contacts-store.js?v=1';
-import { fillContactFilterSelect, importHubspotFile, renderContacts } from './contacts.js?v=5';
+import { fillContactFilterSelect, importHubspotFile, renderContacts } from './contacts.js?v=6';
 import { uniqueContactValues } from './contacts-query.js?v=2';
-import { isSundayDate, readJobLink } from './contact-jobs.js?v=3';
+import { isSundayDate, readJobLink } from './contact-jobs.js?v=4';
 import { moveTeam, visibleTeamOrder } from './team-order.js?v=1';
 import { initSettingsStore, subscribeSettings, teamOrder, writeTeamOrder } from './settings-store.js?v=2';
 import {

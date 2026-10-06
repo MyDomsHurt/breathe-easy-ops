@@ -4,7 +4,7 @@ import { canPlaceJobOnTeamDay } from './team-day.js?v=5';
 import { addJob, allJobs, isStoreReady, removeJob, updateJob } from './store.js?v=13';
 import { allContacts } from './contacts-store.js?v=1';
 import { bookingFieldsFromContact, matchesBookingClient } from './contacts-query.js?v=2';
-import { contactJobLine, jobsForContact } from './contact-jobs.js?v=3';
+import { contactJobLine, jobsForContact } from './contact-jobs.js?v=4';
 import { contactDisplayName } from '../../shared/contact.js';
 import { displayNameForEmail } from '../../shared/firebase-config.js';
 import { highlightOf } from '../../shared/job.js';

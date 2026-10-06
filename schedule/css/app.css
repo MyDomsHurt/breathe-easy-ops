@@ -62,9 +62,26 @@ button, input, select, textarea { font-family: inherit; }
   margin: 0;
   padding: 8px 12px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   flex-wrap: nowrap;
   gap: 8px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.header-right {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 8px;
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 .brand {
@@ -211,13 +228,127 @@ button, input, select, textarea { font-family: inherit; }
   font-weight: 600;
 }
 
-.week-nav {
+.cal-block {
+  position: relative;
+  flex: 0 0 544px;
+  width: 544px;
+  min-width: 544px;
+  max-width: 544px;
+  padding: 6px 8px 8px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.cal-head {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 6px;
-  flex: 0 0 auto;
+  gap: 4px;
+  margin: 0 0 4px;
 }
+.cal-year,
+.cal-month {
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  padding: 2px 6px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.cal-year:hover,
+.cal-month:hover { background: #f8fafc; }
+.cal-year[aria-expanded="true"],
+.cal-month[aria-expanded="true"] {
+  background: #e0f2fe;
+  color: var(--brand-ink);
+}
+.cal-year-list,
+.cal-month-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 55;
+  min-width: 120px;
+  max-height: 220px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+.cal-month-list { left: 72px; }
+.cal-year-list[hidden],
+.cal-month-list[hidden] { display: none; }
+.cal-choice {
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--ink);
+}
+.cal-choice:hover { background: #f8fafc; }
+.cal-choice.on {
+  background: #e0f2fe;
+  color: var(--brand-ink);
+}
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+.cal-dow {
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+  padding: 2px 0;
+}
+.cal-day {
+  border: 0;
+  background: transparent;
+  height: 24px;
+  padding: 0;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--ink);
+  border-radius: 7px;
+  cursor: pointer;
+}
+.cal-day:hover { background: #f8fafc; }
+.cal-day.muted { color: #94a3b8; font-weight: 500; }
+.cal-day.in-week { background: #e0f2fe; color: var(--brand-ink); }
+.cal-day.is-today {
+  box-shadow: inset 0 0 0 1px var(--brand);
+}
+.cal-today {
+  display: block;
+  width: 100%;
+  margin: 6px 0 0;
+  border: 1px solid var(--line);
+  background: white;
+  color: var(--brand-ink);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.cal-today:hover { background: #f8fafc; }
 
 .icon-btn, .ghost-btn, .primary-btn {
   border: 1px solid var(--line);
@@ -239,20 +370,6 @@ button, input, select, textarea { font-family: inherit; }
 .ghost-btn { padding: 7px 10px; font-size: 13px; }
 .ghost-btn.on { background: #e0f2fe; border-color: #7dd3fc; color: var(--brand-ink); }
 
-.sunday-cue {
-  border: 0;
-  background: #fff7ed;
-  color: #9a3412;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 4px 8px;
-  border-radius: 999px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.sunday-cue:hover { background: #ffedd5; }
-
 .primary-btn {
   background: var(--brand);
   color: white;
@@ -265,73 +382,6 @@ button, input, select, textarea { font-family: inherit; }
 
 .primary-btn:hover { background: #0c4a6e; }
 .icon-btn:hover, .ghost-btn:hover { background: #f8fafc; }
-
-.week-label {
-  border: 1px solid var(--line);
-  background: white;
-  color: var(--ink);
-  border-radius: 10px;
-  padding: 7px 10px;
-  font: inherit;
-  font-weight: 700;
-  font-size: 13px;
-  min-width: 118px;
-  text-align: center;
-  white-space: nowrap;
-  cursor: pointer;
-}
-.week-label:hover { background: #f8fafc; }
-.week-label[aria-expanded="true"] {
-  background: #e0f2fe;
-  border-color: #7dd3fc;
-  color: var(--brand-ink);
-}
-
-.date-panel {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  z-index: 50;
-  min-width: 220px;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 8px;
-  padding: 10px;
-  background: white;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  box-shadow: var(--shadow);
-}
-.date-panel[hidden] { display: none; }
-.date-panel-modes,
-.date-panel-sunday {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.date-panel-month {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--muted);
-}
-.date-panel-month .month-select { flex: 1 1 auto; }
-
-.month-select {
-  border: 1px solid var(--line);
-  background: white;
-  color: var(--ink);
-  border-radius: 10px;
-  padding: 7px 8px;
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.2;
-  min-height: 32px;
-  cursor: pointer;
-}
 
 .header-filters,
 .board-filters {
@@ -1717,7 +1767,7 @@ button, input, select, textarea { font-family: inherit; }
 
 #appRoot[data-view="outliers"] .header-filters,
 #appRoot[data-view="outliers"] .board-filters,
-#appRoot[data-view="outliers"] .week-nav,
+#appRoot[data-view="outliers"] .cal-block,
 #appRoot[data-view="outliers"] #newBooking,
 #appRoot[data-view="outliers"] .header-search,
 #appRoot[data-view="outliers"] .board-legend { display: none; }
@@ -1748,7 +1798,8 @@ button, input, select, textarea { font-family: inherit; }
 
 #appRoot[data-view="contacts"] .header-filters,
 #appRoot[data-view="contacts"] .board-filters,
-#appRoot[data-view="contacts"] .week-nav,
+#appRoot[data-view="contacts"] .cal-block,
+#appRoot[data-view="jobs"] .cal-block,
 #appRoot[data-view="contacts"] #newBooking,
 #appRoot[data-view="contacts"] .header-search,
 #appRoot[data-view="contacts"] .board-legend,
@@ -3074,7 +3125,7 @@ p.hubspot-id-line {
   display: flex;
   align-items: flex-start;
   justify-content: flex-end;
-  padding: 68px 16px 24px;
+  padding: 16px 16px 24px;
   background: rgba(15, 39, 68, 0.18);
 }
 .settings-root[hidden] { display: none; }

@@ -285,7 +285,32 @@ const searchList = sidePanelHtml({
 assert(searchList.indexOf('data-pick-i') !== -1, 'search list before first click');
 assert(searchList.indexOf('Use this contact') === -1, 'list is not the summary');
 assert(searchList.indexOf('id="changeLog" hidden') === -1, 'search list keeps the change log');
-print('ok 6 Kay Lo card, change log, and drawer stay open together');
+const dough = {
+  first_name: 'Dough',
+  last_name: 'Bros',
+  hubspot_id: '468000000002',
+  phone: '+85261109999',
+  address: '1 Baker Street, Central',
+};
+const doughHtml = sidePanelHtml({
+  form: { job_id: '', hubspot_id: dough.hubspot_id, changes: [] },
+  contacts: [dough],
+  jobs: [],
+  hits: [],
+  picked: null,
+  editing: false,
+});
+const doughRail = doughHtml.indexOf('id="contactRail"');
+const doughLog = doughHtml.indexOf('id="changeLog"');
+assert(doughRail !== -1, 'Dough Bros card is present');
+assert(doughLog > doughRail, 'history sits between the card and the drawer');
+assert(doughHtml.indexOf('id="contactRail" hidden') === -1, 'new booking keeps the card');
+assert(doughHtml.indexOf('id="changeLog" hidden') === -1, 'empty history stays open');
+assert(doughHtml.indexOf('Dough Bros') !== -1, 'Dough Bros name');
+assert(doughHtml.indexOf('History') !== -1, 'history panel heading');
+assert(doughHtml.indexOf('no changes yet') !== -1, 'empty log reads no changes yet');
+assert(doughHtml.indexOf('No history yet') === -1, 'old empty copy is gone');
+print('ok 6 Kay Lo and Dough Bros keep the history panel open');
 
 const bookingSrc = readSrc('booking.js');
 const appSrc = readSrc('app.js');
@@ -323,9 +348,10 @@ assert(bookingSrc.indexOf('form.hubspot_id = picked.hubspot_id') !== -1, 'pick k
 assert(bookingSrc.indexOf("from './contact-jobs.js?v=4'") !== -1, 'booking contact-jobs cache');
 assert(bookingSrc.indexOf("from './contacts.js") === -1, 'booking does not import contacts pane');
 assert(bookingSrc.indexOf("from './contacts-query.js?v=2'") !== -1, 'booking contacts-query cache');
-assert(appSrc.indexOf("from './booking.js?v=50'") !== -1, 'app booking cache');
+assert(bookingSrc.indexOf('no changes yet') !== -1, 'empty log copy');
+assert(appSrc.indexOf("from './booking.js?v=51'") !== -1, 'app booking cache');
 assert(appSrc.indexOf("from './contacts-query.js?v=2'") !== -1, 'app contacts-query cache');
-assert(html.indexOf('js/app.js?v=94') !== -1, 'index app cache');
+assert(html.indexOf('js/app.js?v=95') !== -1, 'index app cache');
 assert(html.indexOf('css/app.css?v=60') !== -1, 'index css cache');
 const cssSrc = readSrc('../css/app.css');
 assert(cssSrc.indexOf('width: 520px') !== -1, 'card is wide enough for a job line');

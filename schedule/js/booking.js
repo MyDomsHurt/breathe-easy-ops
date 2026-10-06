@@ -239,7 +239,7 @@ function logFallback(action) {
 
 function changeLogBody(changes) {
   const rows = Array.isArray(changes) ? changes.slice().reverse() : [];
-  if (!rows.length) return '<p class="log-empty">No history yet</p>';
+  if (!rows.length) return '<p class="log-empty">no changes yet</p>';
   return rows.map((row) => {
     const diffs = Array.isArray(row.diffs) ? row.diffs : [];
     const sentences = diffs.length
@@ -391,10 +391,6 @@ function contactRailHtml(opts = {}) {
 
 function logRailHtml(opts = {}) {
   const formState = opts.form || {};
-  const editing = opts.editing != null ? !!opts.editing : Boolean(formState.job_id);
-  if (!editing) {
-    return '<aside class="log-rail" id="changeLog" hidden></aside>';
-  }
   return `<aside class="log-rail" id="changeLog">
       <div class="log-rail-head">
         <h3>History</h3>
@@ -474,7 +470,7 @@ function paintSidePanel() {
   paintOneRail('changeLog', logRailHtml(opts));
   bindSidePanel($('#contactRail'));
   const logBtn = $('#toggleLog');
-  if (logBtn) logBtn.setAttribute('aria-expanded', Boolean(form.job_id) ? 'true' : 'false');
+  if (logBtn) logBtn.setAttribute('aria-expanded', 'true');
 }
 
 function sizeFullBox(el, minRows, maxRows) {

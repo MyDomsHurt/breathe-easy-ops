@@ -1015,6 +1015,44 @@ export async function applyCleanTimes(updates) {
   return { written };
 }
 
+export async function applyCleanAcs(updates) {
+  requireJeff('clean job ACs');
+  if (!ops || typeof ops.upsertJob !== 'function') {
+    throw new Error('Store is not ready');
+  }
+  if (!usingFirestore()) throw new Error('Sign in to clean job ACs');
+  const list = Array.isArray(updates) ? updates : [];
+  const email = currentActorEmail();
+
+  holdEmit += 1;
+  recording = false;
+  let written = 0;
+  try {
+    for (const row of list) {
+      if (!row || !row.job_id) continue;
+      const prev = ops.getJob(row.job_id) || row.base;
+      if (!prev || prev.deleted === true || prev.deleted === 'true') continue;
+      if (isCrewNote(prev) || isCompanyDay(prev)) continue;
+      const next = { ...prev, acs: row.acs, notes: row.notes };
+      if (row.arrow) {
+        next.changes = appendChange(prev.changes, {
+          at: new Date().toISOString(),
+          by: email,
+          action: 'saved',
+          diffs: [{ field: 'ACs', from: row.from, to: row.to }],
+        });
+      }
+      await ops.upsertJob(next);
+      written += 1;
+    }
+  } finally {
+    recording = true;
+    holdEmit = Math.max(0, holdEmit - 1);
+    emit();
+  }
+  return { written };
+}
+
 export async function applySeptemberFixes(updates) {
   requireJeff('fix September');
   if (!ops || typeof ops.upsertJob !== 'function') {

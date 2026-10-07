@@ -1,15 +1,15 @@
 import { DISTRICTS, JOB_TYPES, TEAMS } from './config.js?v=3';
 import { canPlaceJobOnTeamDay, dateMarkState, findCrewNote, hongKongToday, isCompanyDay, isCrewNote, isTeamDayFull } from './team-day.js?v=5';
 import { addDays, formatDay, formatTime24, formatWeekLabel, jobTypeOf, mondayOf, normalizeLunch, parseISO, shortTime, weekDays, workWeekDays } from './utils.js';
-import { allJobs, applyCleanAcs, applyCleanPhones, applyCleanTimes, applySeptemberFixes, applySeptemberLoad, clearDateMark, getJob, listContactsForPhoneClean, listJobsForTimeClean, placeJobInSlot, redo, removeJob, setDateMark, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js?v=13';
+import { allJobs, applyCleanAcs, applyCleanPhones, applyCleanTimes, applyOctDecLoad, applySeptemberFixes, applySeptemberLoad, clearDateMark, getJob, listContactsForPhoneClean, listJobsForTimeClean, placeJobInSlot, redo, removeJob, setDateMark, setTeamDayFull, setTeamDayHighlight, setTeamDayLunch, setTeamDayMembers, setTeamDaySlots, subscribe, initStore, undo, updateJob, usingFirestore } from './store.js?v=14';
 import { isOfficeEmail } from '../../shared/firebase-config.js';
 import { startScheduleAuth } from './auth.js';
 import { daySlotsOf, firstEmptySlotIndex, hasTimeConflict, jobsForTeamDay, layoutSlots, slotIndex } from './capacity.js?v=4';
 import { clientCardName, pulseRemaining, renderDayBoard, renderWeekBoard, weekDragSlotsHtml } from './board.js?v=29';
 import { applyJobDrop, armClickSuppress, beginDrag, capturedDragId, clearCapturedDrag, consumeClickSuppress, jobDropKind, pointerJobUp, pointerMoved, resolveDropId } from './board-drag.js?v=2';
-import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=51';
+import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=52';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js?v=2';
-import { exportMasterRoster } from './export-roster.js?v=33';
+import { exportMasterRoster } from './export-roster.js?v=34';
 import { allContacts, initContactsStore, subscribeContacts } from './contacts-store.js?v=1';
 import { fillContactFilterSelect, importHubspotFile, renderContacts } from './contacts.js?v=6';
 import { uniqueContactValues } from './contacts-query.js?v=2';
@@ -24,6 +24,11 @@ import {
   septemberLoadDone,
   validateSeptemberGlance,
 } from './september-load.js?v=1';
+import {
+  planOctDecLines,
+  planOctDecLoad,
+  validateOctDecGlance,
+} from './oct-dec-load.js?v=1';
 import {
   markTimesCleanedDone,
   planCleanTimes,
@@ -58,6 +63,7 @@ const TODAY = calendarToday();
 const OWNER_EMAIL = 'jefflamb1992@gmail.com';
 let signedInEmail = '';
 let septemberPending = null;
+let octDecPending = null;
 let checkSeptemberPending = null;
 let cleanTimesPending = null;
 let cleanPhonesPending = null;
@@ -1342,6 +1348,29 @@ function paintSeptemberLoad() {
   if (applyBtn) applyBtn.hidden = false;
 }
 
+function paintOctDecLoad() {
+  const block = $('octDecLoadBlock');
+  if (!block) return;
+  const show = isOwnerUser(signedInEmail);
+  block.hidden = !show;
+  const applyBtn = $('applyOctDecBtn');
+  const planEl = $('octDecLoadPlan');
+  if (!show || !octDecPending) {
+    if (applyBtn) applyBtn.hidden = true;
+    if (planEl) {
+      planEl.hidden = true;
+      planEl.textContent = '';
+    }
+    if (!show) octDecPending = null;
+    return;
+  }
+  if (planEl) {
+    planEl.hidden = false;
+    planEl.textContent = planOctDecLines(octDecPending.plan).join('\n');
+  }
+  if (applyBtn) applyBtn.hidden = false;
+}
+
 function paintCheckSeptember() {
   const block = $('checkSeptemberBlock');
   if (!block) return;
@@ -1446,6 +1475,7 @@ function paintSettingsPanel() {
     + `</div>`
   )).join('');
   paintSeptemberLoad();
+  paintOctDecLoad();
   paintCheckSeptember();
   paintCleanTimes();
   paintCleanPhones();
@@ -1876,6 +1906,7 @@ function bindSettingsPanel() {
     closeBtn.addEventListener('click', () => closeSettingsPanel());
   }
   bindSeptemberLoad();
+  bindOctDecLoad();
   bindCheckSeptember();
   bindCleanTimes();
   bindCleanPhones();
@@ -1995,6 +2026,98 @@ function bindSeptemberLoad() {
       } catch (err) {
         console.error(err);
         toast((err && err.message) || 'September load failed');
+      } finally {
+        applyBtn.disabled = false;
+        if (loadBtn) loadBtn.disabled = false;
+      }
+    });
+  }
+}
+
+function bindOctDecLoad() {
+  const loadBtn = $('loadOctDecBtn');
+  const applyBtn = $('applyOctDecBtn');
+  const file = $('octDecGlanceFile');
+  if (loadBtn && file && !loadBtn.dataset.bound) {
+    loadBtn.dataset.bound = '1';
+    loadBtn.addEventListener('click', () => {
+      if (!isOwnerUser(signedInEmail)) {
+        toast('Only Jeff can load Oct–Dec');
+        return;
+      }
+      file.value = '';
+      file.click();
+    });
+    file.addEventListener('change', async () => {
+      const picked = file.files && file.files[0];
+      file.value = '';
+      if (!picked) return;
+      if (!isOwnerUser(signedInEmail)) {
+        toast('Only Jeff can load Oct–Dec');
+        return;
+      }
+      if (!usingFirestore()) {
+        toast('Sign in to load Oct–Dec');
+        return;
+      }
+      loadBtn.disabled = true;
+      try {
+        const text = await picked.text();
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch {
+          octDecPending = null;
+          toast('That file is not JSON');
+          paintOctDecLoad();
+          return;
+        }
+        const checked = validateOctDecGlance(data);
+        if (!checked.ok) {
+          octDecPending = null;
+          toast(checked.error);
+          paintOctDecLoad();
+          return;
+        }
+        const live = await listJobsForTimeClean();
+        const plan = planOctDecLoad(live, checked.jobs, checked.crew);
+        octDecPending = { jobs: checked.jobs, crew: checked.crew, plan };
+        paintOctDecLoad();
+      } catch (err) {
+        console.error(err);
+        toast((err && err.message) || 'Could not read that file');
+      } finally {
+        loadBtn.disabled = false;
+      }
+    });
+  }
+  if (applyBtn && !applyBtn.dataset.bound) {
+    applyBtn.dataset.bound = '1';
+    applyBtn.addEventListener('click', async () => {
+      if (!isOwnerUser(signedInEmail)) {
+        toast('Only Jeff can load Oct–Dec');
+        return;
+      }
+      if (!octDecPending) return;
+      applyBtn.disabled = true;
+      if (loadBtn) loadBtn.disabled = true;
+      try {
+        const result = await applyOctDecLoad({
+          jobs: octDecPending.jobs,
+          crew: octDecPending.crew,
+          deleteIds: octDecPending.plan.softDeletes,
+        });
+        octDecPending = null;
+        toast(
+          'Applied: ' + result.jobUpserts + ' job upserts, '
+          + result.crewUpserts + ' crew upserts, '
+          + result.softDeleted + ' live jobs in that range soft-deleted',
+        );
+        paint();
+        paintSettingsPanel();
+      } catch (err) {
+        console.error(err);
+        toast((err && err.message) || 'Oct–Dec load failed');
       } finally {
         applyBtn.disabled = false;
         if (loadBtn) loadBtn.disabled = false;

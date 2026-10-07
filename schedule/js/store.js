@@ -955,6 +955,81 @@ export async function applySeptemberLoad({ jobs, crew, deleteIds }) {
   };
 }
 
+export async function applyOctDecLoad({ jobs, crew, deleteIds }) {
+  requireJeff('load Oct–Dec');
+  if (!ops || typeof ops.importJobs !== 'function' || typeof ops.upsertJob !== 'function') {
+    throw new Error('Store is not ready');
+  }
+  if (!usingFirestore()) throw new Error('Sign in to load Oct–Dec');
+  function jobDate(row) {
+    return String((row && row.date) || '').slice(0, 10);
+  }
+  const jobList = (Array.isArray(jobs) ? jobs : []).filter((j) => jobDate(j) >= '2026-10-01');
+  const crewList = (Array.isArray(crew) ? crew : []).filter((n) => jobDate(n) >= '2026-10-01');
+  const ids = Array.isArray(deleteIds) ? deleteIds : [];
+
+  holdEmit += 1;
+  recording = false;
+  try {
+    const live = await listJobsForTimeClean();
+    const liveById = new Map();
+    for (const row of live) {
+      if (row && row.job_id) liveById.set(String(row.job_id), row);
+    }
+    for (const id of ids) {
+      const prev = ops.getJob(id) || liveById.get(String(id));
+      if (!prev || prev.deleted === true || prev.deleted === 'true') continue;
+      if (isCrewNote(prev) || isCompanyDay(prev)) continue;
+      if (jobDate(prev) < '2026-10-01') continue;
+      if (ops.getJob(id)) {
+        ops.removeJob(id);
+      } else {
+        await ops.upsertJob({ ...prev, deleted: true });
+      }
+    }
+    await ops.importJobs(jobList);
+    for (const note of crewList) {
+      if (!note || !note.job_id) continue;
+      if (jobDate(note) < '2026-10-01') continue;
+      const prev = ops.getJob(note.job_id);
+      const mark = note.day_mark
+        ? {
+            day_mark: note.day_mark,
+            day_mark_name: note.day_mark_name || '',
+            day_mark_time: note.day_mark_time || '',
+            day_mark_end: note.day_mark_end || '',
+            day_mark_all_day: !!note.day_mark_all_day,
+          }
+        : {
+            day_mark: (prev && prev.day_mark) || '',
+            day_mark_name: (prev && prev.day_mark_name) || '',
+            day_mark_time: (prev && prev.day_mark_time) || '',
+            day_mark_end: (prev && prev.day_mark_end) || '',
+            day_mark_all_day: !!(prev && prev.day_mark_all_day),
+          };
+      await ops.upsertJob({
+        ...(prev || {}),
+        job_id: note.job_id,
+        date: note.date,
+        team_lead: note.team_lead,
+        team_members: note.team_members,
+        source: note.source,
+        deleted: false,
+        ...mark,
+      });
+    }
+  } finally {
+    recording = true;
+    holdEmit = Math.max(0, holdEmit - 1);
+    emit();
+  }
+  return {
+    jobUpserts: jobList.length,
+    crewUpserts: crewList.length,
+    softDeleted: ids.length,
+  };
+}
+
 export async function listJobsForTimeClean() {
   if (usingFirestore() && typeof firebase !== 'undefined' && typeof firebase.firestore === 'function') {
     const snap = await firebase.firestore().collection(JOBS_COLLECTION).get();

@@ -349,9 +349,9 @@ assert(bookingSrc.indexOf("from './contact-jobs.js?v=4'") !== -1, 'booking conta
 assert(bookingSrc.indexOf("from './contacts.js") === -1, 'booking does not import contacts pane');
 assert(bookingSrc.indexOf("from './contacts-query.js?v=2'") !== -1, 'booking contacts-query cache');
 assert(bookingSrc.indexOf('no changes yet') !== -1, 'empty log copy');
-assert(appSrc.indexOf("from './booking.js?v=51'") !== -1, 'app booking cache');
+assert(appSrc.indexOf("from './booking.js?v=52'") !== -1, 'app booking cache');
 assert(appSrc.indexOf("from './contacts-query.js?v=2'") !== -1, 'app contacts-query cache');
-assert(html.indexOf('js/app.js?v=97') !== -1, 'index app cache');
+assert(html.indexOf('js/app.js?v=98') !== -1, 'index app cache');
 assert(html.indexOf('css/app.css?v=65') !== -1, 'index css cache');
 const cssSrc = readSrc('../css/app.css');
 assert(cssSrc.indexOf('width: 520px') !== -1, 'card is wide enough for a job line');

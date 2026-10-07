@@ -9,12 +9,20 @@ import { CREW_SOURCE, isCrewNote } from '../shared/team-day.js';
 
 export const SEP_FROM = '2026-09-01';
 export const SEP_TO = '2026-09-30';
+export const OCT_FROM = '2026-10-01';
+export const OCT_TO = '2027-01-03';
 
 const TERRITORIES = new Set(['HKN', 'HKS', 'KLN', 'N-T', 'S-K', 'L-T', 'L-M']);
 
-export function inSeptember(date) {
+export function inDateRange(date, bounds) {
   const d = String(date || '').slice(0, 10);
-  return d >= SEP_FROM && d <= SEP_TO;
+  const from = bounds && bounds.from ? bounds.from : SEP_FROM;
+  const to = bounds && bounds.to ? bounds.to : SEP_TO;
+  return d >= from && d <= to;
+}
+
+export function inSeptember(date) {
+  return inDateRange(date, { from: SEP_FROM, to: SEP_TO });
 }
 
 function text(value) {
@@ -84,7 +92,8 @@ export function glanceCrewToCanonical(raw) {
   };
 }
 
-export function loadGlance(data) {
+export function loadGlance(data, bounds) {
+  const range = bounds && bounds.from && bounds.to ? bounds : { from: SEP_FROM, to: SEP_TO };
   const root = data && typeof data === 'object' ? data : {};
   const jobRows = Array.isArray(data) ? data : (Array.isArray(root.jobs) ? root.jobs : []);
   const crewRows = Array.isArray(data) ? [] : (Array.isArray(root.crew_notes) ? root.crew_notes : []);
@@ -95,7 +104,7 @@ export function loadGlance(data) {
 
   function addCrew(row) {
     const note = glanceCrewToCanonical(row);
-    if (!note.job_id || !inSeptember(note.date)) return;
+    if (!note.job_id || !inDateRange(note.date, range)) return;
     if (seenCrew.has(note.job_id)) return;
     seenCrew.add(note.job_id);
     crew.push(note);
@@ -107,7 +116,7 @@ export function loadGlance(data) {
       continue;
     }
     const job = glanceJobToCanonical(row);
-    if (!inSeptember(job.date)) continue;
+    if (!inDateRange(job.date, range)) continue;
     if (isCrewNote(job)) {
       addCrew(row);
       continue;
@@ -121,13 +130,14 @@ export function loadGlance(data) {
   return { jobs, crew };
 }
 
-export function softDeleteIds(liveJobs, fileJobIds) {
+export function softDeleteIds(liveJobs, fileJobIds, bounds) {
+  const range = bounds && bounds.from && bounds.to ? bounds : { from: SEP_FROM, to: SEP_TO };
   const keep = new Set((fileJobIds || []).map((id) => String(id || '')));
   const out = [];
   for (const job of liveJobs || []) {
     if (!job || isCrewNote(job)) continue;
     if (job.deleted === true || job.deleted === 'true') continue;
-    if (!inSeptember(job.date)) continue;
+    if (!inDateRange(job.date, range)) continue;
     const id = String(job.job_id || '');
     if (!id || keep.has(id)) continue;
     out.push(id);

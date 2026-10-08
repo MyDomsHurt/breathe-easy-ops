@@ -194,9 +194,21 @@ function ordinal(n) {
   return n + 'th';
 }
 
+function isPaintedDayJob(j) {
+  if (!j || j.deleted) return false;
+  if (isCrewNote(j)) return false;
+  const td = typeof window !== 'undefined' ? window.BETeamDay : null;
+  if (td && typeof td.isCompanyDay === 'function' && td.isCompanyDay(j)) return false;
+  if (j.source === 'company-day' || String(j.job_id || '').indexOf('holiday-') === 0) return false;
+  return true;
+}
+
 function sameDayTeamJobs(job) {
-  const list = (typeof allJobs !== 'undefined' && allJobs.length ? allJobs : []).filter(function (x) {
-    return x.date === job.date && x.team_lead === job.team_lead;
+  const pool = (typeof filtered !== 'undefined' && filtered && filtered.length)
+    ? filtered
+    : ((typeof allJobs !== 'undefined' && allJobs.length) ? allJobs : []);
+  const list = pool.filter(function (x) {
+    return isPaintedDayJob(x) && x.date === job.date && x.team_lead === job.team_lead;
   });
   list.sort(function (a, b) {
     const dt = jobSortMinutes(a) - jobSortMinutes(b);

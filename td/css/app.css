@@ -340,14 +340,15 @@ main {
   margin: 0 0 1.25rem;
   padding: 0 0 0.6rem;
   border-radius: 12px;
-  border: 1px solid #666666;
+  border: 1px solid #d9e2ec;
+  background: #fff;
   background-clip: padding-box;
 }
-.day-section.day-a {
-  background: #C5CDD6;
+.day-section.is-open {
+  background: #fff;
 }
-.day-section.day-b {
-  background: #EEF2F6;
+.day-section.is-closed {
+  background: #e8eef3;
 }
 .day-header-sticky {
   position: sticky;
@@ -363,14 +364,6 @@ main {
 .day-section > .compact-grid {
   padding: 0 0.45rem;
 }
-.day-section.day-a .day-header-sticky {
-  background: #C5CDD6;
-  border-bottom-color: #C5CDD6;
-}
-.day-section.day-b .day-header-sticky {
-  background: #EEF2F6;
-  border-bottom-color: #EEF2F6;
-}
 .day-section .day-header-sticky h3,
 .day-section .day-header-sticky h3 span:not(.text-amber-600) {
   color: #1e293b !important;
@@ -378,44 +371,22 @@ main {
 .day-section .day-whos-on {
   color: #334155;
 }
-.day-section.day-past {
-  opacity: 0.88;
-}
-.day-when {
-  margin: 0 0 0.28rem;
-  line-height: 1;
-}
-.day-header-sticky.has-when {
-  padding-top: 0.5rem;
-  padding-bottom: 0.5rem;
-}
 .day-flag {
-  display: inline-block;
-  font-size: 0.68rem;
+  display: inline;
+  font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  padding: 0.14rem 0.5rem;
-  border-radius: 999px;
-  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  margin: 0 0 0 0.35rem;
   vertical-align: middle;
+  color: #166534;
+  background: none;
 }
 .day-flag-today {
-  background: #fff;
-  color: #0f172a;
-  border: 1px solid #94a3b8;
-}
-.day-flag-tomorrow {
-  background: #0f172a;
-  color: #fff;
-  border: 1px solid #0f172a;
-}
-.day-section.day-today {
-  border: 2px solid #86efac;
-  box-shadow: 0 0 0 1px #bbf7d0;
-}
-.day-section.day-today .day-header-sticky {
-  border-bottom-width: 2px;
+  color: #166534;
 }
 
 /* Week views: days as side-scrolling columns */
@@ -505,7 +476,7 @@ body.jobs-week-view #appRoot > .max-w-7xl.mx-auto.px-4.py-5 {
 }
 .job-card-detailed .compact-row {
   display: grid;
-  grid-template-columns: 5.5ch minmax(0, 1fr) max-content;
+  grid-template-columns: 5.5ch minmax(0, 1fr);
   column-gap: 12px;
   align-items: start;
   padding: 12px 12px 12px;
@@ -632,6 +603,9 @@ body.jobs-week-view #appRoot > .max-w-7xl.mx-auto.px-4.py-5 {
   margin-top: 0;
 }
 .job-card-detailed .compact-notes {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
   margin: 6px 0 0;
   padding: 0;
   border: 0;
@@ -639,35 +613,14 @@ body.jobs-week-view #appRoot > .max-w-7xl.mx-auto.px-4.py-5 {
   font-weight: 500;
   line-height: 1.4;
   color: #8E7CC3;
+  overflow: hidden;
 }
-.job-card-detailed .detailed-notes2 {
-  margin: 6px 0 0;
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 1.4;
-  color: #0f172a;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
+.day-lunch {
+  margin-top: 0.35rem;
 }
-.job-card-detailed .compact-col-meta {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 3px;
-  text-align: right;
-  min-width: 0;
-}
-.job-card-detailed .compact-type,
-.job-card-detailed .compact-pay {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  line-height: 1.25;
-  color: #64748b;
-  white-space: nowrap;
-}
-.job-card-detailed .compact-pay.is-unpaid {
-  color: #d97706;
+.day-header-sticky .lunch-row {
+  justify-content: flex-start;
+  margin: 0;
 }
 .lunch-row {
   grid-column: 1 / -1;

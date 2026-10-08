@@ -329,7 +329,6 @@ function formatDayHeading(iso) {
 
 function dayWhenBadge(iso) {
   if (iso === todayISO()) return '<span class="day-flag day-flag-today">Today</span>';
-  if (iso === tomorrowISO()) return '<span class="day-flag day-flag-tomorrow">Tomorrow</span>';
   return '';
 }
 
@@ -778,22 +777,30 @@ function cardsWithLunch(jobs, date, teamFilter) {
   const sorted = (jobs || []).slice().sort(function (a, b) {
     return jobSortMinutes(a) - jobSortMinutes(b);
   });
-  const lunches = lunchesOnDate(date);
-  const bits = [];
-  let li = 0;
-  sorted.forEach(function (j) {
-    const jm = jobSortMinutes(j);
-    while (li < lunches.length && lunches[li].mins <= jm) {
-      bits.push(lunchRowHtml(lunches[li], teamFilter === 'all'));
-      li += 1;
+  return sorted.map(function (j) { return jobCard(j); }).join('');
+}
+
+function dayLunchHtml(date) {
+  const rows = lunchesOnDate(date);
+  if (!rows.length) return '';
+  const showTeam = currentFilters.team === 'all';
+  return '<div class="day-lunch">' + rows.map(function (row) {
+    return lunchRowHtml(row, showTeam);
+  }).join('') + '</div>';
+}
+
+function dayIsClosed(date) {
+  const today = todayISO();
+  const td = window.BETeamDay;
+  if (td && typeof td.isTeamDayFull === 'function') {
+    if (currentFilters.team !== 'all') {
+      return td.isTeamDayFull(allJobs, date, currentFilters.team, today);
     }
-    bits.push(jobCard(j));
-  });
-  while (li < lunches.length) {
-    bits.push(lunchRowHtml(lunches[li], teamFilter === 'all'));
-    li += 1;
+    return TEAMS.every(function (team) {
+      return td.isTeamDayFull(allJobs, date, team, today);
+    });
   }
-  return bits.join('');
+  return String(date || '') < String(today);
 }
 
 function visibleCrewNotes() {
@@ -970,22 +977,25 @@ function renderByDate(container) {
   const dates = datesInBounds(bounds);
   const gridCls = jobsGridClass();
   const today = todayISO();
-  container.innerHTML = dates.map(function (date, i) {
+  container.innerHTML = dates.map(function (date) {
     const jobs = (groups[date] || []).slice().sort((a, b) => jobSortMinutes(a) - jobSortMinutes(b));
     const returns = jobs.filter(j => j.is_return).length;
-    const kind = date === today ? 'today' : (date === tomorrowISO() ? 'tomorrow' : (date < today ? 'past' : 'upcoming'));
-    const stripe = i % 2 === 0 ? 'day-a' : 'day-b';
+    const closed = dayIsClosed(date);
     const when = dayWhenBadge(date);
-    return '<section class="day-section day-' + kind + ' ' + stripe + '" data-date="' + date + '">' +
-      '<div class="day-header-sticky' + (when ? ' has-when' : '') + '">' +
-        (when ? '<div class="day-when">' + when + '</div>' : '') +
+    const panel = closed ? 'is-closed' : 'is-open';
+    const todayCls = date === today ? ' day-today' : '';
+    return '<section class="day-section ' + panel + todayCls + '" data-date="' + date + '">' +
+      '<div class="day-header-sticky">' +
         '<div class="flex items-center justify-between">' +
           '<h3 class="font-semibold text-brand-800">' +
-            formatDayHeading(date) + '<span class="text-slate-400 font-normal text-sm ml-2">' + jobs.length + ' job' + (jobs.length !== 1 ? 's' : '') + '</span>' +
+            formatDayHeading(date) +
+            (when ? ' ' + when : '') +
+            '<span class="text-slate-400 font-normal text-sm ml-2">' + jobs.length + ' job' + (jobs.length !== 1 ? 's' : '') + '</span>' +
             (returns ? '<span class="ml-1 text-amber-600 text-sm">\u00b7 ' + returns + ' return' + (returns > 1 ? 's' : '') + '</span>' : '') +
           '</h3>' +
         '</div>' +
         dayWhosOnHtml(jobs, date) +
+        dayLunchHtml(date) +
       '</div>' +
       '<div class="' + gridCls + '">' + cardsWithLunch(jobs, date, currentFilters.team) + '</div></section>';
   }).join('');
@@ -1027,44 +1037,22 @@ function jobsGridClass() {
   return 'grid gap-1.5';
 }
 
-function compactTypeMark(j) {
-  const t = String(j && j.job_type || '').toLowerCase().trim();
-  if ((j && j.is_return) || t === 'return') return 'Return';
-  if (t === 'influencer' || t === 'collab') return 'Collab';
-  if (t === 'inspection') return 'Inspection';
-  if (t === 'other') return 'Other';
-  return 'Service';
-}
-
-function compactPayMark(j) {
-  const pay = String(j && j.payment || '').trim().toLowerCase();
-  if (pay === 'free') return 'Free';
-  return jobIsPaid(j) ? 'Paid' : 'Unpaid';
-}
-
 function jobCard(j) {
   const hold = isTentative(j);
   const dist = DISTRICT_COLORS[j.district] || DISTRICT_FALLBACK;
-
   const shownAddr = displayAddress(j.address);
-  const pinIco = '<svg class="tap-hint" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 1.4A4.6 4.6 0 0 0 3.4 6c0 3.4 4.6 8.6 4.6 8.6s4.6-5.2 4.6-8.6A4.6 4.6 0 0 0 8 1.4zm0 6.3A1.7 1.7 0 1 1 8 4.3a1.7 1.7 0 0 1 0 3.4z"/></svg>';
-  const phoneIco = '<svg class="tap-hint" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M3.3 2.2c.3-.4.8-.5 1.2-.3l2.1 1c.4.2.6.6.5 1.1L6.7 6.3c1.3 2.3 3 4 5.3 5.3l2.3-.4c.4-.1.9.1 1.1.5l1 2.1c.2.4.1.9-.3 1.2l-1.2 1.2c-.4.4-1 .6-1.6.4C7.3 15.6.4 8.7.6 2.7c0-.5.2-1.1.6-1.5L3.3 2.2z"/></svg>';
-  const shortAddr = shownAddr
-    ? '<p class="compact-addr">' + pinIco + esc(shownAddr) + '</p>'
-    : '';
   const unitsBit = liveAcsBadges(j.acs) || (j.acs
     ? '<span class="compact-units">' + esc(j.acs) + '</span>'
     : '');
-  const payWord = compactPayMark(j);
   const shownMobile = formatMobile(j.mobile);
   const phoneBit = shownMobile
-    ? '<p class="detailed-phone">' + phoneIco + esc(shownMobile) + '</p>'
+    ? '<p class="detailed-phone">' + esc(shownMobile) + '</p>'
+    : '';
+  const addrBit = shownAddr
+    ? '<p class="compact-addr">' + esc(shownAddr) + '</p>'
     : '';
   const notes1 = j.notes
     ? '<p class="compact-notes">' + esc(j.notes) + '</p>'
-    : '';
-  const notes2 = j.notes_long
-    ? '<p class="detailed-notes2">' + esc(j.notes_long) + '</p>'
     : '';
   const left = hold ? '#ca8a04' : dist.border;
   return '<article class="job-card job-card-detailed' + (hold ? ' is-tentative' : '') + '" data-id="' + esc(j.job_id) + '" style="border-left:4px solid ' + left + '">' +
@@ -1076,13 +1064,8 @@ function jobCard(j) {
       '<div class="compact-col compact-col-main">' +
         '<span class="compact-name">' + esc(j.client_name) + '</span>' +
         phoneBit +
-        shortAddr +
+        addrBit +
         notes1 +
-        notes2 +
-      '</div>' +
-      '<div class="compact-col compact-col-meta">' +
-        '<span class="compact-type">' + compactTypeMark(j) + '</span>' +
-        '<span class="compact-pay' + (payWord === 'Unpaid' ? ' is-unpaid' : '') + '">' + payWord + '</span>' +
       '</div>' +
     '</div></article>';
 }

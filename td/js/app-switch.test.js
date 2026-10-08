@@ -37,9 +37,9 @@ assert(nav.indexOf('Performance') === -1, '1 Performance link gone');
 assert(nav.indexOf('dashboard/') === -1, '1 no dashboard href');
 print('ok 1 TD header has Live Schedule only');
 
-assert(html.indexOf('css/app.css?v=45') !== -1, '2 css cache');
-assert(html.indexOf('js/app.js?v=43') !== -1, '2 js cache');
-print('ok 2 cache css/app.css?v=45 js/app.js?v=43');
+assert(html.indexOf('css/app.css?v=46') !== -1, '2 css cache');
+assert(html.indexOf('js/app.js?v=44') !== -1, '2 js cache');
+print('ok 2 cache css/app.css?v=46 js/app.js?v=44');
 
 assert(dash.indexOf("location.replace('/')") !== -1, '3 dashboard returns to schedule');
 assert(dash.indexOf('href="/"') !== -1, '3 schedule link');

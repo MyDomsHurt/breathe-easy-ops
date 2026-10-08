@@ -48,6 +48,9 @@ assert(cardBody.indexOf('Unpaid') === -1, '1 no Unpaid');
 assert(cardBody.indexOf('Service') === -1, '1 no Service');
 assert(cardBody.indexOf('border-left:4px solid') !== -1, '1 coloured left edge');
 assert(cardBody.indexOf('job-card-detailed') !== -1, '1 white detailed card');
+assert(cardBody.indexOf('day-heading-date') === -1, '1 no date in jobCard');
+assert(cardBody.indexOf('day-whos-on') === -1, '1 no team line in jobCard');
+assert(cardBody.indexOf('formatDayHeading') === -1, '1 date stays out of jobCard');
 print('ok 1 jobCard is time, units, name, phone, address, one note');
 
 const lunchAt = src.indexOf('function cardsWithLunch');
@@ -80,10 +83,10 @@ assert(css.indexOf('day-flag-tomorrow') === -1, '3 no tomorrow badge style');
 assert(css.indexOf('-webkit-line-clamp: 1') !== -1, '3 one note line');
 print('ok 3 open white, closed grey, today marked, not a green box');
 
-assert(html.indexOf('css/app.css?v=48') !== -1, '4 css cache');
-assert(html.indexOf('js/app.js?v=47') !== -1, '4 js cache');
+assert(html.indexOf('css/app.css?v=49') !== -1, '4 css cache');
+assert(html.indexOf('js/app.js?v=48') !== -1, '4 js cache');
 assert(html.indexOf('Performance') === -1, '4 Performance stays gone');
 assert(html.indexOf('id="be-app-switch"') !== -1, '4 Live Schedule header');
-print('ok 4 cache css/app.css?v=48 js/app.js?v=47; no Performance');
+print('ok 4 cache css/app.css?v=49 js/app.js?v=48; no Performance');
 
 print('ok job-card cases');

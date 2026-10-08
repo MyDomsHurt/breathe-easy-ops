@@ -1033,7 +1033,7 @@ function renderByDate(container) {
     const panel = closed ? 'is-closed' : 'is-open';
     const todayCls = date === today ? ' day-today' : '';
     return '<section class="day-section ' + panel + todayCls + '" data-date="' + date + '">' +
-      '<div class="day-header-sticky">' +
+      '<header class="day-header-sticky">' +
         '<div class="flex items-center justify-between">' +
           '<h3 class="font-semibold text-brand-800">' +
             '<span class="day-heading-date">' + formatDayHeading(date) + '</span>' +
@@ -1043,7 +1043,7 @@ function renderByDate(container) {
           '</h3>' +
         '</div>' +
         dayWhosOnHtml(jobs, date) +
-      '</div>' +
+      '</header>' +
       '<div class="' + gridCls + '">' + cardsWithLunch(jobs, date, currentFilters.team) + '</div></section>';
   }).join('');
   syncWeekStrip(container, dates.length);

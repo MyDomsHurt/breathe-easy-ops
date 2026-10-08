@@ -346,17 +346,19 @@ main {
   background: #e8eef3;
 }
 .day-header-sticky {
-  position: sticky;
-  top: var(--day-sticky-top, calc(var(--app-header-h, 56px) + var(--tech-bar-h, 0px)));
-  z-index: 2;
+  position: relative;
+  top: auto;
+  z-index: auto;
   background: inherit;
   padding: 0.45rem 0.6rem 0.4rem;
-  margin: 0 0 0.4rem;
+  margin: 0 0 0.5rem;
   border: 0;
   border-radius: 11px 11px 0 0;
 }
 .day-section > .grid,
 .day-section > .compact-grid {
+  position: relative;
+  z-index: 0;
   padding: 0 0.45rem;
 }
 .day-section .day-header-sticky h3,
@@ -424,7 +426,9 @@ body.jobs-week-view #appRoot > .max-w-7xl.mx-auto.px-4.py-5 {
   margin-bottom: 0 !important;
 }
 #jobsContainer.jobs-week-strip > .day-section .day-header-sticky {
-  top: var(--day-sticky-top, calc(var(--app-header-h, 56px) + var(--tech-bar-h, 0px)));
+  position: relative;
+  top: auto;
+  z-index: auto;
 }
 @media (max-width: 767px) {
   #jobsContainer.jobs-week-strip {

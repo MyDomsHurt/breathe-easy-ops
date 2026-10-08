@@ -31,3 +31,21 @@
   to = "/index.html"
   status = 404
   force = true
+
+[[redirects]]
+  from = "/dashboard"
+  to = "/"
+  status = 302
+  force = true
+
+[[redirects]]
+  from = "/dashboard/"
+  to = "/"
+  status = 302
+  force = true
+
+[[redirects]]
+  from = "/dashboard/*"
+  to = "/"
+  status = 302
+  force = true

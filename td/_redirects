@@ -1,0 +1,6 @@
+/data/jobs.json  /index.html  404!
+/dashboard/data.json  /index.html  404!
+/dashboard/weeks.json  /index.html  404!
+/dashboard   /  302!
+/dashboard/  /  302!
+/dashboard/*  /  302!

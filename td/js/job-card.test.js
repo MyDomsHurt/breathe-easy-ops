@@ -52,16 +52,17 @@ print('ok 1 jobCard is time, units, name, phone, address, one note');
 
 const lunchAt = src.indexOf('function cardsWithLunch');
 const lunchBody = src.slice(lunchAt, src.indexOf('function dayLunchHtml'));
-assert(lunchBody.indexOf('lunchRowHtml') === -1, '2 lunch is not between cards');
+assert(lunchBody.indexOf('lunchRowHtml') !== -1, '2 lunch is a row in the list');
 assert(lunchBody.indexOf('jobCard') !== -1, '2 cardsWithLunch paints jobs');
 const byDateAt = src.indexOf('function renderByDate');
 const byDateBody = src.slice(byDateAt, src.indexOf('function renderByTeam'));
-assert(byDateBody.indexOf('dayLunchHtml') !== -1, '2 lunch in the day header');
+assert(byDateBody.indexOf('dayLunchHtml') === -1, '2 lunch is not in the day header');
+assert(byDateBody.indexOf('cardsWithLunch') !== -1, '2 lunch via cardsWithLunch');
 assert(byDateBody.indexOf('day-header-sticky') !== -1, '2 day header');
 assert(byDateBody.indexOf('new booking') === -1, '2 no new booking');
 assert(byDateBody.indexOf('draggable') === -1, '2 no drag');
 assert(byDateBody.indexOf('close button') === -1 && byDateBody.indexOf('data-day-full') === -1, '2 no close button');
-print('ok 2 lunch stays in the day header');
+print('ok 2 lunch is a row in that day list at its time');
 
 const whenAt = src.indexOf('function dayWhenBadge');
 const whenBody = src.slice(whenAt, src.indexOf('function sortJobs'));
@@ -79,10 +80,10 @@ assert(css.indexOf('day-flag-tomorrow') === -1, '3 no tomorrow badge style');
 assert(css.indexOf('-webkit-line-clamp: 1') !== -1, '3 one note line');
 print('ok 3 open white, closed grey, today marked, not a green box');
 
-assert(html.indexOf('css/app.css?v=47') !== -1, '4 css cache');
-assert(html.indexOf('js/app.js?v=46') !== -1, '4 js cache');
+assert(html.indexOf('css/app.css?v=48') !== -1, '4 css cache');
+assert(html.indexOf('js/app.js?v=47') !== -1, '4 js cache');
 assert(html.indexOf('Performance') === -1, '4 Performance stays gone');
 assert(html.indexOf('id="be-app-switch"') !== -1, '4 Live Schedule header');
-print('ok 4 cache css/app.css?v=47 js/app.js?v=46; no Performance');
+print('ok 4 cache css/app.css?v=48 js/app.js?v=47; no Performance');
 
 print('ok job-card cases');

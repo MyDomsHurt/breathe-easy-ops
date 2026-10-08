@@ -210,8 +210,8 @@ body.compact .compact-pay.is-unpaid {
   }
 }
 #jobsContainer > section { margin-bottom: 1.25rem !important; }
-body.compact #viewTitle,
-body.compact main > .flex.items-center.justify-between { display: none !important; }
+#viewTitle,
+main > .flex.items-center.justify-between { display: none !important; }
 body.compact .max-w-7xl.mx-auto.px-4.py-5 {
   padding-top: 0.4rem !important;
   padding-bottom: 0.75rem !important;
@@ -363,6 +363,12 @@ main {
 .day-section .day-header-sticky h3 span:not(.text-amber-600) {
   color: #1e293b !important;
 }
+.day-heading-date {
+  white-space: nowrap;
+  overflow: visible;
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
 .day-section .day-whos-on {
   color: #334155;
 }
@@ -386,7 +392,8 @@ main {
 
 /* Week views: days as side-scrolling columns */
 body.jobs-week-view {
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 body.jobs-week-view #appRoot > .max-w-7xl.mx-auto.px-4.py-5 {
   padding-bottom: 0.5rem !important;
@@ -394,12 +401,12 @@ body.jobs-week-view #appRoot > .max-w-7xl.mx-auto.px-4.py-5 {
 #jobsContainer.jobs-week-strip {
   display: flex;
   flex-wrap: nowrap;
-  align-items: stretch;
+  align-items: flex-start;
   gap: 10px;
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: visible;
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  height: var(--week-col-h, calc(100dvh - var(--app-header-h, 56px) - var(--tech-bar-h, 0px) - 12px));
+  height: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
 }
@@ -411,16 +418,13 @@ body.jobs-week-view #appRoot > .max-w-7xl.mx-auto.px-4.py-5 {
   width: 85vw;
   min-width: 85vw;
   max-width: 85vw;
-  max-height: 100%;
-  height: 100%;
+  height: auto;
   overflow-x: hidden;
-  overflow-y: auto;
+  overflow-y: visible;
   margin-bottom: 0 !important;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
 }
 #jobsContainer.jobs-week-strip > .day-section .day-header-sticky {
-  top: 0;
+  top: var(--day-sticky-top, calc(var(--app-header-h, 56px) + var(--tech-bar-h, 0px)));
 }
 @media (max-width: 767px) {
   #jobsContainer.jobs-week-strip {

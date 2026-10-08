@@ -354,8 +354,14 @@ function selectedDayISO() {
   return currentFilters.day || todayISO();
 }
 
+const DAY_HEAD_WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DAY_HEAD_MO = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
 function formatDayHeading(iso) {
-  return formatDate(iso);
+  if (!iso) return '';
+  const d = new Date(String(iso) + 'T00:00:00');
+  if (isNaN(d.getTime())) return '';
+  return DAY_HEAD_WD[d.getDay()] + ', ' + d.getDate() + ' ' + DAY_HEAD_MO[d.getMonth()];
 }
 
 function dayWhenBadge(iso) {
@@ -578,12 +584,6 @@ function syncHeaderHeight() {
   }
   document.documentElement.style.setProperty('--tech-bar-h', barH + 'px');
   document.documentElement.style.setProperty('--day-sticky-top', (h + barH) + 'px');
-  const container = document.getElementById('jobsContainer');
-  if (container && container.classList.contains('jobs-week-strip')) {
-    const top = container.getBoundingClientRect().top;
-    const colH = Math.max(160, Math.floor(window.innerHeight - top - 8));
-    document.documentElement.style.setProperty('--week-col-h', colH + 'px');
-  }
 }
 
 function syncWeekStrip(container, dayCount) {
@@ -811,7 +811,23 @@ function cardsWithLunch(jobs, date, teamFilter) {
   const sorted = (jobs || []).slice().sort(function (a, b) {
     return jobSortMinutes(a) - jobSortMinutes(b);
   });
-  return sorted.map(function (j) { return jobCard(j); }).join('');
+  const lunches = lunchesOnDate(date);
+  const showTeam = currentFilters.team === 'all';
+  const out = [];
+  let li = 0;
+  sorted.forEach(function (j) {
+    const mins = jobSortMinutes(j);
+    while (li < lunches.length && lunches[li].mins <= mins) {
+      out.push(lunchRowHtml(lunches[li], showTeam));
+      li++;
+    }
+    out.push(jobCard(j));
+  });
+  while (li < lunches.length) {
+    out.push(lunchRowHtml(lunches[li], showTeam));
+    li++;
+  }
+  return out.join('');
 }
 
 function dayLunchHtml(date) {
@@ -948,10 +964,8 @@ function render() {
   }
   empty.classList.add('hidden');
   if (viewMode === 'date') {
-    document.getElementById('viewTitle').textContent = 'Jobs by Date';
     renderByDate(container);
   } else {
-    document.getElementById('viewTitle').textContent = 'Jobs by Team';
     syncWeekStrip(container, 0);
     renderByTeam(container);
   }
@@ -1022,14 +1036,13 @@ function renderByDate(container) {
       '<div class="day-header-sticky">' +
         '<div class="flex items-center justify-between">' +
           '<h3 class="font-semibold text-brand-800">' +
-            formatDayHeading(date) +
+            '<span class="day-heading-date">' + formatDayHeading(date) + '</span>' +
             (when ? ' ' + when : '') +
             '<span class="text-slate-400 font-normal text-sm ml-2">' + jobs.length + ' job' + (jobs.length !== 1 ? 's' : '') + '</span>' +
             (returns ? '<span class="ml-1 text-amber-600 text-sm">\u00b7 ' + returns + ' return' + (returns > 1 ? 's' : '') + '</span>' : '') +
           '</h3>' +
         '</div>' +
         dayWhosOnHtml(jobs, date) +
-        dayLunchHtml(date) +
       '</div>' +
       '<div class="' + gridCls + '">' + cardsWithLunch(jobs, date, currentFilters.team) + '</div></section>';
   }).join('');

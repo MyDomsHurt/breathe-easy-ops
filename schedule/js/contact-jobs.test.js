@@ -222,7 +222,7 @@ print('ok 6 boot URL reader and new tab leaves Contacts');
 
 const html = readSrc('../index.html');
 assert(html.indexOf('id="viewContacts"') !== -1, 'same contacts page');
-assert(html.indexOf('js/app.js?v=98') !== -1, 'app cache');
+assert(html.indexOf('js/app.js?v=99') !== -1, 'app cache');
 assert(html.indexOf('css/app.css?v=65') !== -1, 'css cache');
 assert(appSrc.indexOf("from './contacts.js?v=6'") !== -1, 'contacts cache');
 assert(appSrc.indexOf("from './contact-jobs.js?v=4'") !== -1, 'contact-jobs cache');

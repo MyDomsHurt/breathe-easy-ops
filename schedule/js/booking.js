@@ -912,7 +912,7 @@ export function bindForm() {
   if (del) del.addEventListener('click', cancelJob);
 }
 
-function applyPickedContact(c) {
+export function applyPickedContact(c) {
   const picked = bookingFieldsFromContact(c);
   form.client_name = picked.client_name;
   form.hubspot_id = picked.hubspot_id;
@@ -921,28 +921,26 @@ function applyPickedContact(c) {
   form.phone_cc = p.country || '';
   form.phone_national = p.national || '';
   form.address = picked.address;
-  form.address_line1 = picked.address_line1;
-  form.address_street = picked.address_street;
-  form.address_place = picked.address_place;
+  form.address_line1 = '';
+  form.address_street = '';
+  form.address_place = '';
   form.address_extra = '';
   form.district = '';
-  const terr = picked.address_territory;
-  if (terr) {
-    const hit = TERRITORIES.find((t) => (
-      t.code === terr.toUpperCase() || t.label.toLowerCase() === terr.toLowerCase()
-    ));
-    if (hit) form.district = hit.code;
-  }
-  if (form.address && !form.address_line1 && !form.address_street) {
+  if (form.address) {
     const parsed = parseAddress(form.address);
     form.address_line1 = parsed.line1 || '';
     form.address_street = parsed.street || '';
-    form.address_place = parsed.district || form.address_place;
+    form.address_place = parsed.district || '';
     if (parsed.code) form.district = parsed.code;
-    if (parsed.composed) form.address = parsed.composed;
-  } else if (form.address && !form.district) {
-    const parsed = parseAddress(form.address);
-    if (parsed.code) form.district = parsed.code;
+  }
+  if (!form.district) {
+    const terr = picked.address_territory;
+    if (terr) {
+      const hit = TERRITORIES.find((t) => (
+        t.code === terr.toUpperCase() || t.label.toLowerCase() === terr.toLowerCase()
+      ));
+      if (hit) form.district = hit.code;
+    }
   }
 }
 

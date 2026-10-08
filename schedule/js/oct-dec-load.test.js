@@ -191,7 +191,7 @@ assert(html.indexOf('id="octDecLoadBlock"') !== -1, '9 settings block');
 assert(html.indexOf('id="loadOctDecBtn"') !== -1, '9 Load Oct–Dec file');
 assert(html.indexOf('id="applyOctDecBtn"') !== -1, '9 Apply');
 assert(html.indexOf('id="octDecGlanceFile"') !== -1, '9 file picker');
-assert(html.indexOf('js/app.js?v=98') !== -1, '9 app cache');
+assert(html.indexOf('js/app.js?v=99') !== -1, '9 app cache');
 assert(html.indexOf('css/app.css?v=65') !== -1, '9 css cache');
 print('ok 9 Settings markup and cache');
 

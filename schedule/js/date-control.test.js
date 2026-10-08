@@ -115,9 +115,9 @@ assert(bindBody.indexOf('[data-cal-day]') !== -1, '6 day buttons are bound');
 assert(bindBody.indexOf('pickCalDay') !== -1, '6 click calls pickCalDay');
 print('ok 6 clicking 8 Oct moves the week and closes the popup');
 
-assert(html.indexOf('js/app.js?v=98') !== -1, '7 index app cache');
+assert(html.indexOf('js/app.js?v=99') !== -1, '7 index app cache');
 assert(html.indexOf('css/app.css?v=65') !== -1, '7 index css cache');
-assert(src.indexOf("from './booking.js?v=52'") !== -1, '7 booking cache stays');
-print('ok 7 cache app.js?v=98 app.css?v=65 booking.js?v=52');
+assert(src.indexOf("from './booking.js?v=53'") !== -1, '7 booking cache stays');
+print('ok 7 cache app.js?v=99 app.css?v=65 booking.js?v=53');
 
 print('ok date-control cases');

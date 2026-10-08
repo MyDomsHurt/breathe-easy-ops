@@ -1,5 +1,5 @@
 import { bookingFieldsFromContact, matchesBookingClient, searchBookingClients } from './contacts-query.js';
-import { commitBooking, sidePanelHtml } from './booking.js';
+import { applyPickedContact, commitBooking, getBookingForm, sidePanelHtml } from './booking.js';
 import { contactJobLine, jobsForContact } from './contact-jobs.js';
 import { emptyUnits } from './utils.js';
 
@@ -95,6 +95,28 @@ assert(named.client_name === 'Cara Ho', 'no-phone name');
 assert(named.phone === '', 'no-phone stays empty');
 assert(named.hubspot_id === '303', 'no-phone keeps hubspot id');
 print('ok 3 pick fills name, phone, address, hubspot_id');
+
+const christy = {
+  hubspot_id: 'christy-ngan',
+  first_name: 'Christy',
+  last_name: 'Ngan',
+  phone: '+85261234567',
+  address: 'Flat E, 11/F, Tower 9, Centra Horizon, 18 Chong San Road, Tung Chung, Lantau',
+  address_line1: 'Flat E, 11/F, Tower 9, Centra Horizon',
+  address_street: 'Flat E, 11/F, Tower 9, Centra Horizon, 18 Chong San Road',
+  address_place: 'Tung Chung',
+  address_territory: 'Lantau',
+};
+applyPickedContact(christy);
+const christyForm = getBookingForm();
+const christyStreet = [christyForm.address_line1, christyForm.address_street].filter(Boolean).join(', ');
+assert(christyStreet === 'Flat E, 11/F, Tower 9, Centra Horizon, 18 Chong San Road', 'Christy Billing Street is the parse');
+assert(!/Flat E.*Flat E/.test(christyStreet), 'unit line is not doubled');
+assert(christyForm.address === christy.address, 'Address box stays the full line');
+assert(christyForm.address_street === '18 Chong San Road', 'the road stays');
+assert(christyForm.address_place === 'Tung Chung', 'place from parseAddress');
+assert(christyForm.district === 'L-T', 'district from parseAddress');
+print('ok 3b Christy Ngan Use this contact parses Billing Street; Address box stays the full line');
 
 function blankForm(over = {}) {
   return {
@@ -345,13 +367,21 @@ const useBody = bookingSrc.slice(useAt, bookingSrc.indexOf('function bookingClie
 assert(useBody.indexOf('applyPickedContact') !== -1, 'Use this contact fills');
 assert(useBody.indexOf('closeClientSearch') !== -1, 'Use this contact closes the search');
 assert(bookingSrc.indexOf('form.hubspot_id = picked.hubspot_id') !== -1, 'pick keeps hubspot id');
+assert(bookingSrc.indexOf('form.address_line1 = picked.address_line1') === -1, 'do not copy contact address_line1');
+assert(bookingSrc.indexOf('form.address_street = picked.address_street') === -1, 'do not copy contact address_street');
+const applyAt = bookingSrc.indexOf('function applyPickedContact');
+assert(applyAt !== -1, 'applyPickedContact exists');
+const applyBody = bookingSrc.slice(applyAt, bookingSrc.indexOf('let clientHitRows'));
+assert(applyBody.indexOf('parseAddress') !== -1, 'Use this contact parses the full address');
+assert(applyBody.indexOf('form.address = picked.address') !== -1, 'address comes from the contact full line');
+assert(applyBody.indexOf('parsed.composed') === -1, 'Address box stays the full line');
 assert(bookingSrc.indexOf("from './contact-jobs.js?v=4'") !== -1, 'booking contact-jobs cache');
 assert(bookingSrc.indexOf("from './contacts.js") === -1, 'booking does not import contacts pane');
 assert(bookingSrc.indexOf("from './contacts-query.js?v=2'") !== -1, 'booking contacts-query cache');
 assert(bookingSrc.indexOf('no changes yet') !== -1, 'empty log copy');
-assert(appSrc.indexOf("from './booking.js?v=52'") !== -1, 'app booking cache');
+assert(appSrc.indexOf("from './booking.js?v=53'") !== -1, 'app booking cache');
 assert(appSrc.indexOf("from './contacts-query.js?v=2'") !== -1, 'app contacts-query cache');
-assert(html.indexOf('js/app.js?v=98') !== -1, 'index app cache');
+assert(html.indexOf('js/app.js?v=99') !== -1, 'index app cache');
 assert(html.indexOf('css/app.css?v=65') !== -1, 'index css cache');
 const cssSrc = readSrc('../css/app.css');
 assert(cssSrc.indexOf('width: 520px') !== -1, 'card is wide enough for a job line');

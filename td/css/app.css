@@ -229,21 +229,15 @@ body.compact .max-w-7xl.mx-auto.px-4.py-5 {
   margin: 0 auto;
   padding: 6px 10px 7px;
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.tech-bar-row {
-  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
   align-items: center;
-  min-width: 0;
-}
-.tech-bar-tech {
-  gap: 0;
+  justify-content: flex-start;
+  gap: 8px;
 }
 .tech-select {
-  flex: 1 1 auto;
-  min-width: 0;
-  width: 100%;
+  flex: 0 0 auto;
+  width: auto;
   appearance: none;
   -webkit-appearance: none;
   font-family: inherit;
@@ -268,13 +262,14 @@ body.compact .max-w-7xl.mx-auto.px-4.py-5 {
 }
 .range-seg {
   display: flex;
-  width: 100%;
+  flex: 0 0 auto;
+  width: auto;
   align-items: center;
   gap: 4px;
 }
 .range-select {
-  flex: 1 1 auto;
-  min-width: 0;
+  flex: 0 0 auto;
+  width: auto;
   appearance: none;
   -webkit-appearance: none;
   font-family: inherit;

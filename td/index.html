@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/app.css?v=46" />
+  <link rel="stylesheet" href="css/app.css?v=47" />
   <link rel="stylesheet" href="css/be-shell.css?v=5" />
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen" style="font-family:'Libre Franklin',system-ui,sans-serif">
@@ -90,11 +90,9 @@
 
   <div id="techRangeBar" class="bg-white border-b border-slate-200 sticky z-40">
     <div class="tech-bar-inner">
-      <div class="tech-bar-row tech-bar-tech">
-        <label class="sr-only" for="techTeamSelect">Technician</label>
-        <select id="techTeamSelect" class="tech-select" aria-label="Technician"></select>
-      </div>
-      <div class="tech-bar-row range-seg">
+      <label class="sr-only" for="techTeamSelect">Technician</label>
+      <select id="techTeamSelect" class="tech-select" aria-label="Technician"></select>
+      <div class="range-seg">
         <button type="button" id="prevDay" class="day-step" aria-label="Previous day">‹</button>
         <label class="sr-only" for="rangeSelect">Timeframe</label>
         <select id="rangeSelect" class="range-select" aria-label="Timeframe">
@@ -137,7 +135,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
   <script src="js/auth.js?v=3"></script>
   <script type="module" src="js/live-jobs.js"></script>
-  <script src="js/app.js?v=44"></script>
+  <script src="js/app.js?v=45"></script>
   <script src="js/shell-ui.js?v=4"></script>
   <script src="js/unit-stats.js"></script>
   <script src="js/app-nav.js"></script>

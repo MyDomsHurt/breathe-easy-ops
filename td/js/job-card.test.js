@@ -79,10 +79,10 @@ assert(css.indexOf('day-flag-tomorrow') === -1, '3 no tomorrow badge style');
 assert(css.indexOf('-webkit-line-clamp: 1') !== -1, '3 one note line');
 print('ok 3 open white, closed grey, today marked, not a green box');
 
-assert(html.indexOf('css/app.css?v=46') !== -1, '4 css cache');
-assert(html.indexOf('js/app.js?v=44') !== -1, '4 js cache');
+assert(html.indexOf('css/app.css?v=47') !== -1, '4 css cache');
+assert(html.indexOf('js/app.js?v=45') !== -1, '4 js cache');
 assert(html.indexOf('Performance') === -1, '4 Performance stays gone');
 assert(html.indexOf('id="be-app-switch"') !== -1, '4 Live Schedule header');
-print('ok 4 cache css/app.css?v=46 js/app.js?v=44; no Performance');
+print('ok 4 cache css/app.css?v=47 js/app.js?v=45; no Performance');
 
 print('ok job-card cases');

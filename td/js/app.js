@@ -29,6 +29,25 @@ function teamFromEmail(email) {
 function lockedTeam() {
   return window.BE_LOCKED_TEAM || '';
 }
+
+function sizeSelectToName(sel) {
+  if (!sel || !sel.options || !sel.options.length) return;
+  const opt = sel.options[sel.selectedIndex] || sel.options[0];
+  const text = String(opt.textContent || '');
+  const probe = document.createElement('span');
+  const cs = window.getComputedStyle(sel);
+  probe.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;pointer-events:none;left:0;top:0';
+  probe.style.fontFamily = cs.fontFamily;
+  probe.style.fontSize = cs.fontSize;
+  probe.style.fontWeight = cs.fontWeight;
+  probe.style.letterSpacing = cs.letterSpacing;
+  probe.textContent = text || 'M';
+  document.body.appendChild(probe);
+  const pad = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+  sel.style.width = Math.ceil(probe.getBoundingClientRect().width + pad) + 'px';
+  probe.remove();
+}
+
 let viewMode = 'date';
 
 const TEAMS = ['Matthew', 'Tiago', 'Nick', 'Alun', 'Iggi', 'Josh'];
@@ -416,6 +435,7 @@ function buildTeamButtons() {
     });
     sel.value = current;
     sel.disabled = !!lock;
+    sizeSelectToName(sel);
   }
 }
 
@@ -464,6 +484,7 @@ function bindEvents() {
   if (techSelect) {
     techSelect.addEventListener('change', e => {
       currentFilters.team = lockedTeam() || e.target.value || 'Matthew';
+      sizeSelectToName(techSelect);
       applyFilters();
     });
   }
@@ -607,6 +628,7 @@ function paintRangeButtons(range) {
   if (!sel) return;
   const week = range === 'next_week' ? 'next_week' : 'this_week';
   sel.value = week;
+  sizeSelectToName(sel);
 }
 
 function selectRange(range) {

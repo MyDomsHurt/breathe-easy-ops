@@ -27,10 +27,31 @@
     return ALLOWED.indexOf((email || "").toLowerCase().trim()) !== -1;
   }
 
+  function googleBtn() {
+    return document.getElementById("btnGoogle");
+  }
+
+  function hideGoogleButton() {
+    const btn = googleBtn();
+    if (btn) btn.classList.add("hidden");
+  }
+
+  function showGoogleButton() {
+    const btn = googleBtn();
+    if (btn) btn.classList.remove("hidden");
+  }
+
+  function hideLoginWall() {
+    const login = document.getElementById("loginScreen");
+    if (login) login.classList.add("hidden");
+    hideGoogleButton();
+  }
+
   function showLogin() {
     const login = document.getElementById("loginScreen");
     const app = document.getElementById("appRoot");
     if (login) login.classList.remove("hidden");
+    showGoogleButton();
     if (app) app.classList.add("hidden");
   }
 
@@ -38,6 +59,7 @@
     const login = document.getElementById("loginScreen");
     const app = document.getElementById("appRoot");
     if (login) login.classList.add("hidden");
+    hideGoogleButton();
     if (app) app.classList.remove("hidden");
   }
 
@@ -88,6 +110,8 @@
   }
 
   function boot() {
+    hideLoginWall();
+
     if (!window.firebase) {
       console.error("Firebase SDK missing");
       setError("Firebase SDK failed to load. Check your connection.");
@@ -100,7 +124,7 @@
     const provider = new firebase.auth.GoogleAuthProvider();
     provider.setCustomParameters({ prompt: "select_account" });
 
-    const btn = document.getElementById("btnGoogle");
+    const btn = googleBtn();
     if (btn) {
       btn.addEventListener("click", function () {
         setError("");
@@ -138,12 +162,11 @@
       return;
     }
 
-    if (loginIsVisible()) dropLoginWorker();
     window.addEventListener("load", function () {
       if (loginIsVisible()) dropLoginWorker();
     });
 
-    auth.onAuthStateChanged(function (user) {
+    function onUser(user) {
       if (!user) {
         showLogin();
         dropLoginWorker();
@@ -180,7 +203,13 @@
       if (typeof window.onAuthReady === "function") {
         window.onAuthReady(user);
       }
-    });
+    }
+
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+      .catch(function (err) { console.error(err); })
+      .then(function () {
+        auth.onAuthStateChanged(onUser);
+      });
   }
 
   if (document.readyState === "loading") {

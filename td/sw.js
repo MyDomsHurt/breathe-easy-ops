@@ -1,6 +1,6 @@
 /* TD — cache enough shell to launch standalone.
-   Never intercept /, /index.html, or auth.js — login must be network-only. */
-const CACHE = 'td-v37';
+   Never intercept navigations, /, /index.html, or auth.js — login must be network-only. */
+const CACHE = 'td-v38';
 const SHELL = [
   '/manifest.webmanifest',
   '/icons/icon-192.png',
@@ -48,6 +48,7 @@ self.addEventListener('fetch', function (event) {
   if (url.pathname.indexOf('/shared/') === 0) return;
 
   const path = url.pathname;
+  if (req.mode === 'navigate') return;
   if (path === '/' || path === '/index.html' || path === '/js/auth.js') {
     return;
   }

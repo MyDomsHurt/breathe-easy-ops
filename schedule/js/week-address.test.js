@@ -91,7 +91,7 @@ const appSrc = readSrc('app.js');
 const html = readSrc('../index.html');
 assert(appSrc.indexOf("from './board.js?v=30'") !== -1, '4 board cache');
 assert(html.indexOf('js/app.js?v=100') !== -1, '4 app cache');
-assert(html.indexOf('css/app.css?v=65') !== -1, '4 css cache stays');
+assert(html.indexOf('css/app.css?v=66') !== -1, '4 css cache');
 assert(appSrc.indexOf("from './booking.js?v=53'") !== -1, '4 booking cache stays');
 print('ok 4 cache board.js?v=30 app.js?v=100');
 

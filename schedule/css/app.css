@@ -2335,9 +2335,11 @@ button, input, select, textarea { font-family: inherit; }
 }
 .drawer-body {
   padding: 16px 20px 8px;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   flex: 1 1 auto;
   min-height: 0;
+  min-width: 0;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -2345,6 +2347,16 @@ button, input, select, textarea { font-family: inherit; }
   margin: 0 0 12px;
   padding: 0 0 12px;
   border-bottom: 1px solid #eef2f6;
+  min-width: 0;
+  max-width: 100%;
+}
+.drawer .field {
+  min-width: 0;
+  max-width: 100%;
+}
+.drawer .field textarea {
+  min-width: 0;
+  max-width: 100%;
 }
 .form-block:last-child { margin-bottom: 0; padding-bottom: 8px; border-bottom: 0; }
 .form-block .field { margin-bottom: 8px; }
@@ -2432,7 +2444,7 @@ p.hubspot-id-line {
   color: #94a3b8;
 }
 .form-block > .field:last-child,
-.grid-2 > .field, .grid-3 > .field { margin-bottom: 0; }
+.grid-2 > .field, .grid-3 > .field { margin-bottom: 0; min-width: 0; }
 .field label {
   display: block;
   font-size: 10px;
@@ -2585,7 +2597,20 @@ p.hubspot-id-line {
 }
 
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.5rem), 1fr));
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+.grid-3 input,
+.grid-3 select,
+.grid-3 .prefix-well {
+  min-width: 0;
+  max-width: 100%;
+}
 
 .typeahead { position: relative; }
 .typeahead-list {
@@ -2935,7 +2960,7 @@ p.hubspot-id-line {
 }
 
 .tent-btn {
-  min-width: 108px;
+  min-width: 0;
   background: #fffbeb;
   border-color: #f3e8c2;
   color: #854d0e;
@@ -2956,6 +2981,8 @@ p.hubspot-id-line {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
+  max-width: 100%;
 }
 .foot-audit {
   margin: 0;
@@ -2968,18 +2995,21 @@ p.hubspot-id-line {
 }
 .foot-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   align-items: center;
   justify-content: space-between;
+  min-width: 0;
+  max-width: 100%;
 }
-.foot-spacer { flex: 1; }
-.foot-actions { display: flex; gap: 8px; }
+.foot-spacer { flex: 1; min-width: 0; }
+.foot-actions { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
 .danger-btn {
   color: #b91c1c;
   border-color: #fecaca;
   margin-right: auto;
 }
-.drawer-foot .primary-btn { min-width: 92px; }
+.drawer-foot .primary-btn { min-width: 0; }
 
 .modal {
   position: absolute;

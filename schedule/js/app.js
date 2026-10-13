@@ -7,11 +7,11 @@ import { startScheduleAuth } from './auth.js';
 import { daySlotsOf, firstEmptySlotIndex, hasTimeConflict, jobsForTeamDay, layoutSlots, slotIndex } from './capacity.js?v=4';
 import { clientCardName, pulseRemaining, renderDayBoard, renderWeekBoard, weekDragSlotsHtml } from './board.js?v=30';
 import { applyJobDrop, armClickSuppress, beginDrag, capturedDragId, clearCapturedDrag, consumeClickSuppress, jobDropKind, pointerJobUp, pointerMoved, resolveDropId } from './board-drag.js?v=2';
-import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=53';
+import { closeBooking, newBookingPrefill, openBooking } from './booking.js?v=54';
 import { renderJobModal, renderJobsList, renderSearchHits } from './jobs.js?v=2';
 import { exportMasterRoster } from './export-roster.js?v=34';
 import { allContacts, initContactsStore, subscribeContacts } from './contacts-store.js?v=1';
-import { fillContactFilterSelect, importHubspotFile, renderContacts } from './contacts.js?v=6';
+import { fillContactFilterSelect, importHubspotFile, renderContacts } from './contacts.js?v=7';
 import { uniqueContactValues } from './contacts-query.js?v=2';
 import { isSundayDate, readJobLink } from './contact-jobs.js?v=4';
 import { moveTeam, visibleTeamOrder } from './team-order.js?v=1';
@@ -77,7 +77,7 @@ const state = {
   view: 'board',
   mode: 'week',
   monday: mondayOf(TODAY),
-  weekTabs: [{ id: 1, monday: mondayOf(TODAY) }],
+  weekTabs: [{ id: 1, kind: 'week', monday: mondayOf(TODAY) }],
   weekTabId: 1,
   weekTabSeq: 1,
   day: TODAY,
@@ -216,25 +216,60 @@ function weekTabLabel(monday) {
   return day + ' ' + names[month - 1];
 }
 
-function syncCurrentWeekTab() {
-  const tab = state.weekTabs.find((t) => t.id === state.weekTabId);
-  if (tab) tab.monday = state.monday;
+function tabIsContacts(tab) {
+  return !!(tab && tab.kind === 'contacts');
 }
 
-function addWeekTab() {
+function syncCurrentWeekTab() {
+  const tab = state.weekTabs.find((t) => t.id === state.weekTabId);
+  if (tab && !tabIsContacts(tab)) tab.monday = state.monday;
+}
+
+function addWeekTab(monday) {
+  const week = monday || state.monday;
   state.weekTabSeq += 1;
   const id = state.weekTabSeq;
-  state.weekTabs.push({ id, monday: state.monday });
+  state.weekTabs.push({ id, kind: 'week', monday: week });
   state.weekTabId = id;
+  state.view = 'board';
+  state.mode = 'week';
+  state.monday = week;
   paint();
+}
+
+function addContactsTab() {
+  let tab = state.weekTabs.find(tabIsContacts);
+  if (!tab) {
+    state.weekTabSeq += 1;
+    tab = { id: state.weekTabSeq, kind: 'contacts' };
+    state.weekTabs.push(tab);
+  }
+  state.weekTabId = tab.id;
+  state.view = 'contacts';
+  paint();
+}
+
+function openJobWeekTab(job) {
+  if (!job) return;
+  state.day = job.date;
+  if (isSunday(job.date)) state.showSunday = true;
+  state.focusJobId = job.job_id;
+  hideSearchHits();
+  addWeekTab(mondayOf(job.date));
+  openBooking(job);
 }
 
 function selectWeekTab(id) {
   const tab = state.weekTabs.find((t) => t.id === Number(id));
   if (!tab) return;
   state.weekTabId = tab.id;
-  state.monday = tab.monday;
-  state.mode = 'week';
+  if (tabIsContacts(tab)) {
+    state.view = 'contacts';
+  } else {
+    state.view = 'board';
+    state.monday = tab.monday;
+    state.mode = 'week';
+  }
   paint();
 }
 
@@ -247,7 +282,12 @@ function closeWeekTab(id) {
   if (state.weekTabId === nid) {
     const next = state.weekTabs[Math.min(idx, state.weekTabs.length - 1)];
     state.weekTabId = next.id;
-    state.monday = next.monday;
+    if (tabIsContacts(next)) {
+      state.view = 'contacts';
+    } else {
+      state.view = 'board';
+      state.monday = next.monday;
+    }
   }
   paint();
 }
@@ -256,9 +296,10 @@ function weekTabBarHtml() {
   const tabs = state.weekTabs.map((tab) => {
     const on = tab.id === state.weekTabId ? ' on' : '';
     const close = state.weekTabs.length > 1
-      ? `<button type="button" class="week-tab-close" data-week-tab-close="${tab.id}" aria-label="Close week">×</button>`
+      ? `<button type="button" class="week-tab-close" data-week-tab-close="${tab.id}" aria-label="Close tab">×</button>`
       : '';
-    return `<span class="week-tab${on}" data-week-tab="${tab.id}"><button type="button" class="week-tab-hit" data-week-tab="${tab.id}">${weekTabLabel(tab.monday)}</button>${close}</span>`;
+    const label = tabIsContacts(tab) ? 'Contacts' : weekTabLabel(tab.monday);
+    return `<span class="week-tab${on}" data-week-tab="${tab.id}"><button type="button" class="week-tab-hit" data-week-tab="${tab.id}">${label}</button>${close}</span>`;
   }).join('');
   return `${tabs}<button type="button" class="week-tab-add" id="weekTabAdd" aria-label="Add week">+</button>`;
 }
@@ -1763,12 +1804,35 @@ function bindChrome() {
   document.querySelectorAll('[data-nav]').forEach((el) => {
     el.addEventListener('click', (e) => {
       e.preventDefault();
-      state.view = el.dataset.nav;
-      if (state.view === 'jobs') $('globalSearch')?.focus();
-      if (state.view === 'contacts') $('contactsSearch')?.focus();
+      const nav = el.dataset.nav;
+      if (nav === 'contacts') {
+        addContactsTab();
+        $('contactsSearch')?.focus();
+        return;
+      }
+      state.view = nav;
+      if (nav === 'jobs') $('globalSearch')?.focus();
+      if (nav === 'board') {
+        const cur = state.weekTabs.find((t) => t.id === state.weekTabId);
+        if (tabIsContacts(cur)) {
+          const week = [...state.weekTabs].reverse().find((t) => !tabIsContacts(t));
+          if (week) {
+            state.weekTabId = week.id;
+            state.monday = week.monday;
+          }
+        }
+      }
       paint();
     });
   });
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('a.contact-job');
+    if (!a) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const job = getJob(a.dataset.job);
+    if (job) openJobWeekTab(job);
+  }, true);
   const userMenuBtn = $('userMenuBtn');
   if (userMenuBtn) {
     userMenuBtn.addEventListener('click', (e) => {
@@ -1829,6 +1893,7 @@ function bindChrome() {
     }, true);
     contactsMount.addEventListener('click', (e) => {
       if (e.target.closest('a.contact-job')) {
+        e.preventDefault();
         e.stopPropagation();
         return;
       }

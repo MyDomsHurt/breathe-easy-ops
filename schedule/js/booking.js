@@ -300,7 +300,7 @@ function bookingJobLine(job) {
 function bookingJobRow(j) {
   const href = contactJobHref(j);
   if (!href) return '';
-  return `<li><a class="contact-job contact-job-line" href="${escapeAttr(href)}" target="_blank" rel="noopener noreferrer">${escapeAttr(bookingJobLine(j))}</a></li>`;
+  return `<li><a class="contact-job contact-job-line" href="${escapeAttr(href)}" data-job="${escapeAttr(String(j.job_id || ''))}">${escapeAttr(bookingJobLine(j))}</a></li>`;
 }
 
 function bookingJobsHtml(c, jobs, today) {
@@ -436,7 +436,10 @@ function bindSidePanel(el) {
     });
   });
   el.querySelectorAll('a.contact-job').forEach((a) => {
-    a.addEventListener('click', (e) => e.stopPropagation());
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
   });
 }
 

@@ -90,9 +90,9 @@ print('ok 3 missing tag comes from the job district as (N-T)');
 const appSrc = readSrc('app.js');
 const html = readSrc('../index.html');
 assert(appSrc.indexOf("from './board.js?v=30'") !== -1, '4 board cache');
-assert(html.indexOf('js/app.js?v=101') !== -1, '4 app cache');
+assert(html.indexOf('js/app.js?v=102') !== -1, '4 app cache');
 assert(html.indexOf('css/app.css?v=67') !== -1, '4 css cache');
-assert(appSrc.indexOf("from './booking.js?v=53'") !== -1, '4 booking cache stays');
-print('ok 4 cache board.js?v=30 app.js?v=101');
+assert(appSrc.indexOf("from './booking.js?v=54'") !== -1, '4 booking cache');
+print('ok 4 cache board.js?v=30 app.js?v=102');
 
 print('ok week-address cases');

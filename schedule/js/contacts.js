@@ -56,7 +56,7 @@ function jobRow(j) {
   const payBit = f.pay
     ? `<span class="compact-pay ${payClass(f.pay)}">${esc(f.pay)}</span>`
     : '';
-  return `<li><a class="contact-job job-card job-card-detailed" href="${esc(href)}" target="_blank" rel="noopener noreferrer">
+  return `<li><a class="contact-job job-card job-card-detailed" href="${esc(href)}" data-job="${esc(String(j.job_id || ''))}">
       <div class="compact-row">
         <div class="compact-col compact-col-time">
           ${f.day ? `<span class="compact-time">${esc(f.day)}</span>` : ''}

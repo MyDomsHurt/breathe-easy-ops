@@ -53,9 +53,11 @@ const header = html.slice(html.indexOf('class="app-header"'), html.indexOf('</he
 assert(header.indexOf('id="weekTabBar"') !== -1, '1 tab bar under the header');
 assert(header.indexOf('id="weekTabBar"') > header.indexOf('header-inner'), '1 tab bar is under the header row');
 assert(src.indexOf('function addWeekTab') !== -1, '1 plus adds a tab');
+assert(src.indexOf('function addContactsTab') !== -1, '1 Contacts nav opens a Contacts tab');
+assert(src.indexOf('function openJobWeekTab') !== -1, '1 job row opens an in-app week tab');
 assert(src.indexOf('function selectWeekTab') !== -1, '1 click shows that week');
 assert(src.indexOf('function closeWeekTab') !== -1, '1 close a tab');
-print('ok 1 tab bar under the header; a tab is a week');
+print('ok 1 tab bar under the header; a tab is a week or Contacts');
 
 const pickAt = src.indexOf('function pickCalDay');
 const pickBody = src.slice(pickAt, src.indexOf('function goCalToday'));
@@ -76,30 +78,43 @@ const jobs = [{ job_id: 'keep-me', date: '2026-08-17' }];
 let removed = 0;
 const state = {
   monday: thisWeek,
-  weekTabs: [{ id: 1, monday: thisWeek }],
+  weekTabs: [{ id: 1, kind: 'week', monday: thisWeek }],
   weekTabId: 1,
   weekTabSeq: 1,
   mode: 'week',
+  view: 'board',
   day: thisWeek,
   calMenu: 'x',
   calOpen: true,
+  focusJobId: '',
+  showSunday: false,
 };
 function paint() {}
 function isSunday() { return false; }
+function hideSearchHits() {}
+const opened = [];
+function openBooking(job) { opened.push(job && job.job_id); }
 function removeJob() { removed += 1; }
 
 eval(
   fnBody(src, 'weekTabLabel') + '\n' +
+  fnBody(src, 'tabIsContacts') + '\n' +
   fnBody(src, 'syncCurrentWeekTab') + '\n' +
   fnBody(src, 'addWeekTab') + '\n' +
+  fnBody(src, 'addContactsTab') + '\n' +
+  fnBody(src, 'openJobWeekTab') + '\n' +
   fnBody(src, 'selectWeekTab') + '\n' +
   fnBody(src, 'closeWeekTab') + '\n' +
+  fnBody(src, 'weekTabBarHtml') + '\n' +
   fnBody(src, 'pickCalDay') + '\n' +
   'globalThis.__addWeekTab = addWeekTab;\n' +
+  'globalThis.__addContactsTab = addContactsTab;\n' +
+  'globalThis.__openJobWeekTab = openJobWeekTab;\n' +
   'globalThis.__selectWeekTab = selectWeekTab;\n' +
   'globalThis.__closeWeekTab = closeWeekTab;\n' +
   'globalThis.__pickCalDay = pickCalDay;\n' +
-  'globalThis.__weekTabLabel = weekTabLabel;\n'
+  'globalThis.__weekTabLabel = weekTabLabel;\n' +
+  'globalThis.__weekTabBarHtml = weekTabBarHtml;\n'
 );
 
 globalThis.__addWeekTab();
@@ -122,11 +137,28 @@ assert(removed === 0, '3 closing does not delete jobs');
 assert(jobs[0].job_id === 'keep-me', '3 jobs stay');
 print('ok 3 two tabs 17 Aug and this week; close leaves the jobs');
 
+globalThis.__addContactsTab();
+assert(state.weekTabs.some((t) => t.kind === 'contacts'), '5 Contacts nav opens a Contacts tab');
+assert(state.view === 'contacts', '5 Contacts tab shows Contacts');
+assert(globalThis.__weekTabBarHtml().indexOf('Contacts') !== -1, '5 Contacts sits in the same bar');
+const beforeTabs = state.weekTabs.length;
+globalThis.__openJobWeekTab(jobs[0]);
+assert(state.weekTabs.length === beforeTabs + 1, '5 job row adds an in-app tab');
+assert(state.monday === '2026-08-17', '5 in-app tab is that job’s week');
+assert(state.view === 'board', '5 job row shows the week');
+assert(opened[0] === 'keep-me', '5 job row opens the card');
+assert(state.weekTabs.some((t) => t.kind === 'contacts'), '5 Contacts tab stays');
+assert(removed === 0, '5 job row does not delete jobs');
+assert(src.indexOf('window.open') === -1, '5 no window.open');
+assert(booking.indexOf('target="_blank"') === -1, '5 booking job line does not open a browser tab');
+print('ok 5 Contacts, click a job: in-app week tab and card; browser tab count stays');
+
 assert(css.indexOf('.week-tab-bar') !== -1, '4 tab bar css');
 assert(css.indexOf('.week-tab-add') !== -1, '4 plus css');
-assert(html.indexOf('js/app.js?v=101') !== -1, '4 app cache');
+assert(html.indexOf('js/app.js?v=102') !== -1, '4 app cache');
 assert(html.indexOf('css/app.css?v=67') !== -1, '4 css cache');
-assert(src.indexOf("from './booking.js?v=53'") !== -1, '4 booking cache stays');
-print('ok 4 cache app.js?v=101 app.css?v=67');
+assert(src.indexOf("from './booking.js?v=54'") !== -1, '4 booking cache');
+assert(src.indexOf("from './contacts.js?v=7'") !== -1, '4 contacts cache');
+print('ok 4 cache app.js?v=102 app.css?v=67 booking.js?v=54 contacts.js?v=7');
 
 print('ok week-tabs cases');

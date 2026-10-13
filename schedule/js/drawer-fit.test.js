@@ -68,9 +68,9 @@ assert(css.indexOf('.log-rail {') !== -1, '4 log rail stays');
 assert(css.indexOf('width: 300px') !== -1, '4 log width stays');
 print('ok 4 three panels unchanged');
 
-assert(html.indexOf('css/app.css?v=66') !== -1, '5 css cache');
-assert(html.indexOf('js/app.js?v=100') !== -1, '5 app cache stays');
+assert(html.indexOf('css/app.css?v=67') !== -1, '5 css cache');
+assert(html.indexOf('js/app.js?v=101') !== -1, '5 app cache');
 assert(appSrc.indexOf("from './booking.js?v=53'") !== -1, '5 booking cache stays');
-print('ok 5 cache app.css?v=66 app.js?v=100');
+print('ok 5 cache app.css?v=67 app.js?v=101');
 
 print('ok drawer-fit cases');

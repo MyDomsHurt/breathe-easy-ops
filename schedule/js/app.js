@@ -77,6 +77,9 @@ const state = {
   view: 'board',
   mode: 'week',
   monday: mondayOf(TODAY),
+  weekTabs: [{ id: 1, monday: mondayOf(TODAY) }],
+  weekTabId: 1,
+  weekTabSeq: 1,
   day: TODAY,
   teams: [...TEAMS],
   districts: [],
@@ -204,11 +207,100 @@ function closeCalPopup() {
   paintDateControl();
 }
 
+function weekTabLabel(monday) {
+  const iso = String(monday || '');
+  const day = Number(iso.slice(8, 10));
+  const month = Number(iso.slice(5, 7));
+  const names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  if (!day || !month) return '';
+  return day + ' ' + names[month - 1];
+}
+
+function syncCurrentWeekTab() {
+  const tab = state.weekTabs.find((t) => t.id === state.weekTabId);
+  if (tab) tab.monday = state.monday;
+}
+
+function addWeekTab() {
+  state.weekTabSeq += 1;
+  const id = state.weekTabSeq;
+  state.weekTabs.push({ id, monday: state.monday });
+  state.weekTabId = id;
+  paint();
+}
+
+function selectWeekTab(id) {
+  const tab = state.weekTabs.find((t) => t.id === Number(id));
+  if (!tab) return;
+  state.weekTabId = tab.id;
+  state.monday = tab.monday;
+  state.mode = 'week';
+  paint();
+}
+
+function closeWeekTab(id) {
+  if (state.weekTabs.length <= 1) return;
+  const nid = Number(id);
+  const idx = state.weekTabs.findIndex((t) => t.id === nid);
+  if (idx < 0) return;
+  state.weekTabs.splice(idx, 1);
+  if (state.weekTabId === nid) {
+    const next = state.weekTabs[Math.min(idx, state.weekTabs.length - 1)];
+    state.weekTabId = next.id;
+    state.monday = next.monday;
+  }
+  paint();
+}
+
+function weekTabBarHtml() {
+  const tabs = state.weekTabs.map((tab) => {
+    const on = tab.id === state.weekTabId ? ' on' : '';
+    const close = state.weekTabs.length > 1
+      ? `<button type="button" class="week-tab-close" data-week-tab-close="${tab.id}" aria-label="Close week">×</button>`
+      : '';
+    return `<span class="week-tab${on}" data-week-tab="${tab.id}"><button type="button" class="week-tab-hit" data-week-tab="${tab.id}">${weekTabLabel(tab.monday)}</button>${close}</span>`;
+  }).join('');
+  return `${tabs}<button type="button" class="week-tab-add" id="weekTabAdd" aria-label="Add week">+</button>`;
+}
+
+function paintWeekTabs() {
+  const el = $('weekTabBar');
+  if (!el) return;
+  el.innerHTML = weekTabBarHtml();
+}
+
+function bindWeekTabs() {
+  const el = $('weekTabBar');
+  if (!el || el.dataset.bound) return;
+  el.dataset.bound = '1';
+  el.addEventListener('click', (e) => {
+    const close = e.target.closest('[data-week-tab-close]');
+    if (close) {
+      e.preventDefault();
+      e.stopPropagation();
+      closeWeekTab(close.dataset.weekTabClose);
+      return;
+    }
+    const add = e.target.closest('#weekTabAdd');
+    if (add) {
+      e.preventDefault();
+      addWeekTab();
+      return;
+    }
+    const tab = e.target.closest('[data-week-tab]');
+    if (tab) {
+      e.preventDefault();
+      selectWeekTab(tab.dataset.weekTab);
+    }
+  });
+}
+
 function pickCalDay(iso) {
   const day = String(iso || '').trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return;
   state.mode = 'week';
   state.monday = mondayOf(day);
+  syncCurrentWeekTab();
   state.day = day;
   state.calMenu = '';
   state.calOpen = false;
@@ -219,6 +311,7 @@ function pickCalDay(iso) {
 function goCalToday() {
   state.mode = 'week';
   state.monday = mondayOf(TODAY);
+  syncCurrentWeekTab();
   state.day = TODAY;
   state.calYear = Number(TODAY.slice(0, 4));
   state.calMonth = Number(TODAY.slice(5, 7));
@@ -392,6 +485,7 @@ function paint() {
   if (!mount) return;
   const jobs = filteredJobs();
   paintDateControl();
+  paintWeekTabs();
   $('viewBoard').hidden = state.view !== 'board';
   $('viewJobs').hidden = state.view !== 'jobs';
   if ($('viewContacts')) $('viewContacts').hidden = state.view !== 'contacts';
@@ -438,6 +532,7 @@ function consumePendingJobLink() {
   state.view = 'board';
   state.mode = 'week';
   state.monday = mondayOf(job.date);
+  syncCurrentWeekTab();
   state.day = job.date;
   if (isSunday(job.date)) state.showSunday = true;
   state.focusJobId = job.job_id;
@@ -472,6 +567,7 @@ function goToJob(job) {
   state.view = 'board';
   state.mode = 'week';
   state.monday = mondayOf(job.date);
+  syncCurrentWeekTab();
   state.day = job.date;
   if (isSunday(job.date)) state.showSunday = true;
   state.focusJobId = job.job_id;
@@ -1134,6 +1230,7 @@ function bindBoardDrag() {
     });
     if (result === 'move') {
       state.monday = mondayOf(date);
+      syncCurrentWeekTab();
       state.day = date;
       state.focusJobId = id;
       const moved = getJob(id);
@@ -1252,6 +1349,7 @@ function bindBoardPointer() {
     });
     if (result === 'move') {
       state.monday = mondayOf(date);
+      syncCurrentWeekTab();
       state.day = date;
       state.focusJobId = id;
       const movedJob = getJob(id);
@@ -1680,6 +1778,7 @@ function bindChrome() {
     });
   }
   bindDateControl();
+  bindWeekTabs();
   $('newBooking').addEventListener('click', () => {
     const date = TODAY;
     const boardTeams = visibleBoardTeams();
@@ -1828,6 +1927,7 @@ function bindChrome() {
   window.addEventListener('be:booked', (e) => {
     const job = e.detail;
     state.monday = mondayOf(job.date);
+    syncCurrentWeekTab();
     state.day = job.date;
     state.view = 'board';
     state.focusJobId = job.job_id;
@@ -2505,6 +2605,7 @@ startScheduleAuth()
       state.view = 'board';
       state.mode = 'week';
       state.monday = mondayOf(pendingJobLink.date);
+      syncCurrentWeekTab();
       state.day = pendingJobLink.date;
       if (isSunday(pendingJobLink.date)) state.showSunday = true;
     }

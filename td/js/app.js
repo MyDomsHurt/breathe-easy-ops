@@ -73,7 +73,6 @@ const DISTRICT_COLORS = {
 };
 const DISTRICT_FALLBACK = { bg: '#F3F4F6', border: '#D1D5DB', text: '#374151' };
 
-/* Area tags already live on job.district — never show or search them. */
 const DISTRICT_TAG = 'HKN|HKS|HKIS|KLN|TKO|TSW|N\\s*-?\\s*TW?|NTW?|S\\s*-?\\s*K|L\\s*-?\\s*[TM]|LT|LM';
 
 function tidyAddress(s) {
@@ -109,9 +108,36 @@ function stripDistrictTag(raw) {
   return tidyAddress(a);
 }
 
-function displayAddress(raw) {
-  const out = tidyAddress(stripDistrictTag(raw).replace(/\s*need a pin\s*$/i, ''));
-  return out || String(raw || '').trim();
+function shortDistrictCode(district) {
+  const raw = String(district || '').trim();
+  if (!raw) return '';
+  if (DISTRICT_COLORS[raw]) return raw;
+  const key = raw.replace(/\s+/g, '').toUpperCase();
+  if (DISTRICT_COLORS[key]) return key;
+  if (key === 'NT' || /^NEW\s*TERRITORIES$/i.test(raw)) return 'N-T';
+  if (key === 'NTW') return 'N-TW';
+  if (key === 'SK') return 'S-K';
+  if (key === 'LT') return 'L-T';
+  if (key === 'LM') return 'L-M';
+  return '';
+}
+
+function addressHasDistrictTag(line) {
+  return new RegExp('[\\(（]\\s*(?:' + DISTRICT_TAG + ')\\s*[\\)）]', 'i').test(String(line || ''));
+}
+
+function displayAddress(raw, district) {
+  let a = String(raw || '');
+  a = a.replace(/\/\/\s*pin:?\s*/gi, ' ');
+  a = a.replace(/https?:\/\/(?:maps\.app\.goo\.gl\/|goo\.gl\/maps\/|maps\.google\.)[^\s]+/gi, ' ');
+  a = a.replace(/\s*need a pin\s*$/i, '');
+  a = a.replace(/\(\s*\d+\s*[SWBCU](?:\s*[+\/&]\s*\d+\s*[SWBCU])*\s*\)/gi, ' ');
+  a = tidyAddress(a);
+  const code = shortDistrictCode(district);
+  if (code && !addressHasDistrictTag(a)) {
+    a = a ? (a + ' (' + code + ')') : ('(' + code + ')');
+  }
+  return a;
 }
 
 function mapsHref(raw) {
@@ -1087,7 +1113,7 @@ function jobsGridClass() {
 function jobCard(j) {
   const hold = isTentative(j);
   const dist = DISTRICT_COLORS[j.district] || DISTRICT_FALLBACK;
-  const shownAddr = displayAddress(j.address);
+  const shownAddr = displayAddress(j.address, j.district);
   const unitsBit = liveAcsBadges(j.acs) || (j.acs
     ? '<span class="compact-units">' + esc(j.acs) + '</span>'
     : '');
@@ -1150,7 +1176,7 @@ function cleanAddressForMaps(raw) {
 function openModal(j) {
   document.getElementById('modalTitle').textContent = j.client_name;
   document.getElementById('modalSub').textContent = formatDate(j.date) + ' \u00b7 ' + displayTime(j) + ' \u00b7 ' + j.team_lead;
-  const shownAddr = displayAddress(j.address);
+  const shownAddr = displayAddress(j.address, j.district);
   const placeUrl = mapsHref(j.address);
   const dirUrl = mapsDirHref(j.address);
   const nextJob = nextJobSameDayLead(j);

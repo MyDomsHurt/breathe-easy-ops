@@ -134,11 +134,27 @@ function compactPayMark(j) {
   return { label: 'Paid', kind: 'paid' };
 }
 
+function shortDistrictCode(district) {
+  const fromKey = districtKey(district);
+  if (fromKey) return fromKey;
+  const raw = String(district == null ? '' : district).trim();
+  if (!raw) return '';
+  const key = raw.replace(/\s+/g, '').toUpperCase();
+  if (key === 'NT' || /^NEW\s*TERRITORIES$/i.test(raw)) return 'N-T';
+  if (key === 'NTW') return 'N-TW';
+  if (key === 'SK') return 'S-K';
+  if (key === 'LT') return 'L-T';
+  if (key === 'LM') return 'L-M';
+  return '';
+}
+
 function weekAddressLine(job) {
-  const street = String(job && job.address_street || '').trim();
-  const place = String(job && job.address_place || '').trim();
-  if (street || place) return [street, place].filter(Boolean).join(', ');
-  return String(job && job.address || '').trim();
+  let a = String(job && job.address || '').trim();
+  const code = shortDistrictCode(job && job.district);
+  if (code && !lastParenDistrictCode(a)) {
+    a = a ? (a + ' (' + code + ')') : ('(' + code + ')');
+  }
+  return a;
 }
 
 function boardCardHtml(job, conflict, week) {

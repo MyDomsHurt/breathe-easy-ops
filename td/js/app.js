@@ -1222,6 +1222,9 @@ function techNotesBoxHtml() {
     '</div>' +
     '<textarea id="techNotesText" class="tech-notes-text" rows="3"></textarea>' +
     '<input type="file" id="techNotesFile" class="tech-notes-file" style="display:block;margin:8px 0 0;font:inherit;font-size:13px">' +
+    '<div id="techNotesProgress" style="display:none;margin:8px 0 0;height:8px;border-radius:8px;background:#e2e8f0;overflow:hidden">' +
+      '<div id="techNotesProgressBar" style="height:100%;width:0%;background:#075985;border-radius:8px"></div>' +
+    '</div>' +
     '<div id="techNotesLog" style="display:none"></div>' +
   '</div>';
 }
@@ -1278,11 +1281,36 @@ function techNoteFileRef(file, fileId) {
   };
 }
 
-function uploadTechNoteFile(jobId, file, fileId) {
+function uploadTechNoteFile(jobId, file, fileId, onProgress) {
   const storage = techNotesStorage();
   if (!storage || !jobId || !file || !fileId) return Promise.reject(new Error('no storage'));
   const path = 'technician_notes/' + String(jobId) + '/' + String(fileId);
-  return storage.ref(path).put(file);
+  const task = storage.ref(path).put(file);
+  if (typeof onProgress === 'function') {
+    task.on('state_changed', function (snap) {
+      const total = snap && snap.totalBytes ? snap.totalBytes : 0;
+      const done = snap && snap.bytesTransferred ? snap.bytesTransferred : 0;
+      onProgress(total ? Math.round((done / total) * 100) : 0);
+    });
+  }
+  return task;
+}
+
+function showTechNoteProgress(pct) {
+  const wrap = document.getElementById('techNotesProgress');
+  const bar = document.getElementById('techNotesProgressBar');
+  if (wrap) wrap.style.display = 'block';
+  if (bar) {
+    const n = Math.max(0, Math.min(100, Math.round(Number(pct) || 0)));
+    bar.style.width = n + '%';
+  }
+}
+
+function hideTechNoteProgress() {
+  const wrap = document.getElementById('techNotesProgress');
+  const bar = document.getElementById('techNotesProgressBar');
+  if (wrap) wrap.style.display = 'none';
+  if (bar) bar.style.width = '0%';
 }
 
 function addTechNoteFileRef(noteId, fileRef) {
@@ -1471,14 +1499,16 @@ function bindTechNotes(job) {
     writeTechNote(job, text, techNoteBy()).then(function (written) {
       if (!written || !written.payload) return null;
       if (!file) return written;
+      showTechNoteProgress(0);
       const fileId = techNoteFileId();
       const jobId = written.payload.job_id;
-      return uploadTechNoteFile(jobId, file, fileId).then(function () {
+      return uploadTechNoteFile(jobId, file, fileId, showTechNoteProgress).then(function () {
         return addTechNoteFileRef(written.id, techNoteFileRef(file, fileId)).then(function () {
           return written;
         });
       });
     }).then(function (written) {
+      hideTechNoteProgress();
       if (written && written.payload) {
         if (ta) ta.value = '';
         if (fileEl) fileEl.value = '';
@@ -1488,6 +1518,7 @@ function bindTechNotes(job) {
         saveBtn.textContent = 'Save';
       }
     }).catch(function () {
+      hideTechNoteProgress();
       saveBtn.textContent = 'Save failed';
     }).then(function () {
       delete saveBtn.dataset.busy;

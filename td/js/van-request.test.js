@@ -61,9 +61,9 @@ assert(cardBody.indexOf('detailed-phone') !== -1, 'jobCard phone');
 assert(cardBody.indexOf('compact-addr') !== -1, 'jobCard address');
 assert(cardBody.indexOf('compact-notes') !== -1, 'jobCard note');
 assert(cardBody.indexOf('compact-col-meta') === -1, 'jobCard no stamp');
-assert(html.indexOf('js/app.js?v=63') !== -1, 'js cache');
+assert(html.indexOf('js/app.js?v=64') !== -1, 'js cache');
 assert(html.indexOf('css/app.css?v=52') !== -1, 'css cache');
-print('ok 1 jobCard unchanged; js/app.js?v=63');
+print('ok 1 jobCard unchanged; js/app.js?v=64');
 
 const jobsJson = JSON.stringify([
   { job_id: '2026-10-08-matthew-1', date: '2026-10-08', team_lead: 'Matthew', time: '08:30', client_name: 'First' },
@@ -110,9 +110,10 @@ assert(openBody.indexOf('copyText(vanText)') !== -1, '3 copies vanRequestText');
 assert(openBody.indexOf("flashVanBtn(vanBtn, 'Copied'") !== -1, '3 Copied');
 assert(openBody.indexOf("flashVanBtn(vanBtn, 'Copy failed'") !== -1, '3 Copy failed still opens');
 assert(openBody.indexOf('vanDiscordChannel()') !== -1, '3 opens the channel');
-assert(openBody.indexOf("window.open(vanDiscordChannel()") !== -1, '3 opens the Discord channel URL directly');
-assert(openBody.indexOf('copyText(vanText)') < openBody.indexOf("window.open(vanDiscordChannel()"), '3 copies then opens');
-assert(openBody.indexOf('about:blank') === -1, '3 does not open a blank tab first');
+assert(openBody.indexOf('window.location.href = vanDiscordChannel()') !== -1, '3 opens Discord with location.href');
+assert(openBody.indexOf('copyText(vanText)') < openBody.indexOf('window.location.href = vanDiscordChannel()'), '3 copies then opens');
+assert(openBody.indexOf('window.open') === -1, '3 does not use window.open');
+assert(openBody.indexOf('about:blank') === -1, '3 does not open a blank tab');
 assert(openBody.indexOf('tab.location') === -1, '3 no leftover browser tab');
 assert(src.indexOf("fetch('/.netlify/functions/van-discord'") === -1, '3 does not post to Discord');
 assert(src.indexOf('function postVanRequest') === -1, '3 no post helper');
@@ -141,8 +142,9 @@ const poonVan = globalThis.__poonVan;
 assert(poonVan.indexOf('Poon Kit Tung') !== -1, '4 Poon Kit Tung is in the copy');
 assert(poonVan.indexOf('Van request') !== -1, '4 copy stays van request');
 assert(openBody.indexOf('copyText(vanText)') !== -1, '4 Copy van request copies the text');
-assert(openBody.indexOf("window.open(vanDiscordChannel()") !== -1, '4 opens Discord');
-assert(openBody.indexOf('about:blank') === -1, '4 no blank tab');
-print('ok 4 Copy van request on Poon Kit Tung copies the text and opens Discord. No blank tab.');
+assert(openBody.indexOf('window.location.href = vanDiscordChannel()') !== -1, '4 opens Discord with location.href');
+assert(openBody.indexOf('window.open') === -1, '4 no window.open');
+assert(openBody.indexOf('about:blank') === -1, '4 no leftover browser tab');
+print('ok 4 Copy van request on a phone opens Discord with no leftover browser tab.');
 
 print('ok van-request cases');

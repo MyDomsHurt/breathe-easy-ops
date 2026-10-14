@@ -1173,10 +1173,59 @@ function cleanAddressForMaps(raw) {
   return a;
 }
 
+function modalDayLabel(iso) {
+  if (!iso) return '';
+  const d = new Date(String(iso) + 'T00:00:00');
+  if (isNaN(d.getTime())) return '';
+  const wd = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const mo = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return wd[d.getDay()] + ' ' + d.getDate() + ' ' + mo[d.getMonth()];
+}
+
+function modalSubText(j) {
+  return modalDayLabel(j && j.date) + ' \u00b7 ' + displayTime(j) + ' \u00b7 ' + (j && j.team_lead || '');
+}
+
+function modalChipsHtml(j) {
+  const units = liveAcsBadges(j && j.acs) || (j && j.acs
+    ? '<span class="modal-chip">' + esc(j.acs) + '</span>'
+    : '');
+  const paid = jobIsPaid(j);
+  const pay = '<span class="modal-chip ' + (paid ? 'modal-chip-paid' : 'modal-chip-unpaid') + '">'
+    + (paid ? 'Paid' : 'Unpaid') + '</span>';
+  return units + pay;
+}
+
+function modalPhoneHtml(j) {
+  const tel = j && j.mobile ? String(j.mobile).replace(/[^\d+]/g, '') : '';
+  if (!tel) return '';
+  const shown = formatMobile(j.mobile) || String(j.mobile).trim();
+  return '<a class="modal-phone" href="tel:' + esc(tel) + '">' + esc(shown) + '</a>';
+}
+
+function modalNotesHtml(j) {
+  const notes = j && j.notes ? String(j.notes).trim() : '';
+  if (!notes) return '';
+  return '<div class="modal-notes">' + esc(notes) + '</div>';
+}
+
+function modalBodyHtml(j, mapsRow) {
+  const shownAddr = displayAddress(j && j.address, j && j.district);
+  const addr = shownAddr
+    ? '<div class="modal-address"><div class="modal-address-text">' + esc(shownAddr) + '</div>' + (mapsRow || '') + '</div>'
+    : '';
+  return modalPhoneHtml(j) + addr + modalNotesHtml(j) +
+    '<div class="van-copy-row">' +
+      '<button type="button" id="copyVanBtn" class="van-copy-btn">Copy van request</button>' +
+      '<button type="button" id="copyVanPinBtn" class="van-copy-btn van-copy-btn-quiet">Copy van request + pin</button>' +
+    '</div>';
+}
+
 function openModal(j) {
   document.getElementById('modalTitle').textContent = j.client_name;
-  document.getElementById('modalSub').textContent = formatDate(j.date) + ' \u00b7 ' + displayTime(j) + ' \u00b7 ' + j.team_lead;
-  const shownAddr = displayAddress(j.address, j.district);
+  document.getElementById('modalSub').textContent = modalSubText(j);
+  const chipsEl = document.getElementById('modalChips');
+  if (chipsEl) chipsEl.innerHTML = modalChipsHtml(j);
   const placeUrl = mapsHref(j.address);
   const dirUrl = mapsDirHref(j.address);
   const nextJob = nextJobSameDayLead(j);
@@ -1197,42 +1246,7 @@ function openModal(j) {
   const mapsRow = mapBtns.length
     ? '<div class="job-map-actions">' + mapBtns.join('') + '</div>'
     : '';
-  const addressHtml = shownAddr
-    ? '<div class="text-slate-800 break-words">' + esc(shownAddr) + '</div>' + mapsRow
-    : '\u2014';
-  const tel = j.mobile ? String(j.mobile).replace(/[^\d+]/g, '') : '';
-  const mobileHtml = tel
-    ? '<a href="tel:' + esc(tel) + '" class="inline-flex items-center justify-center min-h-[44px] font-semibold text-emerald-800">' + esc(j.mobile) + '</a>'
-    : (j.mobile || '\u2014');
-  const isPaid = jobIsPaid(j);
-  const paidStatus = isPaid
-    ? '<span class="inline-flex items-center gap-1.5 text-emerald-700 font-semibold">PAID</span>'
-    : '<span class="inline-flex items-center gap-1.5 text-rose-700 font-semibold">UNPAID</span>';
-  const rows = [
-    ['Type', j.is_return ? '<span class="text-amber-600 font-semibold">Return</span>' : 'Full clean'],
-  ];
-  if (isTentative(j)) {
-    rows.push(['Status', '<span class="tentative-badge text-white text-[10px] font-semibold px-1.5 py-0.5 rounded">Tentative</span>']);
-  }
-  rows.push(
-    ['Team', j.team_lead + (j.team_members ? ' (' + j.team_members + ')' : '')],
-    ['ACs / Units', j.acs || '\u2014 (empty \u2192 treated as return)'],
-    ['Payment Status', paidStatus],
-    ['Mobile', mobileHtml],
-    ['Address', addressHtml],
-    ['District', j.district || '\u2014'],
-    ['Notes 1', j.notes ? esc(j.notes) : '\u2014']
-  );
-  if (j.notes_long) rows.push(['Notes 2', esc(j.notes_long)]);
-  rows.push(['Job ID', j.job_id]);
-  document.getElementById('modalBody').innerHTML = rows.map(function(pair) {
-    const note2 = pair[0] === 'Notes 2' ? ' modal-notes-2' : '';
-    return '<div><dt class="text-xs font-medium text-slate-400 uppercase tracking-wide">' + pair[0] + '</dt><dd class="mt-0.5 text-slate-800 break-words' + note2 + '">' + pair[1] + '</dd></div>';
-  }).join('') +
-    '<div class="van-copy-row">' +
-      '<button type="button" id="copyVanBtn" class="van-copy-btn">Copy van request</button>' +
-      '<button type="button" id="copyVanPinBtn" class="van-copy-btn">Copy van request + pin</button>' +
-    '</div>';
+  document.getElementById('modalBody').innerHTML = modalBodyHtml(j, mapsRow);
   const vanText = vanRequestText(j);
   const dirBtn = document.getElementById('jobDirBtn');
   if (dirBtn && dirUrl) {

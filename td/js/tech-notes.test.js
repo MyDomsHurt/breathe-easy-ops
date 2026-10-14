@@ -61,7 +61,13 @@ assert(box.indexOf('techNotesLogBtn') === -1, '1 no Notes button');
 assert(box.indexOf('>Notes<') === -1, '1 Notes button removed');
 assert(box.indexOf('techNotesHistoryBtn') !== -1, '1 notebook icon opens history');
 assert(box.indexOf('tech-notes-history-icon') !== -1, '1 notebook svg');
-assert(box.indexOf('Technician notes') < box.indexOf('techNotesHistoryBtn'), '1 icon on the right of the label');
+assert(box.indexOf('tech-notes-heading') !== -1, '1 label and icon sit together');
+assert(box.indexOf('Technician notes') < box.indexOf('techNotesHistoryBtn'), '1 icon sits immediately to the right of Technician notes');
+assert(box.indexOf('tech-notes-heading') < box.indexOf('Technician notes'), '1 heading wraps the words');
+assert(box.indexOf('techNotesHistoryBtn') < box.indexOf('tech-notes-text'), '1 icon is not on the far side of the block');
+assert(css.indexOf('.tech-notes-heading') !== -1, '1 heading css');
+assert(css.indexOf('margin-right: auto') === -1, '1 label does not push the icon away');
+assert(css.indexOf('margin-left: auto') === -1, '1 icon does not sit on the far side');
 assert(box.indexOf('techNotesLog') !== -1, '1 log mount');
 assert(box.indexOf('display:none') !== -1, '1 closed log is hidden');
 assert(box.indexOf('tech-note-item') === -1, '1 closed box does not list notes');
@@ -260,6 +266,11 @@ const jenny = { job_id: '2026-10-14-matthew-jenny', team_lead: 'Matthew', notes:
 const jennyNote = globalThis.__techNotePayload(jenny, 'gate code 1234', 'jefflamb1992@gmail.com', '2026-10-14T05:00:00.000Z');
 assert(jennyNote && jennyNote.text === 'gate code 1234', '7 Jenny Ho note text');
 assert(jennyNote.job_id === '2026-10-14-matthew-jenny', '7 Jenny Ho job_id');
+assert(box.indexOf('Technician notes') < box.indexOf('techNotesHistoryBtn'), '7 Jenny Ho notebook icon is right beside Technician notes');
+assert(box.indexOf('tech-notes-heading') !== -1, '7 Jenny Ho icon sits with the label');
+assert(css.indexOf('margin-left: auto') === -1, '7 Jenny Ho icon is not on the far side of the block');
+assert(box.indexOf('id="techNotesFile"') < box.indexOf('techNotesSave'), '7 Save placement stays under the file input');
+assert(fnBody(src, 'loadTechNotes').indexOf('techNoteClientJobIds') !== -1, '7 history stays');
 const jennyLog = globalThis.__techNoteLogHtml([jennyNote]);
 assert(jennyLog.indexOf('gate code 1234') !== -1, '7 the note appears in the log');
 assert(jennyLog.indexOf('14 Oct, 13:00') !== -1, '7 log time stays');
@@ -330,10 +341,10 @@ assert(storageRules.indexOf('match /technician_notes/{jobId}/{fileId}') !== -1, 
 assert(storageRules.indexOf('The app does not deploy rules') !== -1, '4 Jeff publishes storage rules');
 print('ok 4b storage.rules: technician_notes/{jobId}/{fileId}');
 
-assert(html.indexOf('js/app.js?v=65') !== -1, '5 js cache');
-assert(html.indexOf('css/app.css?v=53') !== -1, '5 css cache');
+assert(html.indexOf('js/app.js?v=66') !== -1, '5 js cache');
+assert(html.indexOf('css/app.css?v=54') !== -1, '5 css cache');
 assert(html.indexOf('firebase-firestore-compat.js') !== -1, '5 Firebase compat on the page');
 assert(html.indexOf('firebase-storage-compat.js') !== -1, '5 Storage SDK on the page');
-print('ok 5 cache js/app.js?v=65 css/app.css?v=53');
+print('ok 5 cache js/app.js?v=66 css/app.css?v=54');
 
 print('ok tech-notes cases');

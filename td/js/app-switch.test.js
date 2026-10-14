@@ -38,8 +38,8 @@ assert(nav.indexOf('dashboard/') === -1, '1 no dashboard href');
 print('ok 1 TD header has Live Schedule only');
 
 assert(html.indexOf('css/app.css?v=51') !== -1, '2 css cache');
-assert(html.indexOf('js/app.js?v=58') !== -1, '2 js cache');
-print('ok 2 cache css/app.css?v=51 js/app.js?v=58');
+assert(html.indexOf('js/app.js?v=59') !== -1, '2 js cache');
+print('ok 2 cache css/app.css?v=51 js/app.js?v=59');
 
 assert(dash.indexOf("location.replace('/')") !== -1, '3 dashboard returns to schedule');
 assert(dash.indexOf('href="/"') !== -1, '3 schedule link');

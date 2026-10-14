@@ -17,6 +17,8 @@ function readSrc(name) {
     '../td/' + name,
     'firestore.rules',
     '../firestore.rules',
+    'storage.rules',
+    '../storage.rules',
   ];
   for (const p of paths) {
     try {
@@ -56,6 +58,9 @@ assert(box.indexOf('techNotesLog') !== -1, '1 log mount');
 assert(box.indexOf('display:none') !== -1, '1 closed log is hidden');
 assert(box.indexOf('tech-note-item') === -1, '1 closed box does not list notes');
 assert(box.indexOf('photo') === -1, '1 no photo button');
+assert(box.indexOf('type="file"') !== -1, '1 file input on the box');
+assert(box.indexOf('id="techNotesFile"') !== -1, '1 one file input');
+assert(box.indexOf('multiple') === -1, '1 one file only');
 const bodyFn = fnBody(src, 'modalBodyHtml');
 assert(bodyFn.indexOf('modalNotesHtml') !== -1, '1 office notes');
 assert(bodyFn.indexOf('techNotesBoxHtml') !== -1, '1 technician box in the sheet');
@@ -82,11 +87,18 @@ assert(cardBody.indexOf('technician_notes') === -1, '2 week does not read this n
 assert(cardBody.indexOf('techNotes') === -1, '2 week card has no technician box');
 const bindFn = fnBody(src, 'bindTechNotes');
 assert(bindFn.indexOf("ta.value = ''") !== -1, '2 box clears');
+assert(bindFn.indexOf('fileEl.value = ') !== -1, '2 file input clears on success');
 assert(bindFn.indexOf("'Saved'") !== -1, '2 Saved state shows');
 assert(bindFn.indexOf("saveBtn.textContent = 'Save'") !== -1, '2 Saved then clears');
 assert(bindFn.indexOf('loadTechNotes') !== -1, '2 log loads that job');
 assert(bindFn.indexOf('closeTechNotesLog') !== -1, '2 close tucks the log away');
 assert(bindFn.indexOf('loadTechNote(') === -1, '2 does not fill the box from a replaced doc');
+assert(bindFn.indexOf('writeTechNote') !== -1, '2 writes the note document first');
+assert(bindFn.indexOf('uploadTechNoteFile') !== -1, '2 then uploads the file');
+assert(bindFn.indexOf('writeTechNote') < bindFn.indexOf('uploadTechNoteFile'), '2 note first, then Storage');
+assert(bindFn.indexOf('addTechNoteFileRef') !== -1, '2 then the file ref');
+assert(bindFn.indexOf('uploadTechNoteFile') < bindFn.indexOf('addTechNoteFileRef'), '2 file ref after Storage');
+assert(bindFn.indexOf('resume') === -1, '2 no resume after the sheet closes');
 print('ok 2 Save adds a note; box clears; week stays off this note');
 
 eval(
@@ -133,10 +145,33 @@ const openLog = globalThis.__techNoteLogHtml([noon]);
 assert(openLog.indexOf('14 Oct, 13:00') !== -1, '6 saved note shows the date and the minute');
 assert(openLog.indexOf('gate left open') !== -1, '6 note text stays');
 assert(openLog.indexOf('14 Oct, 13:00') < openLog.indexOf('gate left open'), '6 time sits on the note');
-assert(fnBody(src, 'writeTechNote') === writeFn, '6 Save is unchanged');
+assert(itemFn.indexOf('file') === -1, '6 text notes log stays text');
 assert(closed.indexOf('14 Oct, 13:00') === -1, '6 closed sheet does not list the time');
 assert(closed.indexOf('tech-note-item') === -1, '6 closed sheet does not list notes');
 print('ok 6 Poon Kit Tung open log shows 14 Oct, 13:00; closed log empty');
+
+const jenny = { job_id: '2026-10-14-matthew-jenny', team_lead: 'Matthew', notes: 'side gate', client_name: 'Jenny Ho' };
+const jennyNote = globalThis.__techNotePayload(jenny, 'gate code 1234', 'jefflamb1992@gmail.com', '2026-10-14T05:00:00.000Z');
+assert(jennyNote && jennyNote.text === 'gate code 1234', '7 Jenny Ho note text');
+assert(jennyNote.job_id === '2026-10-14-matthew-jenny', '7 Jenny Ho job_id');
+const jennyLog = globalThis.__techNoteLogHtml([jennyNote]);
+assert(jennyLog.indexOf('gate code 1234') !== -1, '7 the note appears in the log');
+assert(jennyLog.indexOf('14 Oct, 13:00') !== -1, '7 log time stays');
+const uploadFn = fnBody(src, 'uploadTechNoteFile');
+assert(uploadFn.indexOf("technician_notes/'") !== -1, '7 Storage path technician_notes/');
+assert(uploadFn.indexOf('jobId') !== -1 && uploadFn.indexOf('fileId') !== -1, '7 technician_notes/{job_id}/{fileId}');
+assert(uploadFn.indexOf('.put(file)') !== -1, '7 whole file is in Storage');
+const fileRefFn = fnBody(src, 'techNoteFileRef');
+assert(fileRefFn.indexOf('id:') !== -1, '7 file ref id');
+assert(fileRefFn.indexOf('name:') !== -1, '7 file ref name');
+assert(fileRefFn.indexOf('size:') !== -1, '7 file ref size');
+assert(fileRefFn.indexOf('type:') !== -1, '7 file ref type');
+const attachFn = fnBody(src, 'addTechNoteFileRef');
+assert(attachFn.indexOf('techNotesCol') !== -1, '7 file ref uses techNotesCol');
+assert(attachFn.indexOf('.update({ file: fileRef })') !== -1, '7 file ref on that note document');
+assert(fnBody(src, 'closeModal').indexOf('resume') === -1, '7 no resume after the sheet closes');
+assert(fnBody(src, 'closeModal').indexOf('uploadTechNoteFile') === -1, '7 close does not resume the upload');
+print('ok 7 Jenny Ho: save a note with one file; note in the log; file under technician_notes/{job_id}/');
 
 const techBlock = rules.slice(rules.indexOf('match /technician_notes'), rules.indexOf('match /technician_notes') + 1200);
 assert(rules.indexOf('match /technician_notes/{noteId}') !== -1, '4 technician_notes rule');
@@ -147,12 +182,19 @@ assert(techBlock.indexOf('request.resource.data.author == email()') !== -1, '4 l
 assert(techBlock.indexOf('resource.data.job_id') !== -1, '4 lead reads notes on a job');
 assert(techBlock.indexOf('get(/databases/$(database)/documents/jobs/$(resource.data.job_id)).data.team_lead == leadName()') !== -1, '4 lead reads notes on their jobs');
 assert(techBlock.indexOf('get(/databases/$(database)/documents/jobs/$(request.resource.data.job_id)).data.team_lead == leadName()') !== -1, '4 lead adds on their jobs');
+assert(techBlock.indexOf('allow update: if isLead()') !== -1, '4 lead may add the file ref');
 assert(rules.indexOf('The app does not deploy rules') !== -1, '4 Jeff publishes the rules');
 print('ok 4 firestore.rules: lead add as themselves; read on their jobs; office or Josh any');
 
-assert(html.indexOf('js/app.js?v=58') !== -1, '5 js cache');
+const storageRules = readSrc('storage.rules');
+assert(storageRules.indexOf('match /technician_notes/{jobId}/{fileId}') !== -1, '4 storage technician_notes/{job_id}/{fileId}');
+assert(storageRules.indexOf('The app does not deploy rules') !== -1, '4 Jeff publishes storage rules');
+print('ok 4b storage.rules: technician_notes/{jobId}/{fileId}');
+
+assert(html.indexOf('js/app.js?v=59') !== -1, '5 js cache');
 assert(html.indexOf('css/app.css?v=51') !== -1, '5 css cache');
 assert(html.indexOf('firebase-firestore-compat.js') !== -1, '5 Firebase compat on the page');
-print('ok 5 cache js/app.js?v=58');
+assert(html.indexOf('firebase-storage-compat.js') !== -1, '5 Storage SDK on the page');
+print('ok 5 cache js/app.js?v=59');
 
 print('ok tech-notes cases');

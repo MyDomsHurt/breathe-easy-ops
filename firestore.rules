@@ -70,6 +70,12 @@ service cloud.firestore {
         && request.resource.data.author == email()
         && request.resource.data.job_id is string
         && get(/databases/$(database)/documents/jobs/$(request.resource.data.job_id)).data.team_lead == leadName();
+      allow update: if isLead()
+        && resource.data.author == email()
+        && request.resource.data.author == email()
+        && request.resource.data.job_id == resource.data.job_id
+        && request.resource.data.text == resource.data.text
+        && get(/databases/$(database)/documents/jobs/$(resource.data.job_id)).data.team_lead == leadName();
     }
   }
 }

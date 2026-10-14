@@ -1221,6 +1221,7 @@ function techNotesBoxHtml() {
       '<button type="button" id="techNotesLogBtn" class="tech-notes-log-btn">Notes</button>' +
     '</div>' +
     '<textarea id="techNotesText" class="tech-notes-text" rows="3"></textarea>' +
+    '<input type="file" id="techNotesFile" class="tech-notes-file" style="display:block;margin:8px 0 0;font:inherit;font-size:13px">' +
     '<div id="techNotesLog" style="display:none"></div>' +
   '</div>';
 }
@@ -1252,6 +1253,42 @@ function techNotesCol() {
   if (typeof firebase === 'undefined' || typeof firebase.firestore !== 'function') return null;
   if (!firebase.apps || !firebase.apps.length) return null;
   return firebase.firestore().collection('technician_notes');
+}
+
+function techNotesStorage() {
+  if (typeof firebase === 'undefined' || typeof firebase.storage !== 'function') return null;
+  if (!firebase.apps || !firebase.apps.length) return null;
+  return firebase.storage();
+}
+
+function techNoteFileId() {
+  try {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  } catch (err) {}
+  return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+}
+
+function techNoteFileRef(file, fileId) {
+  if (!file || !fileId) return null;
+  return {
+    id: String(fileId),
+    name: String(file.name || ''),
+    size: Number(file.size) || 0,
+    type: String(file.type || '')
+  };
+}
+
+function uploadTechNoteFile(jobId, file, fileId) {
+  const storage = techNotesStorage();
+  if (!storage || !jobId || !file || !fileId) return Promise.reject(new Error('no storage'));
+  const path = 'technician_notes/' + String(jobId) + '/' + String(fileId);
+  return storage.ref(path).put(file);
+}
+
+function addTechNoteFileRef(noteId, fileRef) {
+  const col = techNotesCol();
+  if (!col || !noteId || !fileRef) return Promise.resolve(null);
+  return col.doc(String(noteId)).update({ file: fileRef });
 }
 
 function techNotesNewestFirst(notes) {
@@ -1326,11 +1363,14 @@ function writeTechNote(job, text, author) {
   if (!payload) return Promise.resolve(null);
   const col = techNotesCol();
   if (!col) return Promise.resolve(null);
-  return col.add(payload).then(function () { return payload; });
+  return col.add(payload).then(function (ref) {
+    return { id: ref && ref.id, payload: payload };
+  });
 }
 
 function bindTechNotes(job) {
   const ta = document.getElementById('techNotesText');
+  const fileEl = document.getElementById('techNotesFile');
   const btn = document.getElementById('techNotesSave');
   const logBtn = document.getElementById('techNotesLogBtn');
   const logEl = document.getElementById('techNotesLog');
@@ -1359,9 +1399,21 @@ function bindTechNotes(job) {
     const saveBtn = btn;
     if (saveBtn.dataset.busy) return;
     saveBtn.dataset.busy = '1';
-    writeTechNote(job, text, techNoteBy()).then(function (payload) {
-      if (payload) {
+    const file = (fileEl && fileEl.files && fileEl.files[0]) ? fileEl.files[0] : null;
+    writeTechNote(job, text, techNoteBy()).then(function (written) {
+      if (!written || !written.payload) return null;
+      if (!file) return written;
+      const fileId = techNoteFileId();
+      const jobId = written.payload.job_id;
+      return uploadTechNoteFile(jobId, file, fileId).then(function () {
+        return addTechNoteFileRef(written.id, techNoteFileRef(file, fileId)).then(function () {
+          return written;
+        });
+      });
+    }).then(function (written) {
+      if (written && written.payload) {
         if (ta) ta.value = '';
+        if (fileEl) fileEl.value = '';
         saveBtn.textContent = 'Saved';
         if (logEl && logEl.dataset.open === '1') loadTechNotes(job && job.job_id, logEl);
       } else {

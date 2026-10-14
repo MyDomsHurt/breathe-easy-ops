@@ -50,7 +50,7 @@ const btnAt = html.indexOf('id="btnGoogle"');
 const btnTag = html.slice(html.lastIndexOf('<button', btnAt), html.indexOf('>', btnAt) + 1);
 assert(btnTag.indexOf('hidden') !== -1, '2 Google button starts hidden');
 assert(html.indexOf('js/auth.js?v=4') !== -1, '2 auth cache');
-assert(html.indexOf('js/app.js?v=58') !== -1, '2 app.js cache');
+assert(html.indexOf('js/app.js?v=59') !== -1, '2 app.js cache');
 assert(html.indexOf('css/app.css?v=51') !== -1, '2 css cache');
 print('ok 2 auth.js?v=4; Google button hidden in HTML');
 

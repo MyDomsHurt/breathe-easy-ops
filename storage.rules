@@ -1,0 +1,43 @@
+rules_version = '2';
+// Jeff publishes these in Firebase console → Storage → Rules after merge.
+// The app does not deploy rules.
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null && request.auth.token.email is string;
+    }
+    function email() {
+      return request.auth.token.email.lower();
+    }
+    function isOffice() {
+      return signedIn() && email() in [
+        'jefflamb1992@gmail.com',
+        'info@breathe-easyhk.com',
+        'ruby@breathe-easyhk.com',
+        'perry@breathe-easyhk.com',
+        'n.marie.lamb@gmail.com',
+        'webhook@breathe-easyhk.com'
+      ];
+    }
+    function isJosh() {
+      return signedIn() && email() == 'joshua@breathe-easyhk.com';
+    }
+    function leadName() {
+      return email() == 'matthewgross2001@gmail.com' ? 'Matthew'
+        : email() == 'tiagogiri334@gmail.com' ? 'Tiago'
+        : email() == 'neltrestium@gmail.com' ? 'Nick'
+        : email() == 'sudor23@gmail.com' ? 'Alun'
+        : email() == 'iggi.king@gmail.com' ? 'Iggi'
+        : '';
+    }
+    function isLead() {
+      return signedIn() && leadName() != '';
+    }
+
+    match /technician_notes/{jobId}/{fileId} {
+      allow read, write: if isOffice() || isJosh()
+        || (isLead()
+            && firestore.get(/databases/(default)/documents/jobs/$(jobId)).data.team_lead == leadName());
+    }
+  }
+}

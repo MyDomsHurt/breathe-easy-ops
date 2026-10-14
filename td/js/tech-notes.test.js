@@ -65,6 +65,9 @@ assert(box.indexOf('photo') === -1, '1 no photo button');
 assert(box.indexOf('type="file"') !== -1, '1 file input on the box');
 assert(box.indexOf('id="techNotesFile"') !== -1, '1 one file input');
 assert(box.indexOf('multiple') === -1, '1 one file only');
+assert(box.indexOf('id="techNotesProgress"') !== -1, '1 progress bar on the box');
+assert(box.indexOf('id="techNotesProgressBar"') !== -1, '1 bar fill');
+assert(box.indexOf('id="techNotesProgress"') < box.indexOf('id="techNotesLog"'), '1 bar sits on the box');
 const bodyFn = fnBody(src, 'modalBodyHtml');
 assert(bodyFn.indexOf('modalNotesHtml') !== -1, '1 office notes');
 assert(bodyFn.indexOf('techNotesBoxHtml') !== -1, '1 technician box in the sheet');
@@ -103,6 +106,8 @@ assert(bindFn.indexOf('writeTechNote') < bindFn.indexOf('uploadTechNoteFile'), '
 assert(bindFn.indexOf('addTechNoteFileRef') !== -1, '2 then the file ref');
 assert(bindFn.indexOf('uploadTechNoteFile') < bindFn.indexOf('addTechNoteFileRef'), '2 file ref after Storage');
 assert(bindFn.indexOf('resume') === -1, '2 no resume after the sheet closes');
+assert(bindFn.indexOf('showTechNoteProgress') !== -1, '2 bar shows while the file uploads');
+assert(bindFn.indexOf('hideTechNoteProgress') !== -1, '2 bar hides when the upload finishes or fails');
 print('ok 2 Save adds a note; box clears; week stays off this note');
 
 eval(
@@ -156,6 +161,27 @@ assert(fnBody(src, 'techNoteLogHtml').indexOf('techNotesNewestFirst') !== -1, '6
 assert(closed.indexOf('14 Oct, 13:00') === -1, '6 closed sheet does not list the time');
 assert(closed.indexOf('tech-note-item') === -1, '6 closed sheet does not list notes');
 print('ok 6 Poon Kit Tung open log shows 14 Oct, 13:00; closed log empty');
+
+const uploadBody = fnBody(src, 'uploadTechNoteFile');
+assert(uploadBody.indexOf("technician_notes/'") !== -1, '9 upload path stays');
+assert(uploadBody.indexOf('.put(file)') !== -1, '9 still puts the whole file');
+assert(uploadBody.indexOf("state_changed") !== -1, '9 listens for progress');
+assert(uploadBody.indexOf('bytesTransferred') !== -1, '9 fills with the percentage');
+assert(bindFn.indexOf('writeTechNote') < bindFn.indexOf('showTechNoteProgress'), '9 note still writes first');
+assert(bindFn.indexOf('uploadTechNoteFile') < bindFn.indexOf('addTechNoteFileRef'), '9 file ref still after Storage');
+assert(fnBody(src, 'techNoteLogHtml').indexOf('techNotesNewestFirst') !== -1, '9 notes log order stays');
+assert(itemFn.indexOf('techNoteFilesHtml') !== -1, '9 notes log still shows files under the note');
+const poonFileLog = globalThis.__techNoteLogHtml([{
+  author: first.author,
+  job_id: poon.job_id,
+  text: first.text,
+  at: '2026-10-14T05:00:00.000Z',
+  file: { id: 'poon-file', name: 'gate.jpg', size: 10, type: 'image/jpeg', url: 'https://example.test/poon.jpg' }
+}]);
+assert(poonFileLog.indexOf('gate left open') !== -1, '9 Poon Kit Tung note appears');
+assert(poonFileLog.indexOf('tech-note-thumb') !== -1, '9 Poon Kit Tung file appears');
+assert(bindFn.indexOf('loadTechNotes') !== -1, '9 note and file appear when it finishes');
+print('ok 9 Poon Kit Tung: save a note with one file; the bar shows progress; the note and file appear when it finishes');
 
 const jenny = { job_id: '2026-10-14-matthew-jenny', team_lead: 'Matthew', notes: 'side gate', client_name: 'Jenny Ho' };
 const jennyNote = globalThis.__techNotePayload(jenny, 'gate code 1234', 'jefflamb1992@gmail.com', '2026-10-14T05:00:00.000Z');
@@ -231,10 +257,10 @@ assert(storageRules.indexOf('match /technician_notes/{jobId}/{fileId}') !== -1, 
 assert(storageRules.indexOf('The app does not deploy rules') !== -1, '4 Jeff publishes storage rules');
 print('ok 4b storage.rules: technician_notes/{jobId}/{fileId}');
 
-assert(html.indexOf('js/app.js?v=60') !== -1, '5 js cache');
+assert(html.indexOf('js/app.js?v=61') !== -1, '5 js cache');
 assert(html.indexOf('css/app.css?v=52') !== -1, '5 css cache');
 assert(html.indexOf('firebase-firestore-compat.js') !== -1, '5 Firebase compat on the page');
 assert(html.indexOf('firebase-storage-compat.js') !== -1, '5 Storage SDK on the page');
-print('ok 5 cache js/app.js?v=60 css/app.css?v=52');
+print('ok 5 cache js/app.js?v=61 css/app.css?v=52');
 
 print('ok tech-notes cases');

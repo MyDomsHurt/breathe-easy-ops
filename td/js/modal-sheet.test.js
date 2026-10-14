@@ -139,8 +139,8 @@ assert(css.indexOf('.modal-chips') !== -1, '3 chips css');
 print('ok 3 Jenny Ho card: chips, phone, address, notes, one green van button');
 
 assert(html.indexOf('css/app.css?v=50') !== -1, '4 css cache');
-assert(html.indexOf('js/app.js?v=54') !== -1, '4 js cache');
+assert(html.indexOf('js/app.js?v=55') !== -1, '4 js cache');
 assert(html.indexOf('js/auth.js?v=4') !== -1, '4 auth cache stays');
-print('ok 4 cache css/app.css?v=50 js/app.js?v=54');
+print('ok 4 cache css/app.css?v=50 js/app.js?v=55');
 
 print('ok modal-sheet cases');

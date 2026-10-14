@@ -57,7 +57,11 @@ const box = fnBody(src, 'techNotesBoxHtml');
 assert(box.indexOf('Technician notes') !== -1, '1 technician notes heading');
 assert(box.indexOf('<textarea') !== -1, '1 text area');
 assert(box.indexOf('techNotesSave') !== -1, '1 Save');
-assert(box.indexOf('techNotesLogBtn') !== -1, '1 log button');
+assert(box.indexOf('techNotesLogBtn') === -1, '1 no Notes button');
+assert(box.indexOf('>Notes<') === -1, '1 Notes button removed');
+assert(box.indexOf('techNotesHistoryBtn') !== -1, '1 notebook icon opens history');
+assert(box.indexOf('tech-notes-history-icon') !== -1, '1 notebook svg');
+assert(box.indexOf('Technician notes') < box.indexOf('techNotesHistoryBtn'), '1 icon on the right of the label');
 assert(box.indexOf('techNotesLog') !== -1, '1 log mount');
 assert(box.indexOf('display:none') !== -1, '1 closed log is hidden');
 assert(box.indexOf('tech-note-item') === -1, '1 closed box does not list notes');
@@ -65,8 +69,13 @@ assert(box.indexOf('photo') === -1, '1 no photo button');
 assert(box.indexOf('type="file"') !== -1, '1 file input on the box');
 assert(box.indexOf('id="techNotesFile"') !== -1, '1 one file input');
 assert(box.indexOf('multiple') !== -1, '1 file input accepts multiple files');
+assert(box.indexOf('id="techNotesFile"') < box.indexOf('id="techNotesProgress"'), '1 file then progress');
 assert(box.indexOf('id="techNotesProgress"') !== -1, '1 progress bar on the box');
 assert(box.indexOf('id="techNotesProgressBar"') !== -1, '1 bar fill');
+assert(box.indexOf('id="techNotesProgress"') < box.indexOf('techNotesSave'), '1 progress bar stays above Save');
+assert(box.indexOf('tech-notes-save-row') !== -1, '1 compact Save row');
+assert(box.indexOf('id="techNotesFile"') < box.indexOf('techNotesSave'), '1 Save sits under the file input');
+assert(css.indexOf('.tech-notes-save-row') !== -1 && css.indexOf('justify-content: flex-end') !== -1, '1 Save is right-aligned');
 assert(box.indexOf('id="techNotesProgress"') < box.indexOf('id="techNotesLog"'), '1 bar sits on the box');
 const bodyFn = fnBody(src, 'modalBodyHtml');
 assert(bodyFn.indexOf('modalNotesHtml') !== -1, '1 office notes');
@@ -97,7 +106,9 @@ assert(bindFn.indexOf("ta.value = ''") !== -1, '2 box clears');
 assert(bindFn.indexOf('fileEl.value = ') !== -1, '2 file input clears on success');
 assert(bindFn.indexOf("'Saved'") !== -1, '2 Saved state shows');
 assert(bindFn.indexOf("saveBtn.textContent = 'Save'") !== -1, '2 Saved then clears');
-assert(bindFn.indexOf('loadTechNotes') !== -1, '2 log loads that job');
+assert(bindFn.indexOf('loadTechNotes') !== -1, '2 history loads that client');
+assert(bindFn.indexOf('loadTechNotes(job') !== -1, '2 history uses the job');
+assert(bindFn.indexOf('techNotesHistoryBtn') !== -1, '2 notebook icon opens the history');
 assert(bindFn.indexOf('closeTechNotesLog') !== -1, '2 close tucks the log away');
 assert(bindFn.indexOf('loadTechNote(') === -1, '2 does not fill the box from a replaced doc');
 assert(bindFn.indexOf('writeTechNote') !== -1, '2 writes the note document first');
@@ -118,14 +129,42 @@ eval(
   fnBody(src, 'techNoteFilesOnNote') + '\n' +
   fnBody(src, 'techNoteFileIsImage') + '\n' +
   fnBody(src, 'techNoteFilesHtml') + '\n' +
+  fnBody(src, 'techNotePhoneKey') + '\n' +
+  fnBody(src, 'techNoteAddressKey') + '\n' +
+  fnBody(src, 'techNoteSameClient') + '\n' +
+  fnBody(src, 'techNoteIsVisitJob') + '\n' +
+  fnBody(src, 'techNoteClientJobIds') + '\n' +
   fnBody(src, 'techNoteLogItemHtml') + '\n' +
   fnBody(src, 'techNoteLogHtml') + '\n' +
   'globalThis.__techNotePayload = techNotePayload;\n' +
   'globalThis.__techNoteAtLabel = techNoteAtLabel;\n' +
-  'globalThis.__techNoteLogHtml = techNoteLogHtml;\n'
+  'globalThis.__techNoteLogHtml = techNoteLogHtml;\n' +
+  'globalThis.__techNoteClientJobIds = techNoteClientJobIds;\n' +
+  'globalThis.__techNoteSameClient = techNoteSameClient;\n'
 );
 
-const poon = { job_id: '2026-10-14-matthew-poon', team_lead: 'Matthew', notes: 'call first', client_name: 'Poon Kit Tung' };
+const poon = {
+  job_id: '2026-10-14-matthew-poon',
+  team_lead: 'Matthew',
+  notes: 'call first',
+  client_name: 'Poon Kit Tung',
+  mobile: '+85261112222',
+  address: '88 Foo Road, Tai Po (N-T)'
+};
+const poonPrior = {
+  job_id: '2026-09-01-matthew-poon',
+  team_lead: 'Matthew',
+  client_name: 'Poon Kit Tung',
+  mobile: '61112222',
+  address: '12 Old Street'
+};
+const otherClient = {
+  job_id: '2026-10-14-matthew-other',
+  team_lead: 'Matthew',
+  client_name: 'Someone Else',
+  mobile: '+85299998888',
+  address: '1 Other Road'
+};
 assert(globalThis.__techNotePayload(poon, '   ', 'matthewgross2001@gmail.com') == null, '3 empty save does nothing');
 assert(globalThis.__techNotePayload(poon, '', 'matthewgross2001@gmail.com') == null, '3 blank save does nothing');
 const first = globalThis.__techNotePayload(poon, 'gate left open', 'matthewgross2001@gmail.com', '2026-10-14T01:00:00.000Z');
@@ -146,6 +185,11 @@ assert(log.indexOf('pin at the door') < log.indexOf('gate left open'), '3 newest
 const closed = fnBody(src, 'techNotesBoxHtml');
 assert(closed.indexOf('gate left open') === -1, '3 closed sheet does not list the note');
 assert(closed.indexOf('pin at the door') === -1, '3 closed sheet does not list the later note');
+const clientIds = globalThis.__techNoteClientJobIds(poon, [poon, poonPrior, otherClient]);
+assert(clientIds.indexOf(poon.job_id) !== -1, '3 this job is in history');
+assert(clientIds.indexOf(poonPrior.job_id) !== -1, '3 prior visit matched by phone');
+assert(clientIds.indexOf(otherClient.job_id) === -1, '3 other client is out');
+assert(globalThis.__techNoteSameClient(poon, { job_id: 'addr', address: poon.address, mobile: '' }) === true, '3 prior visit matched by address');
 print('ok 3 Poon Kit Tung: add, clear fields, newest first, closed log empty');
 
 const itemFn = fnBody(src, 'techNoteLogItemHtml');
@@ -153,14 +197,28 @@ assert(itemFn.indexOf('techNoteAtLabel') !== -1, '6 open log uses at');
 assert(itemFn.indexOf('Asia/Hong_Kong') !== -1 || fnBody(src, 'techNoteAtLabel').indexOf('Asia/Hong_Kong') !== -1, '6 Asia/Hong_Kong');
 assert(globalThis.__techNoteAtLabel('2026-10-14T05:00:00.000Z') === '14 Oct, 13:00', '6 14 Oct, 13:00');
 const noon = globalThis.__techNotePayload(poon, 'gate left open', 'matthewgross2001@gmail.com', '2026-10-14T05:00:00.000Z');
-const openLog = globalThis.__techNoteLogHtml([noon]);
+const priorNote = {
+  author: 'matthewgross2001@gmail.com',
+  job_id: poonPrior.job_id,
+  text: 'old gate code',
+  at: '2026-09-01T04:00:00.000Z'
+};
+const openLog = globalThis.__techNoteLogHtml([noon, priorNote]);
 assert(openLog.indexOf('14 Oct, 13:00') !== -1, '6 saved note shows the date and the minute');
 assert(openLog.indexOf('gate left open') !== -1, '6 note text stays');
 assert(openLog.indexOf('14 Oct, 13:00') < openLog.indexOf('gate left open'), '6 time sits on the note');
+assert(openLog.indexOf('matthewgross2001@gmail.com') !== -1, '6 each note shows who');
+assert(openLog.indexOf(poon.job_id) !== -1, '6 each note shows the job ID');
+assert(openLog.indexOf('old gate code') !== -1, '6 notes from prior visits appear');
+assert(openLog.indexOf(poonPrior.job_id) !== -1, '6 prior visit job ID');
+assert(openLog.indexOf('gate left open') < openLog.indexOf('old gate code'), '6 newest first across visits');
 assert(fnBody(src, 'techNoteLogHtml').indexOf('techNotesNewestFirst') !== -1, '6 text log order stays newest first');
 assert(closed.indexOf('14 Oct, 13:00') === -1, '6 closed sheet does not list the time');
 assert(closed.indexOf('tech-note-item') === -1, '6 closed sheet does not list notes');
-print('ok 6 Poon Kit Tung open log shows 14 Oct, 13:00; closed log empty');
+assert(fnBody(src, 'loadTechNotes').indexOf('techNoteClientJobIds') !== -1, '6 history loads this job and prior visits');
+assert(fnBody(src, 'uploadTechNoteFile').indexOf("technician_notes/'") !== -1, '6 upload path stays');
+assert(fnBody(src, 'writeTechNote').indexOf("collection('jobs')") === -1, '6 does not write the job');
+print('ok 6 Poon Kit Tung: notebook history shows who, when, job ID, and prior visits');
 
 const uploadBody = fnBody(src, 'uploadTechNoteFile');
 assert(uploadBody.indexOf("technician_notes/'") !== -1, '9 upload path stays');
@@ -272,10 +330,10 @@ assert(storageRules.indexOf('match /technician_notes/{jobId}/{fileId}') !== -1, 
 assert(storageRules.indexOf('The app does not deploy rules') !== -1, '4 Jeff publishes storage rules');
 print('ok 4b storage.rules: technician_notes/{jobId}/{fileId}');
 
-assert(html.indexOf('js/app.js?v=64') !== -1, '5 js cache');
-assert(html.indexOf('css/app.css?v=52') !== -1, '5 css cache');
+assert(html.indexOf('js/app.js?v=65') !== -1, '5 js cache');
+assert(html.indexOf('css/app.css?v=53') !== -1, '5 css cache');
 assert(html.indexOf('firebase-firestore-compat.js') !== -1, '5 Firebase compat on the page');
 assert(html.indexOf('firebase-storage-compat.js') !== -1, '5 Storage SDK on the page');
-print('ok 5 cache js/app.js?v=64 css/app.css?v=52');
+print('ok 5 cache js/app.js?v=65 css/app.css?v=53');
 
 print('ok tech-notes cases');

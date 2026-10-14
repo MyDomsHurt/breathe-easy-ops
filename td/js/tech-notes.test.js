@@ -93,9 +93,11 @@ eval(
   fnBody(src, 'esc') + '\n' +
   fnBody(src, 'techNotePayload') + '\n' +
   fnBody(src, 'techNotesNewestFirst') + '\n' +
+  fnBody(src, 'techNoteAtLabel') + '\n' +
   fnBody(src, 'techNoteLogItemHtml') + '\n' +
   fnBody(src, 'techNoteLogHtml') + '\n' +
   'globalThis.__techNotePayload = techNotePayload;\n' +
+  'globalThis.__techNoteAtLabel = techNoteAtLabel;\n' +
   'globalThis.__techNoteLogHtml = techNoteLogHtml;\n'
 );
 
@@ -122,6 +124,20 @@ assert(closed.indexOf('gate left open') === -1, '3 closed sheet does not list th
 assert(closed.indexOf('pin at the door') === -1, '3 closed sheet does not list the later note');
 print('ok 3 Poon Kit Tung: add, clear fields, newest first, closed log empty');
 
+const itemFn = fnBody(src, 'techNoteLogItemHtml');
+assert(itemFn.indexOf('techNoteAtLabel') !== -1, '6 open log uses at');
+assert(itemFn.indexOf('Asia/Hong_Kong') !== -1 || fnBody(src, 'techNoteAtLabel').indexOf('Asia/Hong_Kong') !== -1, '6 Asia/Hong_Kong');
+assert(globalThis.__techNoteAtLabel('2026-10-14T05:00:00.000Z') === '14 Oct, 13:00', '6 14 Oct, 13:00');
+const noon = globalThis.__techNotePayload(poon, 'gate left open', 'matthewgross2001@gmail.com', '2026-10-14T05:00:00.000Z');
+const openLog = globalThis.__techNoteLogHtml([noon]);
+assert(openLog.indexOf('14 Oct, 13:00') !== -1, '6 saved note shows the date and the minute');
+assert(openLog.indexOf('gate left open') !== -1, '6 note text stays');
+assert(openLog.indexOf('14 Oct, 13:00') < openLog.indexOf('gate left open'), '6 time sits on the note');
+assert(fnBody(src, 'writeTechNote') === writeFn, '6 Save is unchanged');
+assert(closed.indexOf('14 Oct, 13:00') === -1, '6 closed sheet does not list the time');
+assert(closed.indexOf('tech-note-item') === -1, '6 closed sheet does not list notes');
+print('ok 6 Poon Kit Tung open log shows 14 Oct, 13:00; closed log empty');
+
 const techBlock = rules.slice(rules.indexOf('match /technician_notes'), rules.indexOf('match /technician_notes') + 1200);
 assert(rules.indexOf('match /technician_notes/{noteId}') !== -1, '4 technician_notes rule');
 assert(techBlock.indexOf('isOffice()') !== -1 && techBlock.indexOf('isJosh()') !== -1, '4 office or Josh may read and write any');
@@ -134,9 +150,9 @@ assert(techBlock.indexOf('get(/databases/$(database)/documents/jobs/$(request.re
 assert(rules.indexOf('The app does not deploy rules') !== -1, '4 Jeff publishes the rules');
 print('ok 4 firestore.rules: lead add as themselves; read on their jobs; office or Josh any');
 
-assert(html.indexOf('js/app.js?v=52') !== -1, '5 js cache');
+assert(html.indexOf('js/app.js?v=53') !== -1, '5 js cache');
 assert(html.indexOf('css/app.css?v=50') !== -1, '5 css cache stays');
 assert(html.indexOf('firebase-firestore-compat.js') !== -1, '5 Firebase compat on the page');
-print('ok 5 cache js/app.js?v=52');
+print('ok 5 cache js/app.js?v=53');
 
 print('ok tech-notes cases');

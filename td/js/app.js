@@ -1257,10 +1257,36 @@ function techNotesNewestFirst(notes) {
   });
 }
 
+function techNoteAtLabel(at) {
+  if (at == null || at === '') return '';
+  const d = new Date(at);
+  if (isNaN(d.getTime())) return '';
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Hong_Kong',
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    hourCycle: 'h23'
+  }).formatToParts(d);
+  const map = {};
+  for (let i = 0; i < parts.length; i++) map[parts[i].type] = parts[i].value;
+  if (!map.day || !map.month || map.hour == null || map.minute == null) return '';
+  const hh = map.hour.length === 1 ? '0' + map.hour : map.hour;
+  const mm = map.minute.length === 1 ? '0' + map.minute : map.minute;
+  return map.day + ' ' + map.month + ', ' + hh + ':' + mm;
+}
+
 function techNoteLogItemHtml(note) {
   const text = note && note.text != null ? String(note.text) : '';
   if (!text) return '';
+  const when = techNoteAtLabel(note && note.at);
+  const timeHtml = when
+    ? '<p class="tech-note-at" style="margin:0 0 4px;font-size:12px;font-weight:600;color:#64748b">' + esc(when) + '</p>'
+    : '';
   return '<div class="tech-note-item" style="margin-top:8px;padding:8px 10px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc">' +
+    timeHtml +
     esc(text) +
   '</div>';
 }

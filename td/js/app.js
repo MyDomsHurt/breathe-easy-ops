@@ -1524,12 +1524,64 @@ function techNoteClientJobIds(job, jobs) {
   return ids;
 }
 
-function techNoteLogItemHtml(note) {
+function techNoteAuthorName(author) {
+  const raw = String(author || '').trim().toLowerCase();
+  if (!raw) return '';
+  const local = raw.indexOf('@') >= 0 ? raw.slice(0, raw.indexOf('@')) : raw;
+  const names = {
+    'jefflamb1992': 'Admin',
+    'info': 'Customer Service',
+    'ruby': 'Ruby',
+    'joshua': 'Josh',
+    'perry': 'Perry',
+    'iggi.king': 'Iggi',
+    'matthewgross2001': 'Matthew',
+    'n.marie.lamb': 'Naiyie',
+    'neltrestium': 'Nick',
+    'sudor23': 'Alun',
+    'tiagogiri334': 'Tiago'
+  };
+  if (names[local]) return names[local];
+  return local;
+}
+
+function techNoteJobById(jobId, jobs) {
+  const id = String(jobId || '');
+  if (!id) return null;
+  const pool = Array.isArray(jobs)
+    ? jobs
+    : ((typeof allJobs !== 'undefined' && allJobs) ? allJobs : []);
+  for (let i = 0; i < pool.length; i++) {
+    if (pool[i] && String(pool[i].job_id) === id) return pool[i];
+  }
+  return null;
+}
+
+function techNoteJobAddress(job) {
+  if (!job) return '';
+  if (typeof displayAddress === 'function') {
+    const shown = displayAddress(job.address, job.district);
+    if (shown) return shown;
+  }
+  return String(job.address || '');
+}
+
+function techNoteJobIsReturn(job) {
+  if (!job) return false;
+  if (job.is_return) return true;
+  return String(job.job_type || '').toLowerCase() === 'return';
+}
+
+function techNoteLogItemHtml(note, jobs) {
   const text = note && note.text != null ? String(note.text) : '';
   if (!text) return '';
-  const who = String(note && note.author || '').trim();
+  const who = techNoteAuthorName(note && note.author);
   const when = techNoteAtLabel(note && note.at);
   const jobId = String(note && note.job_id || '');
+  const job = techNoteJobById(jobId, jobs);
+  const addr = techNoteJobAddress(job);
+  const units = (job && typeof liveAcsBadges === 'function') ? (liveAcsBadges(job.acs) || '') : '';
+  const ret = techNoteJobIsReturn(job) ? '<span class="tech-note-return">Return</span>' : '';
   const bits = [];
   if (who) bits.push('<span class="tech-note-author">' + esc(who) + '</span>');
   if (when) bits.push('<span class="tech-note-at">' + esc(when) + '</span>');
@@ -1537,15 +1589,28 @@ function techNoteLogItemHtml(note) {
   const metaHtml = bits.length
     ? '<p class="tech-note-meta">' + bits.join(' · ') + '</p>'
     : '';
+  const placeHtml = addr
+    ? '<p class="tech-note-addr">' + esc(addr) + '</p>'
+    : '';
+  const badgeHtml = (units || ret)
+    ? '<div class="tech-note-badges">' + units + ret + '</div>'
+    : '';
   return '<div class="tech-note-item">' +
     metaHtml +
+    placeHtml +
+    badgeHtml +
     '<div class="tech-note-text">' + esc(text) + '</div>' +
     techNoteFilesHtml(note) +
   '</div>';
 }
 
-function techNoteLogHtml(notes) {
-  return techNotesNewestFirst(notes).map(techNoteLogItemHtml).join('');
+function techNoteLogHtml(notes, jobs) {
+  const pool = arguments.length > 1
+    ? jobs
+    : ((typeof allJobs !== 'undefined' && allJobs) ? allJobs : []);
+  return techNotesNewestFirst(notes).map(function (note) {
+    return techNoteLogItemHtml(note, pool);
+  }).join('');
 }
 
 function closeTechNotesLog(logEl, historyBtn) {
@@ -1557,12 +1622,12 @@ function closeTechNotesLog(logEl, historyBtn) {
   if (historyBtn) historyBtn.setAttribute('aria-pressed', 'false');
 }
 
-function loadTechNotes(job, listEl) {
+function fetchTechNotes(job) {
   const col = techNotesCol();
-  if (!col || !job || !listEl) return;
+  if (!col || !job) return Promise.resolve([]);
   const ids = techNoteClientJobIds(job);
-  if (!ids.length) return;
-  Promise.all(ids.map(function (id) {
+  if (!ids.length) return Promise.resolve([]);
+  return Promise.all(ids.map(function (id) {
     return col.where('job_id', '==', String(id)).get();
   })).then(function (snaps) {
     const notes = [];
@@ -1571,6 +1636,30 @@ function loadTechNotes(job, listEl) {
         notes.push(doc.data() || {});
       });
     });
+    return notes;
+  });
+}
+
+function paintTechNoteHistoryMark(job, historyBtn) {
+  if (!historyBtn) return;
+  fetchTechNotes(job).then(function (notes) {
+    let has = false;
+    for (let i = 0; i < (notes && notes.length || 0); i++) {
+      if (notes[i] && String(notes[i].text || '').trim()) {
+        has = true;
+        break;
+      }
+    }
+    if (has) historyBtn.classList.add('has-notes');
+    else historyBtn.classList.remove('has-notes');
+  }).catch(function () {
+    historyBtn.classList.remove('has-notes');
+  });
+}
+
+function loadTechNotes(job, listEl) {
+  if (!job || !listEl) return;
+  fetchTechNotes(job).then(function (notes) {
     return attachTechNoteFileUrls(job && job.job_id, notes);
   }).then(function (withUrls) {
     if (!listEl || listEl.dataset.open !== '1') return;
@@ -1597,6 +1686,7 @@ function bindTechNotes(job) {
   const historyBtn = document.getElementById('techNotesHistoryBtn');
   const logEl = document.getElementById('techNotesLog');
   closeTechNotesLog(logEl, historyBtn);
+  paintTechNoteHistoryMark(job, historyBtn);
   if (historyBtn) {
     historyBtn.addEventListener('click', function (e) {
       e.preventDefault();
@@ -1641,6 +1731,7 @@ function bindTechNotes(job) {
         if (ta) ta.value = '';
         if (fileEl) fileEl.value = '';
         saveBtn.textContent = 'Saved';
+        paintTechNoteHistoryMark(job, historyBtn);
         if (logEl && logEl.dataset.open === '1') loadTechNotes(job, logEl);
       } else {
         saveBtn.textContent = 'Save';

@@ -1221,7 +1221,7 @@ function techNotesBoxHtml() {
       '<button type="button" id="techNotesLogBtn" class="tech-notes-log-btn">Notes</button>' +
     '</div>' +
     '<textarea id="techNotesText" class="tech-notes-text" rows="3"></textarea>' +
-    '<input type="file" id="techNotesFile" class="tech-notes-file" style="display:block;margin:8px 0 0;font:inherit;font-size:13px">' +
+    '<input type="file" id="techNotesFile" class="tech-notes-file" multiple style="display:block;margin:8px 0 0;font:inherit;font-size:13px">' +
     '<div id="techNotesProgress" style="display:none;margin:8px 0 0;height:8px;border-radius:8px;background:#e2e8f0;overflow:hidden">' +
       '<div id="techNotesProgressBar" style="height:100%;width:0%;background:#075985;border-radius:8px"></div>' +
     '</div>' +
@@ -1290,10 +1290,59 @@ function uploadTechNoteFile(jobId, file, fileId, onProgress) {
     task.on('state_changed', function (snap) {
       const total = snap && snap.totalBytes ? snap.totalBytes : 0;
       const done = snap && snap.bytesTransferred ? snap.bytesTransferred : 0;
-      onProgress(total ? Math.round((done / total) * 100) : 0);
+      onProgress(total ? Math.round((done / total) * 100) : 0, done, total);
     });
   }
   return task;
+}
+
+function techNoteFilesProgress(dones, totals) {
+  let total = 0;
+  let done = 0;
+  const n = totals && totals.length ? totals.length : 0;
+  for (let i = 0; i < n; i++) {
+    total += Number(totals[i]) || 0;
+    done += Number(dones[i]) || 0;
+  }
+  if (total) return Math.max(0, Math.min(100, Math.round((done / total) * 100)));
+  if (!n) return 0;
+  let finished = 0;
+  for (let i = 0; i < n; i++) {
+    if (Number(dones[i]) > 0) finished++;
+  }
+  return Math.round((finished / n) * 100);
+}
+
+function uploadTechNoteFiles(jobId, files, onProgress) {
+  const list = [];
+  if (files && files.length) {
+    for (let i = 0; i < files.length; i++) {
+      if (files[i]) list.push(files[i]);
+    }
+  }
+  if (!list.length) return Promise.resolve([]);
+  const totals = [];
+  const dones = [];
+  for (let i = 0; i < list.length; i++) {
+    totals[i] = Number(list[i].size) || 0;
+    dones[i] = 0;
+  }
+  function report() {
+    if (typeof onProgress === 'function') onProgress(techNoteFilesProgress(dones, totals));
+  }
+  const pending = list.map(function (file, i) {
+    const fileId = techNoteFileId();
+    return uploadTechNoteFile(jobId, file, fileId, function (pct, transferred, totalBytes) {
+      if (totalBytes) totals[i] = totalBytes;
+      dones[i] = transferred != null ? transferred : Math.round(((Number(pct) || 0) / 100) * (totals[i] || 0));
+      report();
+    }).then(function () {
+      dones[i] = totals[i] || 1;
+      report();
+      return techNoteFileRef(file, fileId);
+    });
+  });
+  return Promise.all(pending);
 }
 
 function showTechNoteProgress(pct) {
@@ -1317,6 +1366,12 @@ function addTechNoteFileRef(noteId, fileRef) {
   const col = techNotesCol();
   if (!col || !noteId || !fileRef) return Promise.resolve(null);
   return col.doc(String(noteId)).update({ file: fileRef });
+}
+
+function addTechNoteFiles(noteId, fileRefs) {
+  const col = techNotesCol();
+  if (!col || !noteId || !fileRefs || !fileRefs.length) return Promise.resolve(null);
+  return col.doc(String(noteId)).update({ files: fileRefs });
 }
 
 function techNotesNewestFirst(notes) {
@@ -1495,15 +1550,17 @@ function bindTechNotes(job) {
     const saveBtn = btn;
     if (saveBtn.dataset.busy) return;
     saveBtn.dataset.busy = '1';
-    const file = (fileEl && fileEl.files && fileEl.files[0]) ? fileEl.files[0] : null;
+    const files = [];
+    if (fileEl && fileEl.files && fileEl.files.length) {
+      for (let i = 0; i < fileEl.files.length; i++) files.push(fileEl.files[i]);
+    }
     writeTechNote(job, text, techNoteBy()).then(function (written) {
       if (!written || !written.payload) return null;
-      if (!file) return written;
+      if (!files.length) return written;
       showTechNoteProgress(0);
-      const fileId = techNoteFileId();
       const jobId = written.payload.job_id;
-      return uploadTechNoteFile(jobId, file, fileId, showTechNoteProgress).then(function () {
-        return addTechNoteFileRef(written.id, techNoteFileRef(file, fileId)).then(function () {
+      return uploadTechNoteFiles(jobId, files, showTechNoteProgress).then(function (fileRefs) {
+        return addTechNoteFiles(written.id, fileRefs).then(function () {
           return written;
         });
       });

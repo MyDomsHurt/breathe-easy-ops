@@ -272,10 +272,10 @@ assert(storageRules.indexOf('match /technician_notes/{jobId}/{fileId}') !== -1, 
 assert(storageRules.indexOf('The app does not deploy rules') !== -1, '4 Jeff publishes storage rules');
 print('ok 4b storage.rules: technician_notes/{jobId}/{fileId}');
 
-assert(html.indexOf('js/app.js?v=62') !== -1, '5 js cache');
+assert(html.indexOf('js/app.js?v=63') !== -1, '5 js cache');
 assert(html.indexOf('css/app.css?v=52') !== -1, '5 css cache');
 assert(html.indexOf('firebase-firestore-compat.js') !== -1, '5 Firebase compat on the page');
 assert(html.indexOf('firebase-storage-compat.js') !== -1, '5 Storage SDK on the page');
-print('ok 5 cache js/app.js?v=62 css/app.css?v=52');
+print('ok 5 cache js/app.js?v=63 css/app.css?v=52');
 
 print('ok tech-notes cases');

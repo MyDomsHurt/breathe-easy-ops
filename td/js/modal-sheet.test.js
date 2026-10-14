@@ -233,8 +233,8 @@ assert(css.indexOf('#059669') === -1, '5 not a green bar');
 print('ok 5 Poon Kit Tung shows the four blocks; time is large; van and pin sit side by side');
 
 assert(html.indexOf('css/app.css?v=52') !== -1, '4 css cache');
-assert(html.indexOf('js/app.js?v=62') !== -1, '4 js cache');
+assert(html.indexOf('js/app.js?v=63') !== -1, '4 js cache');
 assert(html.indexOf('js/auth.js?v=4') !== -1, '4 auth cache stays');
-print('ok 4 cache css/app.css?v=52 js/app.js?v=62');
+print('ok 4 cache css/app.css?v=52 js/app.js?v=63');
 
 print('ok modal-sheet cases');

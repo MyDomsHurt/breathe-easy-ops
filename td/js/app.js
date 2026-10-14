@@ -1402,21 +1402,24 @@ function openModal(j) {
   const chipsEl = document.getElementById('modalChips');
   if (chipsEl) chipsEl.innerHTML = modalChipsHtml(j);
   const placeUrl = mapsHref(j.address);
-  const dirUrl = mapsDirHref(j.address);
   const nextJob = nextJobSameDayLead(j);
   const nextUrl = (nextJob && mapsDirQuery(j.address) && mapsDirQuery(nextJob.address))
     ? mapsDirHref(nextJob.address, j.address)
     : null;
+  const officeUrl = mapsDirQuery(j.address)
+    ? mapsDirHref('Gravity, 29 Hing Yip Street', j.address)
+    : mapsDirHref('Gravity, 29 Hing Yip Street');
   const mapBtns = [];
   if (placeUrl) {
-    mapBtns.push('<a href="' + esc(placeUrl) + '" target="_blank" rel="noopener noreferrer">Open place</a>');
+    mapBtns.push('<a href="' + esc(placeUrl) + '" target="_blank" rel="noopener noreferrer">Open Location</a>');
   }
-  if (dirUrl) {
-    mapBtns.push('<a href="' + esc(dirUrl) + '" target="_blank" rel="noopener noreferrer" id="jobDirBtn">Directions</a>');
-  }
-  if (nextUrl) {
-    const nextName = nextJob.client_name ? ' title="To ' + esc(nextJob.client_name) + '"' : '';
-    mapBtns.push('<a href="' + esc(nextUrl) + '" target="_blank" rel="noopener noreferrer"' + nextName + '>To next</a>');
+  if (nextJob) {
+    if (nextUrl) {
+      const nextName = nextJob.client_name ? ' title="To ' + esc(nextJob.client_name) + '"' : '';
+      mapBtns.push('<a href="' + esc(nextUrl) + '" target="_blank" rel="noopener noreferrer"' + nextName + '>To next</a>');
+    }
+  } else if (officeUrl) {
+    mapBtns.push('<a href="' + esc(officeUrl) + '" target="_blank" rel="noopener noreferrer">To Office</a>');
   }
   const mapsRow = mapBtns.length
     ? '<div class="job-map-actions">' + mapBtns.join('') + '</div>'

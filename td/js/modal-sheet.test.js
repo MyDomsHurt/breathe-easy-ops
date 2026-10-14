@@ -61,13 +61,13 @@ const openBody = src.slice(openAt, src.indexOf('function closeModal'));
 assert(openBody.indexOf('modalChipsHtml') !== -1, '2 chips from openModal');
 assert(openBody.indexOf('modalBodyHtml') !== -1, '2 body from openModal');
 assert(openBody.indexOf('To next') !== -1, '2 keep To next');
-assert(openBody.indexOf('Open place') !== -1, '2 Open place');
-assert(openBody.indexOf('Directions') !== -1, '2 Directions');
-assert(openBody.indexOf("const dirUrl = mapsDirHref(j.address);") !== -1, '2 Directions is the maps dir URL');
-assert(openBody.indexOf('id="jobDirBtn">Directions</a>') !== -1, '2 Directions is a plain link');
-assert(openBody.indexOf('dirBtn.addEventListener') === -1, '2 no Directions click');
-assert(openBody.indexOf('Locating') === -1, '2 no Locating');
-assert(openBody.indexOf('getGpsPin({ maximumAge: 0') === -1, '2 Directions does not get GPS');
+assert(openBody.indexOf('Open Location') !== -1, '2 Open Location');
+assert(openBody.indexOf('Open place') === -1, '2 Open place is gone');
+assert(openBody.indexOf('Directions') === -1, '2 no Directions');
+assert(openBody.indexOf('jobDirBtn') === -1, '2 no Directions button');
+assert(openBody.indexOf('To Office') !== -1, '2 To Office on a last job');
+assert(openBody.indexOf('Gravity, 29 Hing Yip Street') !== -1, '2 To Office is Gravity');
+assert(openBody.indexOf('nextJobSameDayLead') !== -1, '2 next job helper');
 assert(openBody.indexOf('District') === -1, '2 no district row');
 assert(openBody.indexOf('Job ID') === -1, '2 no job id');
 assert(openBody.indexOf('<dt') === -1, '2 not a form');
@@ -121,13 +121,13 @@ const chips = globalThis.__modalChipsHtml(jenny);
 assert(chips.indexOf('8B') !== -1, '3 8B chip');
 assert(chips.indexOf('Unpaid') !== -1, '3 Unpaid chip');
 assert(chips.indexOf('modal-chip-unpaid') !== -1, '3 unpaid chip class');
-const maps = '<div class="job-map-actions"><a>Open place</a><a>Directions</a><a>To next</a></div>';
+const maps = '<div class="job-map-actions"><a>Open Location</a><a>To next</a></div>';
 const body = globalThis.__modalBodyHtml(jenny, maps);
 assert(body.indexOf('href="tel:+85261234567"') !== -1, '3 phone taps');
 assert(body.indexOf('class="modal-phone"') !== -1, '3 phone is a row');
 assert(body.indexOf('12 Foo Road, Tai Po (N-T)') !== -1, '3 address is the body');
-assert(body.indexOf('Open place') !== -1, '3 Open place on the address');
-assert(body.indexOf('Directions') !== -1, '3 Directions on the address');
+assert(body.indexOf('Open Location') !== -1, '3 Open Location on the address');
+assert(body.indexOf('Directions') === -1, '3 no Directions');
 assert(body.indexOf('To next') !== -1, '3 keep To next');
 assert(body.indexOf('side gate') !== -1, '3 notes under the address');
 assert(body.indexOf('modal-address') < body.indexOf('modal-notes'), '3 notes sit under the address');
@@ -144,6 +144,7 @@ assert(css.indexOf('.modal-chips') !== -1, '3 chips css');
 print('ok 3 Jenny Ho card: chips, phone, address, notes, van and pin');
 
 eval(
+  'var window = globalThis.window || (globalThis.window = {});\n' +
   'const DISTRICT_TAG = \'HKN|HKS|HKIS|KLN|TKO|TSW|N\\\\s*-?\\\\s*TW?|NTW?|S\\\\s*-?\\\\s*K|L\\\\s*-?\\\\s*[TM]|LT|LM\';\n' +
   'const DISTRICT_COLORS = {};\n' +
   fnBody(src, 'tidyAddress') + '\n' +
@@ -153,15 +154,44 @@ eval(
   fnBody(src, 'cleanAddressForMaps') + '\n' +
   fnBody(src, 'mapsDirQuery') + '\n' +
   fnBody(src, 'mapsDirHref') + '\n' +
-  'globalThis.__mapsDirHref = mapsDirHref;\n'
+  fnBody(src, 'timeToMinutes') + '\n' +
+  fnBody(src, 'jobSortMinutes') + '\n' +
+  fnBody(src, 'isCrewNote') + '\n' +
+  fnBody(src, 'nextJobSameDayLead') + '\n' +
+  'var allJobs = [];\n' +
+  'globalThis.__mapsDirHref = mapsDirHref;\n' +
+  'globalThis.__setJobs = function (rows) { allJobs = rows; };\n' +
+  'globalThis.__nextJobSameDayLead = nextJobSameDayLead;\n'
 );
-const jennyDir = globalThis.__mapsDirHref(jenny.address);
-assert(jennyDir.indexOf('https://www.google.com/maps/dir/?api=1&destination=') === 0, '6 Jenny Ho Directions is the maps dir URL');
-assert(jennyDir.indexOf('origin=') === -1, '6 Jenny Ho has no GPS origin');
-assert(openBody.indexOf('target="_blank" rel="noopener noreferrer" id="jobDirBtn">Directions</a>') !== -1, '6 Jenny Ho Directions is a plain link');
-assert(openBody.indexOf('target="_blank" rel="noopener noreferrer">Open place</a>') !== -1, '6 Open place stays a plain link');
-assert(openBody.indexOf('>To next</a>') !== -1, '6 To next stays');
-print('ok 6 Jenny Ho Directions opens the Maps app; no browser tab');
+const firstJob = {
+  job_id: '2026-10-14-matthew-first',
+  date: '2026-10-14',
+  team_lead: 'Matthew',
+  time: '09:00',
+  client_name: 'First',
+  address: '12 Foo Road, Tai Po (N-T)'
+};
+const lastJob = {
+  job_id: '2026-10-14-matthew-last',
+  date: '2026-10-14',
+  team_lead: 'Matthew',
+  time: '13:00',
+  client_name: 'Last',
+  address: '88 Foo Road, Tai Po (N-T)'
+};
+globalThis.__setJobs([firstJob, lastJob]);
+const nextOfFirst = globalThis.__nextJobSameDayLead(firstJob);
+const nextOfLast = globalThis.__nextJobSameDayLead(lastJob);
+assert(nextOfFirst && nextOfFirst.job_id === lastJob.job_id, '6 a job with a next');
+assert(nextOfLast == null, '6 a last job has no next');
+assert(openBody.indexOf('>Open Location</a>') !== -1, '6 Open Location');
+assert(openBody.indexOf('>To next</a>') !== -1, '6 To next when there is a next job');
+assert(openBody.indexOf('>To Office</a>') !== -1, '6 To Office when there is no next job');
+const officeDir = globalThis.__mapsDirHref('Gravity, 29 Hing Yip Street', lastJob.address);
+assert(officeDir.indexOf('https://www.google.com/maps/dir/?api=1&destination=') === 0, '6 To Office is a maps dir URL');
+assert(decodeURIComponent(officeDir).indexOf('Gravity, 29 Hing Yip Street') !== -1, '6 To Office goes to Gravity');
+assert(openBody.indexOf('Directions') === -1, '6 no Directions');
+print('ok 6 a job with a next shows Open Location and To next; a last job shows Open Location and To Office; no Directions');
 
 const poon = {
   client_name: 'Poon Kit Tung',
@@ -186,7 +216,7 @@ assert(poonBody.indexOf('sheet-place') < poonBody.indexOf('sheet-notes'), '5 pla
 assert(poonBody.indexOf('sheet-notes') < poonBody.indexOf('sheet-action'), '5 notes then action');
 assert(poonBody.indexOf('sheet-identity-time') !== -1 && poonBody.indexOf('13:00') !== -1, '5 time is large');
 assert(poonBody.indexOf('sheet-place') < poonBody.indexOf('modal-phone'), '5 phone in place');
-assert(poonBody.indexOf('sheet-place') < poonBody.indexOf('Open place'), '5 short map row in place');
+assert(poonBody.indexOf('sheet-place') < poonBody.indexOf('Open Location'), '5 short map row in place');
 assert(poonBody.indexOf('sheet-notes') < poonBody.indexOf('call first'), '5 office note in notes');
 assert(poonBody.indexOf('sheet-notes') < poonBody.indexOf('techNotesSave'), '5 Save on the box');
 assert(poonBody.indexOf('sheet-action') < poonBody.indexOf('copyVanBtn'), '5 van in action');
@@ -203,8 +233,8 @@ assert(css.indexOf('#059669') === -1, '5 not a green bar');
 print('ok 5 Poon Kit Tung shows the four blocks; time is large; van and pin sit side by side');
 
 assert(html.indexOf('css/app.css?v=51') !== -1, '4 css cache');
-assert(html.indexOf('js/app.js?v=57') !== -1, '4 js cache');
+assert(html.indexOf('js/app.js?v=58') !== -1, '4 js cache');
 assert(html.indexOf('js/auth.js?v=4') !== -1, '4 auth cache stays');
-print('ok 4 cache css/app.css?v=51 js/app.js?v=57');
+print('ok 4 cache css/app.css?v=51 js/app.js?v=58');
 
 print('ok modal-sheet cases');

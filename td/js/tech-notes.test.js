@@ -150,9 +150,9 @@ assert(techBlock.indexOf('get(/databases/$(database)/documents/jobs/$(request.re
 assert(rules.indexOf('The app does not deploy rules') !== -1, '4 Jeff publishes the rules');
 print('ok 4 firestore.rules: lead add as themselves; read on their jobs; office or Josh any');
 
-assert(html.indexOf('js/app.js?v=57') !== -1, '5 js cache');
+assert(html.indexOf('js/app.js?v=58') !== -1, '5 js cache');
 assert(html.indexOf('css/app.css?v=51') !== -1, '5 css cache');
 assert(html.indexOf('firebase-firestore-compat.js') !== -1, '5 Firebase compat on the page');
-print('ok 5 cache js/app.js?v=57');
+print('ok 5 cache js/app.js?v=58');
 
 print('ok tech-notes cases');

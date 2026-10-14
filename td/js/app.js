@@ -1214,14 +1214,13 @@ function modalNotesHtml(j) {
 }
 
 function techNotesBoxHtml() {
-  const btn = 'min-height:40px;padding:0 14px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#334155;font:inherit;font-weight:600;cursor:pointer';
-  return '<div id="techNotesBox" style="margin-top:12px">' +
-    '<p style="margin:0 0 6px;font-size:12px;font-weight:700;color:#64748b;letter-spacing:.04em;text-transform:uppercase">Technician notes</p>' +
-    '<textarea id="techNotesText" rows="3" style="display:block;width:100%;min-height:72px;box-sizing:border-box;padding:8px 10px;border:1px solid #cbd5e1;border-radius:10px;font:inherit"></textarea>' +
-    '<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">' +
-      '<button type="button" id="techNotesSave" style="' + btn + '">Save</button>' +
-      '<button type="button" id="techNotesLogBtn" style="' + btn + '">Notes</button>' +
+  return '<div id="techNotesBox" class="tech-notes-box">' +
+    '<div class="tech-notes-box-bar">' +
+      '<p class="tech-notes-box-label">Technician notes</p>' +
+      '<button type="button" id="techNotesSave" class="tech-notes-save">Save</button>' +
+      '<button type="button" id="techNotesLogBtn" class="tech-notes-log-btn">Notes</button>' +
     '</div>' +
+    '<textarea id="techNotesText" class="tech-notes-text" rows="3"></textarea>' +
     '<div id="techNotesLog" style="display:none"></div>' +
   '</div>';
 }
@@ -1380,10 +1379,18 @@ function bindTechNotes(job) {
 function modalBodyHtml(j, mapsRow) {
   const shownAddr = displayAddress(j && j.address, j && j.district);
   const addr = shownAddr
-    ? '<div class="modal-address"><div class="modal-address-text">' + esc(shownAddr) + '</div>' + (mapsRow || '') + '</div>'
+    ? '<div class="modal-address"><div class="modal-address-text">' + esc(shownAddr) + '</div></div>'
     : '';
-  return modalPhoneHtml(j) + addr + modalNotesHtml(j) + techNotesBoxHtml() +
-    '<div class="van-copy-row">' +
+  return '<div class="sheet-block sheet-identity">' +
+      '<p class="sheet-identity-time">' + esc(displayTime(j)) + '</p>' +
+    '</div>' +
+    '<div class="sheet-block sheet-place">' +
+      modalPhoneHtml(j) + addr + (mapsRow || '') +
+    '</div>' +
+    '<div class="sheet-block sheet-notes">' +
+      modalNotesHtml(j) + techNotesBoxHtml() +
+    '</div>' +
+    '<div class="sheet-block sheet-action">' +
       '<button type="button" id="copyVanBtn" class="van-copy-btn">Copy van request</button>' +
       '<button type="button" id="copyVanPinBtn" class="van-copy-btn van-copy-btn-quiet">Copy van request + pin</button>' +
     '</div>';

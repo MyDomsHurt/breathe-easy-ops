@@ -726,15 +726,59 @@ body.jobs-week-view #appRoot > .max-w-7xl.mx-auto.px-4.py-5 {
   padding: 0 2px;
   cursor: pointer;
 }
+#modalBody {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-family: 'Libre Franklin', system-ui, sans-serif;
+}
 #modalBody .modal-notes-2 {
   color: #0f172a;
+}
+.sheet-block {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px;
+}
+.sheet-identity {
+  background: rgba(7, 89, 133, 0.08);
+  border-color: #bae6fd;
+}
+.sheet-identity-time {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: #075985;
+}
+.sheet-place .modal-phone {
+  min-height: 36px;
+  padding: 0;
+}
+.sheet-notes .modal-notes {
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+.sheet-action {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  background: transparent;
+  border: 0;
+  padding: 2px 0 0;
 }
 .modal-phone {
   display: flex;
   align-items: center;
   min-height: 44px;
   padding: 0 2px;
-  color: #065f46;
+  color: #075985;
   font-weight: 700;
   font-size: 16px;
   text-decoration: none;
@@ -756,17 +800,18 @@ body.jobs-week-view #appRoot > .max-w-7xl.mx-auto.px-4.py-5 {
 }
 .job-map-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 10px;
 }
 .job-map-actions a {
-  flex: 1 1 0;
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
-  padding: 0 8px;
-  border-radius: 12px;
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 8px;
   background: #f0f9ff;
   border: 1px solid #bae6fd;
   color: #075985;
@@ -779,39 +824,81 @@ body.jobs-week-view #appRoot > .max-w-7xl.mx-auto.px-4.py-5 {
 .job-map-actions a:active {
   background: #e0f2fe;
 }
-.van-copy-row {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 16px;
+.tech-notes-box {
+  margin-top: 0;
 }
-.van-copy-btn {
+.tech-notes-box-bar {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 100%;
-  min-height: 44px;
+  gap: 8px;
+  margin: 0 0 8px;
+}
+.tech-notes-box-label {
   margin: 0;
-  border: 0;
-  border-radius: 12px;
-  background: #059669;
-  color: #fff;
+  margin-right: auto;
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.tech-notes-save,
+.tech-notes-log-btn {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  background: #fff;
+  color: #075985;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.tech-notes-log-btn {
+  color: #475569;
+  border-color: #cbd5e1;
+}
+.tech-notes-text {
+  display: block;
+  width: 100%;
+  min-height: 72px;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font: inherit;
+}
+.van-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  flex: 0 0 auto;
+  min-height: 36px;
+  margin: 0;
+  padding: 0 12px;
+  border: 1px solid #7dd3fc;
+  border-radius: 8px;
+  background: #fff;
+  color: #075985;
   font-family: inherit;
-  font-size: 15px;
-  font-weight: 800;
+  font-size: 13px;
+  font-weight: 700;
   cursor: pointer;
 }
 .van-copy-btn:active {
   transform: scale(0.98);
 }
 .van-copy-btn.is-copied {
-  background: #047857;
+  background: rgba(7, 89, 133, 0.08);
 }
 .van-copy-btn-quiet {
   background: #fff;
   color: #475569;
   border: 1px solid #cbd5e1;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
 }
 .van-copy-btn-quiet.is-copied {

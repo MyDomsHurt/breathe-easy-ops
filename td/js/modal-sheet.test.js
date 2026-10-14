@@ -133,14 +133,53 @@ assert(body.indexOf('District') === -1, '3 no district row');
 assert(body.indexOf('2026-10-14-matthew-jenny') === -1, '3 no job id');
 assert(body.indexOf('copyVanBtn') !== -1, '3 copy van request');
 assert(body.indexOf('van-copy-btn-quiet') !== -1, '3 pin is quieter');
-assert(body.indexOf('copyVanBtn') < body.indexOf('copyVanPinBtn'), '3 pin under the green button');
+assert(body.indexOf('copyVanBtn') < body.indexOf('copyVanPinBtn'), '3 pin after van');
 assert(css.indexOf('.van-copy-btn-quiet') !== -1, '3 quiet pin css');
 assert(css.indexOf('.modal-chips') !== -1, '3 chips css');
-print('ok 3 Jenny Ho card: chips, phone, address, notes, one green van button');
+print('ok 3 Jenny Ho card: chips, phone, address, notes, van and pin');
 
-assert(html.indexOf('css/app.css?v=50') !== -1, '4 css cache');
-assert(html.indexOf('js/app.js?v=55') !== -1, '4 js cache');
+const poon = {
+  client_name: 'Poon Kit Tung',
+  date: '2026-10-14',
+  time: '13:00',
+  team_lead: 'Matthew',
+  acs: '1B',
+  payment_status: 'UNPAID',
+  mobile: '+85261112222',
+  address: '88 Foo Road, Tai Po (N-T)',
+  district: 'N-T',
+  notes: 'call first',
+  job_id: '2026-10-14-matthew-poon',
+};
+const poonBody = globalThis.__modalBodyHtml(poon, maps);
+assert(poonBody.indexOf('sheet-identity') !== -1, '5 identity block');
+assert(poonBody.indexOf('sheet-place') !== -1, '5 place block');
+assert(poonBody.indexOf('sheet-notes') !== -1, '5 notes block');
+assert(poonBody.indexOf('sheet-action') !== -1, '5 action block');
+assert(poonBody.indexOf('sheet-identity') < poonBody.indexOf('sheet-place'), '5 identity then place');
+assert(poonBody.indexOf('sheet-place') < poonBody.indexOf('sheet-notes'), '5 place then notes');
+assert(poonBody.indexOf('sheet-notes') < poonBody.indexOf('sheet-action'), '5 notes then action');
+assert(poonBody.indexOf('sheet-identity-time') !== -1 && poonBody.indexOf('13:00') !== -1, '5 time is large');
+assert(poonBody.indexOf('sheet-place') < poonBody.indexOf('modal-phone'), '5 phone in place');
+assert(poonBody.indexOf('sheet-place') < poonBody.indexOf('Open place'), '5 short map row in place');
+assert(poonBody.indexOf('sheet-notes') < poonBody.indexOf('call first'), '5 office note in notes');
+assert(poonBody.indexOf('sheet-notes') < poonBody.indexOf('techNotesSave'), '5 Save on the box');
+assert(poonBody.indexOf('sheet-action') < poonBody.indexOf('copyVanBtn'), '5 van in action');
+assert(poonBody.indexOf('sheet-action') < poonBody.indexOf('copyVanPinBtn'), '5 pin in action');
+assert(css.indexOf('border-radius: 8px') !== -1, '5 8px radius');
+assert(css.indexOf("Libre Franklin") !== -1, '5 Libre Franklin');
+assert(css.indexOf('#075985') !== -1, '5 primary blue');
+assert(css.indexOf('rgba(7, 89, 133, 0.08)') !== -1, '5 quiet wash');
+assert(css.indexOf('.sheet-identity-time') !== -1 && css.indexOf('font-size: 32px') !== -1, '5 time is large');
+assert(css.indexOf('.sheet-action') !== -1 && css.indexOf('flex-direction: row') !== -1, '5 van and pin side by side');
+assert(css.indexOf('.van-copy-btn') !== -1, '5 van button');
+assert(css.indexOf('width: auto') !== -1, '5 van not full width');
+assert(css.indexOf('#059669') === -1, '5 not a green bar');
+print('ok 5 Poon Kit Tung shows the four blocks; time is large; van and pin sit side by side');
+
+assert(html.indexOf('css/app.css?v=51') !== -1, '4 css cache');
+assert(html.indexOf('js/app.js?v=56') !== -1, '4 js cache');
 assert(html.indexOf('js/auth.js?v=4') !== -1, '4 auth cache stays');
-print('ok 4 cache css/app.css?v=50 js/app.js?v=55');
+print('ok 4 cache css/app.css?v=51 js/app.js?v=56');
 
 print('ok modal-sheet cases');

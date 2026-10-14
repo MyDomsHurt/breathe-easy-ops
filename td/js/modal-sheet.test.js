@@ -63,6 +63,11 @@ assert(openBody.indexOf('modalBodyHtml') !== -1, '2 body from openModal');
 assert(openBody.indexOf('To next') !== -1, '2 keep To next');
 assert(openBody.indexOf('Open place') !== -1, '2 Open place');
 assert(openBody.indexOf('Directions') !== -1, '2 Directions');
+assert(openBody.indexOf("const dirUrl = mapsDirHref(j.address);") !== -1, '2 Directions is the maps dir URL');
+assert(openBody.indexOf('id="jobDirBtn">Directions</a>') !== -1, '2 Directions is a plain link');
+assert(openBody.indexOf('dirBtn.addEventListener') === -1, '2 no Directions click');
+assert(openBody.indexOf('Locating') === -1, '2 no Locating');
+assert(openBody.indexOf('getGpsPin({ maximumAge: 0') === -1, '2 Directions does not get GPS');
 assert(openBody.indexOf('District') === -1, '2 no district row');
 assert(openBody.indexOf('Job ID') === -1, '2 no job id');
 assert(openBody.indexOf('<dt') === -1, '2 not a form');
@@ -138,6 +143,26 @@ assert(css.indexOf('.van-copy-btn-quiet') !== -1, '3 quiet pin css');
 assert(css.indexOf('.modal-chips') !== -1, '3 chips css');
 print('ok 3 Jenny Ho card: chips, phone, address, notes, van and pin');
 
+eval(
+  'const DISTRICT_TAG = \'HKN|HKS|HKIS|KLN|TKO|TSW|N\\\\s*-?\\\\s*TW?|NTW?|S\\\\s*-?\\\\s*K|L\\\\s*-?\\\\s*[TM]|LT|LM\';\n' +
+  'const DISTRICT_COLORS = {};\n' +
+  fnBody(src, 'tidyAddress') + '\n' +
+  fnBody(src, 'shortDistrictCode') + '\n' +
+  fnBody(src, 'addressHasDistrictTag') + '\n' +
+  fnBody(src, 'displayAddress') + '\n' +
+  fnBody(src, 'cleanAddressForMaps') + '\n' +
+  fnBody(src, 'mapsDirQuery') + '\n' +
+  fnBody(src, 'mapsDirHref') + '\n' +
+  'globalThis.__mapsDirHref = mapsDirHref;\n'
+);
+const jennyDir = globalThis.__mapsDirHref(jenny.address);
+assert(jennyDir.indexOf('https://www.google.com/maps/dir/?api=1&destination=') === 0, '6 Jenny Ho Directions is the maps dir URL');
+assert(jennyDir.indexOf('origin=') === -1, '6 Jenny Ho has no GPS origin');
+assert(openBody.indexOf('target="_blank" rel="noopener noreferrer" id="jobDirBtn">Directions</a>') !== -1, '6 Jenny Ho Directions is a plain link');
+assert(openBody.indexOf('target="_blank" rel="noopener noreferrer">Open place</a>') !== -1, '6 Open place stays a plain link');
+assert(openBody.indexOf('>To next</a>') !== -1, '6 To next stays');
+print('ok 6 Jenny Ho Directions opens the Maps app; no browser tab');
+
 const poon = {
   client_name: 'Poon Kit Tung',
   date: '2026-10-14',
@@ -178,8 +203,8 @@ assert(css.indexOf('#059669') === -1, '5 not a green bar');
 print('ok 5 Poon Kit Tung shows the four blocks; time is large; van and pin sit side by side');
 
 assert(html.indexOf('css/app.css?v=51') !== -1, '4 css cache');
-assert(html.indexOf('js/app.js?v=56') !== -1, '4 js cache');
+assert(html.indexOf('js/app.js?v=57') !== -1, '4 js cache');
 assert(html.indexOf('js/auth.js?v=4') !== -1, '4 auth cache stays');
-print('ok 4 cache css/app.css?v=51 js/app.js?v=56');
+print('ok 4 cache css/app.css?v=51 js/app.js?v=57');
 
 print('ok modal-sheet cases');

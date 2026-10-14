@@ -1424,30 +1424,6 @@ function openModal(j) {
   document.getElementById('modalBody').innerHTML = modalBodyHtml(j, mapsRow);
   bindTechNotes(j);
   const vanText = vanRequestText(j);
-  const dirBtn = document.getElementById('jobDirBtn');
-  if (dirBtn && dirUrl) {
-    dirBtn.addEventListener('click', function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      if (dirBtn.dataset.busy) return;
-      dirBtn.dataset.busy = '1';
-      dirBtn.textContent = 'Locating\u2026';
-      const dest = mapsDirQuery(j.address);
-      const tab = window.open('about:blank', '_blank');
-      if (tab) tab.opener = null;
-      getGpsPin({ maximumAge: 0, timeout: 10000 }).then(function (loc) {
-        const origin = loc.lat.toFixed(6) + ',' + loc.lng.toFixed(6);
-        return 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(dest) + '&origin=' + encodeURIComponent(origin);
-      }).catch(function () {
-        return dirUrl;
-      }).then(function (url) {
-        if (tab && !tab.closed) tab.location = url;
-        else window.open(url, '_blank', 'noopener,noreferrer');
-        dirBtn.textContent = 'Directions';
-        delete dirBtn.dataset.busy;
-      });
-    });
-  }
   const vanBtn = document.getElementById('copyVanBtn');
   const pinBtn = document.getElementById('copyVanPinBtn');
   if (vanBtn) {

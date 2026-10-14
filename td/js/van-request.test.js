@@ -15,6 +15,13 @@ function readSrc(name) {
     'td/js/' + name,
     '../' + name,
     '../td/' + name,
+    'netlify/functions/' + name,
+    'td/netlify/functions/' + name,
+    '../td/netlify/functions/' + name,
+    'netlify.toml',
+    'td/netlify.toml',
+    '../td/netlify.toml',
+    '../netlify.toml',
   ];
   for (const p of paths) {
     try {
@@ -54,9 +61,9 @@ assert(cardBody.indexOf('detailed-phone') !== -1, 'jobCard phone');
 assert(cardBody.indexOf('compact-addr') !== -1, 'jobCard address');
 assert(cardBody.indexOf('compact-notes') !== -1, 'jobCard note');
 assert(cardBody.indexOf('compact-col-meta') === -1, 'jobCard no stamp');
-assert(html.indexOf('js/app.js?v=53') !== -1, 'js cache');
+assert(html.indexOf('js/app.js?v=54') !== -1, 'js cache');
 assert(html.indexOf('css/app.css?v=50') !== -1, 'css cache stays');
-print('ok 1 jobCard unchanged; js/app.js?v=53');
+print('ok 1 jobCard unchanged; js/app.js?v=54');
 
 const jobsJson = JSON.stringify([
   { job_id: '2026-10-08-matthew-1', date: '2026-10-08', team_lead: 'Matthew', time: '08:30', client_name: 'First' },
@@ -95,5 +102,26 @@ assert(lastText.indexOf('Deleted') === -1, 'deleted job is not a next job');
 assert(lastText.indexOf('Holiday') === -1, 'holiday row is not a next job');
 assert(lastText.indexOf('Other team') === -1, 'other team is not a next job');
 print('ok 2 last painted card arrows to Office, not a 3rd job');
+
+const openAt = src.indexOf('function openModal');
+const openBody = src.slice(openAt, src.indexOf('function closeModal'));
+assert(openBody.indexOf('copyVanBtn') !== -1, '3 copyVanBtn click');
+assert(openBody.indexOf('postVanRequest(vanText)') !== -1, '3 posts vanRequestText');
+assert(openBody.indexOf("flashVanBtn(vanBtn, 'Sent'") !== -1, '3 Sent');
+assert(openBody.indexOf("flashVanBtn(vanBtn, 'Failed'") !== -1, '3 Failed');
+assert(openBody.indexOf('vanDiscordChannel()') !== -1, '3 opens the channel after post');
+assert(openBody.indexOf('tab.close()') !== -1, '3 on post fail do not open');
+assert(src.indexOf("fetch('/.netlify/functions/van-discord'") !== -1, '3 posts to van-discord');
+assert(src.indexOf('https://discord.com/channels/1547059756642861066/1547070087343898674') !== -1, '3 Discord channel');
+assert(src.indexOf('discord.com/api/webhooks') === -1, '3 webhook stays out of the client');
+assert(src.indexOf('DISCORD_VAN_WEBHOOK') === -1, '3 webhook env stays off the client');
+print('ok 3 Copy van request posts then opens the channel; fail stays closed');
+
+const fnSrc = readSrc('van-discord.mjs');
+assert(fnSrc.indexOf('process.env.DISCORD_VAN_WEBHOOK') !== -1, '4 function reads DISCORD_VAN_WEBHOOK');
+assert(fnSrc.indexOf('JSON.stringify({ content })') !== -1, '4 posts content');
+assert(fnSrc.indexOf('discord.com/api/webhooks') === -1, '4 webhook URL stays out of the repo function');
+assert(fnSrc.indexOf('httpMethod') !== -1 && fnSrc.indexOf('POST') !== -1, '4 POST only');
+print('ok 4 van-discord reads DISCORD_VAN_WEBHOOK; no webhook URL in repo');
 
 print('ok van-request cases');

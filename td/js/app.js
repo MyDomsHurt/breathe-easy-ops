@@ -291,6 +291,21 @@ function flashVanBtn(btn, label, restore) {
   }, 1600);
 }
 
+function vanDiscordChannel() {
+  return 'https://discord.com/channels/1547059756642861066/1547070087343898674';
+}
+
+function postVanRequest(text) {
+  return fetch('/.netlify/functions/van-discord', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content: String(text == null ? '' : text) })
+  }).then(function (res) {
+    if (!res.ok) throw new Error('Failed');
+    return res;
+  });
+}
+
 function getGpsPin(opts) {
   const o = opts || {};
   return new Promise(function (resolve, reject) {
@@ -1443,10 +1458,19 @@ function openModal(j) {
     vanBtn.addEventListener('click', function (e) {
       e.preventDefault();
       e.stopPropagation();
-      copyText(vanText).then(function () {
-        flashVanBtn(vanBtn, 'Copied', 'Copy van request');
+      if (vanBtn.dataset.busy) return;
+      vanBtn.dataset.busy = '1';
+      const tab = window.open('about:blank', '_blank');
+      if (tab) tab.opener = null;
+      postVanRequest(vanText).then(function () {
+        flashVanBtn(vanBtn, 'Sent', 'Copy van request');
+        if (tab && !tab.closed) tab.location = vanDiscordChannel();
+        else window.open(vanDiscordChannel(), '_blank', 'noopener,noreferrer');
       }).catch(function () {
-        flashVanBtn(vanBtn, 'Copy failed', 'Copy van request');
+        if (tab && !tab.closed) tab.close();
+        flashVanBtn(vanBtn, 'Failed', 'Copy van request');
+      }).then(function () {
+        delete vanBtn.dataset.busy;
       });
     });
   }

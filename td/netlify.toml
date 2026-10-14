@@ -1,0 +1,8 @@
+# Zip-root config for Live Schedule deploys.
+# DISCORD_VAN_WEBHOOK is set in Netlify UI, never git.
+
+[build]
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"

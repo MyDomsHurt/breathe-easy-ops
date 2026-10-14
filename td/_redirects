@@ -1,3 +1,4 @@
+/netlify/*  /index.html  404!
 /data/jobs.json  /index.html  404!
 /dashboard/data.json  /index.html  404!
 /dashboard/weeks.json  /index.html  404!

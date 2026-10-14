@@ -1646,7 +1646,7 @@ function openModal(j) {
       }).catch(function () {
         flashVanBtn(vanBtn, 'Copy failed', 'Copy van request');
       }).then(function () {
-        window.open(vanDiscordChannel(), '_blank', 'noopener,noreferrer');
+        window.location.href = vanDiscordChannel();
       });
     });
   }

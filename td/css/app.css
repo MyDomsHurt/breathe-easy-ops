@@ -842,23 +842,63 @@ body.jobs-week-view #appRoot > .max-w-7xl.mx-auto.px-4.py-5 {
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-.tech-notes-save,
-.tech-notes-log-btn {
+.tech-notes-history-btn {
   flex: 0 0 auto;
-  min-height: 32px;
-  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  padding: 4px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #075985;
+  cursor: pointer;
+}
+.tech-notes-history-btn[aria-pressed="true"] {
+  background: #e0f2fe;
+}
+.tech-notes-history-icon {
+  display: block;
+}
+.tech-notes-file {
+  display: block;
+  width: 100%;
+  margin: 8px 0 0;
+  font: inherit;
+  font-size: 13px;
+}
+.tech-notes-progress {
+  display: none;
+  margin: 8px 0 0;
+  height: 8px;
+  border-radius: 8px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+.tech-notes-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: #075985;
+  border-radius: 8px;
+}
+.tech-notes-save-row {
+  display: flex;
+  justify-content: flex-end;
+  margin: 8px 0 0;
+}
+.tech-notes-save {
+  flex: 0 0 auto;
+  min-height: 28px;
+  padding: 0 10px;
   border: 1px solid #bae6fd;
   border-radius: 8px;
   background: #fff;
   color: #075985;
   font: inherit;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   cursor: pointer;
-}
-.tech-notes-log-btn {
-  color: #475569;
-  border-color: #cbd5e1;
 }
 .tech-notes-text {
   display: block;
@@ -869,6 +909,26 @@ body.jobs-week-view #appRoot > .max-w-7xl.mx-auto.px-4.py-5 {
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   font: inherit;
+}
+.tech-notes-log {
+  display: none;
+}
+.tech-note-item {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+.tech-note-meta {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  word-break: break-all;
+}
+.tech-note-text {
+  font-size: 14px;
 }
 .tech-note-files {
   display: flex;

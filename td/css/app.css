@@ -860,6 +860,14 @@ body.jobs-week-view #appRoot > .max-w-7xl.mx-auto.px-4.py-5 {
 .tech-notes-history-btn[aria-pressed="true"] {
   background: #e0f2fe;
 }
+.tech-notes-history-btn.has-notes {
+  background: #075985;
+  color: #fff;
+}
+.tech-notes-history-btn.has-notes[aria-pressed="true"] {
+  background: #0369a1;
+  color: #fff;
+}
 .tech-notes-history-icon {
   display: block;
 }
@@ -927,7 +935,45 @@ body.jobs-week-view #appRoot > .max-w-7xl.mx-auto.px-4.py-5 {
   font-size: 12px;
   font-weight: 600;
   color: #64748b;
-  word-break: break-all;
+  word-break: break-word;
+}
+.tech-note-addr {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: #334155;
+}
+.tech-note-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 6px;
+}
+.tech-note-item .live-units {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tech-note-item .live-u,
+.tech-note-return {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+  color: #fff;
+}
+.tech-note-item .live-u-s { background: #0284c7; }
+.tech-note-item .live-u-w { background: #d97706; }
+.tech-note-item .live-u-b { background: #0d9488; }
+.tech-note-item .live-u-x { background: #475569; }
+.tech-note-return {
+  background: #b45309;
 }
 .tech-note-text {
   font-size: 14px;

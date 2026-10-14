@@ -64,7 +64,7 @@ assert(box.indexOf('tech-note-item') === -1, '1 closed box does not list notes')
 assert(box.indexOf('photo') === -1, '1 no photo button');
 assert(box.indexOf('type="file"') !== -1, '1 file input on the box');
 assert(box.indexOf('id="techNotesFile"') !== -1, '1 one file input');
-assert(box.indexOf('multiple') === -1, '1 one file only');
+assert(box.indexOf('multiple') !== -1, '1 file input accepts multiple files');
 assert(box.indexOf('id="techNotesProgress"') !== -1, '1 progress bar on the box');
 assert(box.indexOf('id="techNotesProgressBar"') !== -1, '1 bar fill');
 assert(box.indexOf('id="techNotesProgress"') < box.indexOf('id="techNotesLog"'), '1 bar sits on the box');
@@ -101,10 +101,10 @@ assert(bindFn.indexOf('loadTechNotes') !== -1, '2 log loads that job');
 assert(bindFn.indexOf('closeTechNotesLog') !== -1, '2 close tucks the log away');
 assert(bindFn.indexOf('loadTechNote(') === -1, '2 does not fill the box from a replaced doc');
 assert(bindFn.indexOf('writeTechNote') !== -1, '2 writes the note document first');
-assert(bindFn.indexOf('uploadTechNoteFile') !== -1, '2 then uploads the file');
-assert(bindFn.indexOf('writeTechNote') < bindFn.indexOf('uploadTechNoteFile'), '2 note first, then Storage');
-assert(bindFn.indexOf('addTechNoteFileRef') !== -1, '2 then the file ref');
-assert(bindFn.indexOf('uploadTechNoteFile') < bindFn.indexOf('addTechNoteFileRef'), '2 file ref after Storage');
+assert(bindFn.indexOf('uploadTechNoteFiles') !== -1, '2 then uploads every file');
+assert(bindFn.indexOf('writeTechNote') < bindFn.indexOf('uploadTechNoteFiles'), '2 note first, then Storage');
+assert(bindFn.indexOf('addTechNoteFiles') !== -1, '2 then the files array');
+assert(bindFn.indexOf('uploadTechNoteFiles') < bindFn.indexOf('addTechNoteFiles'), '2 files array after Storage');
 assert(bindFn.indexOf('resume') === -1, '2 no resume after the sheet closes');
 assert(bindFn.indexOf('showTechNoteProgress') !== -1, '2 bar shows while the file uploads');
 assert(bindFn.indexOf('hideTechNoteProgress') !== -1, '2 bar hides when the upload finishes or fails');
@@ -167,21 +167,36 @@ assert(uploadBody.indexOf("technician_notes/'") !== -1, '9 upload path stays');
 assert(uploadBody.indexOf('.put(file)') !== -1, '9 still puts the whole file');
 assert(uploadBody.indexOf("state_changed") !== -1, '9 listens for progress');
 assert(uploadBody.indexOf('bytesTransferred') !== -1, '9 fills with the percentage');
+const multiFn = fnBody(src, 'uploadTechNoteFiles');
+assert(multiFn.indexOf('uploadTechNoteFile') !== -1, '9 uploads every file through the path');
+assert(multiFn.indexOf('techNoteFilesProgress') !== -1, '9 overall percentage across the files');
+assert(multiFn.indexOf('Promise.all') !== -1, '9 waits for every file');
 assert(bindFn.indexOf('writeTechNote') < bindFn.indexOf('showTechNoteProgress'), '9 note still writes first');
-assert(bindFn.indexOf('uploadTechNoteFile') < bindFn.indexOf('addTechNoteFileRef'), '9 file ref still after Storage');
+assert(bindFn.indexOf('writeTechNote') < bindFn.indexOf('uploadTechNoteFiles'), '9 then upload every file');
+assert(bindFn.indexOf('uploadTechNoteFiles') < bindFn.indexOf('addTechNoteFiles'), '9 files array after all files are in Storage');
 assert(fnBody(src, 'techNoteLogHtml').indexOf('techNotesNewestFirst') !== -1, '9 notes log order stays');
 assert(itemFn.indexOf('techNoteFilesHtml') !== -1, '9 notes log still shows files under the note');
+eval(fnBody(src, 'techNoteFilesProgress') + '\nglobalThis.__techNoteFilesProgress = techNoteFilesProgress;\n');
+assert(globalThis.__techNoteFilesProgress([50, 50], [100, 100]) === 50, '9 bar is overall across the set');
+assert(globalThis.__techNoteFilesProgress([100, 300], [100, 300]) === 100, '9 bar fills for the set');
+assert(globalThis.__techNoteFilesProgress([100, 0], [100, 100]) === 50, '9 half the set is 50');
 const poonFileLog = globalThis.__techNoteLogHtml([{
   author: first.author,
   job_id: poon.job_id,
   text: first.text,
   at: '2026-10-14T05:00:00.000Z',
-  file: { id: 'poon-file', name: 'gate.jpg', size: 10, type: 'image/jpeg', url: 'https://example.test/poon.jpg' }
+  files: [
+    { id: 'poon-1', name: 'gate.jpg', size: 10, type: 'image/jpeg', url: 'https://example.test/poon1.jpg' },
+    { id: 'poon-2', name: 'door.jpg', size: 12, type: 'image/jpeg', url: 'https://example.test/poon2.jpg' }
+  ]
 }]);
 assert(poonFileLog.indexOf('gate left open') !== -1, '9 Poon Kit Tung note appears');
-assert(poonFileLog.indexOf('tech-note-thumb') !== -1, '9 Poon Kit Tung file appears');
-assert(bindFn.indexOf('loadTechNotes') !== -1, '9 note and file appear when it finishes');
-print('ok 9 Poon Kit Tung: save a note with one file; the bar shows progress; the note and file appear when it finishes');
+assert(poonFileLog.indexOf('tech-note-thumb') !== -1, '9 Poon Kit Tung files appear');
+assert(poonFileLog.indexOf('https://example.test/poon1.jpg') !== -1, '9 first photo in the log');
+assert(poonFileLog.indexOf('https://example.test/poon2.jpg') !== -1, '9 second photo in the log');
+assert(bindFn.indexOf('loadTechNotes') !== -1, '9 note and files appear when they finish');
+assert(bindFn.indexOf("ta.value = ''") !== -1, '9 box clears when all finish');
+print('ok 9 Poon Kit Tung: pick two photos and Save; both appear in the log; the bar fills for the set');
 
 const jenny = { job_id: '2026-10-14-matthew-jenny', team_lead: 'Matthew', notes: 'side gate', client_name: 'Jenny Ho' };
 const jennyNote = globalThis.__techNotePayload(jenny, 'gate code 1234', 'jefflamb1992@gmail.com', '2026-10-14T05:00:00.000Z');
@@ -199,9 +214,9 @@ assert(fileRefFn.indexOf('id:') !== -1, '7 file ref id');
 assert(fileRefFn.indexOf('name:') !== -1, '7 file ref name');
 assert(fileRefFn.indexOf('size:') !== -1, '7 file ref size');
 assert(fileRefFn.indexOf('type:') !== -1, '7 file ref type');
-const attachFn = fnBody(src, 'addTechNoteFileRef');
-assert(attachFn.indexOf('techNotesCol') !== -1, '7 file ref uses techNotesCol');
-assert(attachFn.indexOf('.update({ file: fileRef })') !== -1, '7 file ref on that note document');
+const attachFn = fnBody(src, 'addTechNoteFiles');
+assert(attachFn.indexOf('techNotesCol') !== -1, '7 files array uses techNotesCol');
+assert(attachFn.indexOf('.update({ files: fileRefs })') !== -1, '7 files array on that note document');
 assert(fnBody(src, 'closeModal').indexOf('resume') === -1, '7 no resume after the sheet closes');
 assert(fnBody(src, 'closeModal').indexOf('uploadTechNoteFile') === -1, '7 close does not resume the upload');
 print('ok 7 Jenny Ho: save a note with one file; note in the log; file under technician_notes/{job_id}/');
@@ -257,10 +272,10 @@ assert(storageRules.indexOf('match /technician_notes/{jobId}/{fileId}') !== -1, 
 assert(storageRules.indexOf('The app does not deploy rules') !== -1, '4 Jeff publishes storage rules');
 print('ok 4b storage.rules: technician_notes/{jobId}/{fileId}');
 
-assert(html.indexOf('js/app.js?v=61') !== -1, '5 js cache');
+assert(html.indexOf('js/app.js?v=62') !== -1, '5 js cache');
 assert(html.indexOf('css/app.css?v=52') !== -1, '5 css cache');
 assert(html.indexOf('firebase-firestore-compat.js') !== -1, '5 Firebase compat on the page');
 assert(html.indexOf('firebase-storage-compat.js') !== -1, '5 Storage SDK on the page');
-print('ok 5 cache js/app.js?v=61 css/app.css?v=52');
+print('ok 5 cache js/app.js?v=62 css/app.css?v=52');
 
 print('ok tech-notes cases');

@@ -654,8 +654,105 @@ body.jobs-week-view #appRoot > .max-w-7xl.mx-auto.px-4.py-5 {
 #modal {
   z-index: 200;
 }
+.modal-sheet-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px 12px;
+  background: #fff;
+  color: #0f172a;
+  border-bottom: 1px solid #e2e8f0;
+}
+.modal-sheet-name {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #0f172a;
+}
+.modal-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+.modal-chips .live-units {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.modal-chips .live-u,
+.modal-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.modal-chips .live-u { color: #fff; }
+.modal-chips .live-u-s { background: #0284c7; }
+.modal-chips .live-u-w { background: #d97706; }
+.modal-chips .live-u-b { background: #0d9488; }
+.modal-chips .live-u-x { background: #475569; }
+.modal-chip-paid {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+.modal-chip-unpaid {
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #fdba74;
+}
+.modal-sheet-meta {
+  margin: 8px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+}
+.modal-sheet-close {
+  border: 0;
+  background: transparent;
+  color: #64748b;
+  font-size: 24px;
+  line-height: 1;
+  padding: 0 2px;
+  cursor: pointer;
+}
 #modalBody .modal-notes-2 {
   color: #0f172a;
+}
+.modal-phone {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 2px;
+  color: #065f46;
+  font-weight: 700;
+  font-size: 16px;
+  text-decoration: none;
+}
+.modal-address {
+  color: #0f172a;
+}
+.modal-address-text {
+  font-size: 15px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.modal-notes {
+  margin-top: 10px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: #334155;
+  overflow-wrap: anywhere;
 }
 .job-map-actions {
   display: flex;
@@ -686,7 +783,7 @@ body.jobs-week-view #appRoot > .max-w-7xl.mx-auto.px-4.py-5 {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-top: 12px;
+  margin-top: 16px;
 }
 .van-copy-btn {
   display: flex;
@@ -709,6 +806,17 @@ body.jobs-week-view #appRoot > .max-w-7xl.mx-auto.px-4.py-5 {
 }
 .van-copy-btn.is-copied {
   background: #047857;
+}
+.van-copy-btn-quiet {
+  background: #fff;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  font-size: 14px;
+  font-weight: 600;
+}
+.van-copy-btn-quiet.is-copied {
+  background: #f8fafc;
+  color: #334155;
 }
 #emptyActions button {
   min-height: 44px;

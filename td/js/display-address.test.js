@@ -81,8 +81,8 @@ assert(globalThis.__disp(full, 'N-T').indexOf('Flat E') !== -1, '2 keeps the uni
 assert(globalThis.__disp(full, 'N-T').indexOf('Pak Shek Kok') !== -1, '2 keeps the place');
 print('ok 2 cleaned card is unit, street, place, (N-T)');
 
-assert(html.indexOf('js/app.js?v=49') !== -1, '3 js cache');
-assert(html.indexOf('css/app.css?v=49') !== -1, '3 css cache stays');
-print('ok 3 cache js/app.js?v=49');
+assert(html.indexOf('js/app.js?v=50') !== -1, '3 js cache');
+assert(html.indexOf('css/app.css?v=50') !== -1, '3 css cache stays');
+print('ok 3 cache js/app.js?v=50');
 
 print('ok display-address cases');

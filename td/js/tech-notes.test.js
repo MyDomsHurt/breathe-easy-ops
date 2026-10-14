@@ -115,6 +115,8 @@ assert(bindFn.indexOf("saveBtn.textContent = 'Save'") !== -1, '2 Saved then clea
 assert(bindFn.indexOf('loadTechNotes') !== -1, '2 history loads that client');
 assert(bindFn.indexOf('loadTechNotes(job') !== -1, '2 history uses the job');
 assert(bindFn.indexOf('techNotesHistoryBtn') !== -1, '2 notebook icon opens the history');
+assert(bindFn.indexOf('paintTechNoteHistoryMark') !== -1, '2 notebook icon highlights when the history has notes');
+assert(fnBody(src, 'paintTechNoteHistoryMark').indexOf('has-notes') !== -1, '2 has-notes class');
 assert(bindFn.indexOf('closeTechNotesLog') !== -1, '2 close tucks the log away');
 assert(bindFn.indexOf('loadTechNote(') === -1, '2 does not fill the box from a replaced doc');
 assert(bindFn.indexOf('writeTechNote') !== -1, '2 writes the note document first');
@@ -140,13 +142,19 @@ eval(
   fnBody(src, 'techNoteSameClient') + '\n' +
   fnBody(src, 'techNoteIsVisitJob') + '\n' +
   fnBody(src, 'techNoteClientJobIds') + '\n' +
+  fnBody(src, 'techNoteAuthorName') + '\n' +
+  fnBody(src, 'techNoteJobById') + '\n' +
+  fnBody(src, 'techNoteJobAddress') + '\n' +
+  fnBody(src, 'techNoteJobIsReturn') + '\n' +
+  fnBody(src, 'liveAcsBadges') + '\n' +
   fnBody(src, 'techNoteLogItemHtml') + '\n' +
   fnBody(src, 'techNoteLogHtml') + '\n' +
   'globalThis.__techNotePayload = techNotePayload;\n' +
   'globalThis.__techNoteAtLabel = techNoteAtLabel;\n' +
   'globalThis.__techNoteLogHtml = techNoteLogHtml;\n' +
   'globalThis.__techNoteClientJobIds = techNoteClientJobIds;\n' +
-  'globalThis.__techNoteSameClient = techNoteSameClient;\n'
+  'globalThis.__techNoteSameClient = techNoteSameClient;\n' +
+  'globalThis.__techNoteAuthorName = techNoteAuthorName;\n'
 );
 
 const poon = {
@@ -155,7 +163,8 @@ const poon = {
   notes: 'call first',
   client_name: 'Poon Kit Tung',
   mobile: '+85261112222',
-  address: '88 Foo Road, Tai Po (N-T)'
+  address: '88 Foo Road, Tai Po (N-T)',
+  acs: '1B'
 };
 const poonPrior = {
   job_id: '2026-09-01-matthew-poon',
@@ -202,6 +211,17 @@ const itemFn = fnBody(src, 'techNoteLogItemHtml');
 assert(itemFn.indexOf('techNoteAtLabel') !== -1, '6 open log uses at');
 assert(itemFn.indexOf('Asia/Hong_Kong') !== -1 || fnBody(src, 'techNoteAtLabel').indexOf('Asia/Hong_Kong') !== -1, '6 Asia/Hong_Kong');
 assert(globalThis.__techNoteAtLabel('2026-10-14T05:00:00.000Z') === '14 Oct, 13:00', '6 14 Oct, 13:00');
+assert(globalThis.__techNoteAuthorName('jefflamb1992@gmail.com') === 'Admin', '6 jefflamb1992 is Admin');
+assert(globalThis.__techNoteAuthorName('info@breathe-easyhk.com') === 'Customer Service', '6 info is Customer Service');
+assert(globalThis.__techNoteAuthorName('ruby@breathe-easyhk.com') === 'Ruby', '6 ruby is Ruby');
+assert(globalThis.__techNoteAuthorName('joshua@breathe-easyhk.com') === 'Josh', '6 joshua is Josh');
+assert(globalThis.__techNoteAuthorName('perry@breathe-easyhk.com') === 'Perry', '6 perry is Perry');
+assert(globalThis.__techNoteAuthorName('iggi.king@gmail.com') === 'Iggi', '6 iggi.king is Iggi');
+assert(globalThis.__techNoteAuthorName('matthewgross2001@gmail.com') === 'Matthew', '6 matthewgross2001 is Matthew');
+assert(globalThis.__techNoteAuthorName('n.marie.lamb@gmail.com') === 'Naiyie', '6 n.marie.lamb is Naiyie');
+assert(globalThis.__techNoteAuthorName('neltrestium@gmail.com') === 'Nick', '6 neltrestium is Nick');
+assert(globalThis.__techNoteAuthorName('sudor23@gmail.com') === 'Alun', '6 sudor23 is Alun');
+assert(globalThis.__techNoteAuthorName('tiagogiri334@gmail.com') === 'Tiago', '6 tiagogiri334 is Tiago');
 const noon = globalThis.__techNotePayload(poon, 'gate left open', 'matthewgross2001@gmail.com', '2026-10-14T05:00:00.000Z');
 const priorNote = {
   author: 'matthewgross2001@gmail.com',
@@ -209,11 +229,31 @@ const priorNote = {
   text: 'old gate code',
   at: '2026-09-01T04:00:00.000Z'
 };
-const openLog = globalThis.__techNoteLogHtml([noon, priorNote]);
+const poonReturn = {
+  job_id: '2026-08-01-matthew-poon',
+  team_lead: 'Matthew',
+  client_name: 'Poon Kit Tung',
+  mobile: '+85261112222',
+  address: '88 Foo Road, Tai Po (N-T)',
+  is_return: true
+};
+const returnNote = {
+  author: 'iggi.king@gmail.com',
+  job_id: poonReturn.job_id,
+  text: 'leak back',
+  at: '2026-08-01T04:00:00.000Z'
+};
+const openLog = globalThis.__techNoteLogHtml([noon, priorNote, returnNote], [poon, poonPrior, poonReturn]);
 assert(openLog.indexOf('14 Oct, 13:00') !== -1, '6 saved note shows the date and the minute');
 assert(openLog.indexOf('gate left open') !== -1, '6 note text stays');
 assert(openLog.indexOf('14 Oct, 13:00') < openLog.indexOf('gate left open'), '6 time sits on the note');
-assert(openLog.indexOf('matthewgross2001@gmail.com') !== -1, '6 each note shows who');
+assert(openLog.indexOf('Matthew') !== -1, '6 each note shows the name');
+assert(openLog.indexOf('matthewgross2001@gmail.com') === -1, '6 no email');
+assert(openLog.indexOf('@') === -1, '6 no email address');
+assert(openLog.indexOf('88 Foo Road') !== -1, '6 each note shows the address');
+assert(openLog.indexOf('live-u') !== -1 && openLog.indexOf('1B') !== -1, '6 each note shows the unit badges');
+assert(openLog.indexOf('tech-note-return') !== -1 && openLog.indexOf('Return') !== -1, '6 a return shows a return badge');
+assert(openLog.indexOf('Iggi') !== -1, '6 return note shows Iggi');
 assert(openLog.indexOf(poon.job_id) !== -1, '6 each note shows the job ID');
 assert(openLog.indexOf('old gate code') !== -1, '6 notes from prior visits appear');
 assert(openLog.indexOf(poonPrior.job_id) !== -1, '6 prior visit job ID');
@@ -221,10 +261,13 @@ assert(openLog.indexOf('gate left open') < openLog.indexOf('old gate code'), '6 
 assert(fnBody(src, 'techNoteLogHtml').indexOf('techNotesNewestFirst') !== -1, '6 text log order stays newest first');
 assert(closed.indexOf('14 Oct, 13:00') === -1, '6 closed sheet does not list the time');
 assert(closed.indexOf('tech-note-item') === -1, '6 closed sheet does not list notes');
-assert(fnBody(src, 'loadTechNotes').indexOf('techNoteClientJobIds') !== -1, '6 history loads this job and prior visits');
+assert(fnBody(src, 'loadTechNotes').indexOf('fetchTechNotes') !== -1, '6 history loads this job and prior visits');
+assert(fnBody(src, 'paintTechNoteHistoryMark').indexOf('has-notes') !== -1, '6 notebook icon highlights if notes exist');
+assert(css.indexOf('.tech-notes-history-btn.has-notes') !== -1, '6 highlight css');
 assert(fnBody(src, 'uploadTechNoteFile').indexOf("technician_notes/'") !== -1, '6 upload path stays');
 assert(fnBody(src, 'writeTechNote').indexOf("collection('jobs')") === -1, '6 does not write the job');
-print('ok 6 Poon Kit Tung: notebook history shows who, when, job ID, and prior visits');
+assert(box.indexOf('id="techNotesFile"') < box.indexOf('techNotesSave'), '6 Save placement stays');
+print('ok 6 Poon Kit Tung: notebook highlights if notes exist; each note shows name, address, unit badges; no email');
 
 const uploadBody = fnBody(src, 'uploadTechNoteFile');
 assert(uploadBody.indexOf("technician_notes/'") !== -1, '9 upload path stays');
@@ -270,7 +313,7 @@ assert(box.indexOf('Technician notes') < box.indexOf('techNotesHistoryBtn'), '7 
 assert(box.indexOf('tech-notes-heading') !== -1, '7 Jenny Ho icon sits with the label');
 assert(css.indexOf('margin-left: auto') === -1, '7 Jenny Ho icon is not on the far side of the block');
 assert(box.indexOf('id="techNotesFile"') < box.indexOf('techNotesSave'), '7 Save placement stays under the file input');
-assert(fnBody(src, 'loadTechNotes').indexOf('techNoteClientJobIds') !== -1, '7 history stays');
+assert(fnBody(src, 'fetchTechNotes').indexOf('techNoteClientJobIds') !== -1, '7 history stays');
 const jennyLog = globalThis.__techNoteLogHtml([jennyNote]);
 assert(jennyLog.indexOf('gate code 1234') !== -1, '7 the note appears in the log');
 assert(jennyLog.indexOf('14 Oct, 13:00') !== -1, '7 log time stays');
@@ -341,10 +384,10 @@ assert(storageRules.indexOf('match /technician_notes/{jobId}/{fileId}') !== -1, 
 assert(storageRules.indexOf('The app does not deploy rules') !== -1, '4 Jeff publishes storage rules');
 print('ok 4b storage.rules: technician_notes/{jobId}/{fileId}');
 
-assert(html.indexOf('js/app.js?v=66') !== -1, '5 js cache');
-assert(html.indexOf('css/app.css?v=54') !== -1, '5 css cache');
+assert(html.indexOf('js/app.js?v=67') !== -1, '5 js cache');
+assert(html.indexOf('css/app.css?v=55') !== -1, '5 css cache');
 assert(html.indexOf('firebase-firestore-compat.js') !== -1, '5 Firebase compat on the page');
 assert(html.indexOf('firebase-storage-compat.js') !== -1, '5 Storage SDK on the page');
-print('ok 5 cache js/app.js?v=66 css/app.css?v=54');
+print('ok 5 cache js/app.js?v=67 css/app.css?v=55');
 
 print('ok tech-notes cases');

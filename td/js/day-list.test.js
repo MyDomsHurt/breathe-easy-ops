@@ -97,8 +97,8 @@ assert(cardBody.indexOf('day-heading-date') === -1, '5 date is not inside jobCar
 assert(cardBody.indexOf('day-whos-on') === -1, '5 team line is not inside jobCard');
 assert(src.indexOf('function vanRequestText') !== -1, '5 vanRequestText stays');
 assert(html.indexOf('js/auth.js?v=4') !== -1, '5 auth cache stays');
-assert(html.indexOf('css/app.css?v=51') !== -1, '5 css cache');
-assert(html.indexOf('js/app.js?v=59') !== -1, '5 js cache');
-print('ok 5 heading sits above the card, not inside it; cache v=51/v=59');
+assert(html.indexOf('css/app.css?v=52') !== -1, '5 css cache');
+assert(html.indexOf('js/app.js?v=60') !== -1, '5 js cache');
+print('ok 5 heading sits above the card, not inside it; cache v=52/v=60');
 
 print('ok day-list cases');

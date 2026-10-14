@@ -13,8 +13,11 @@ function readSrc(name) {
     name,
     'td/' + name,
     'td/js/' + name,
+    'td/css/' + name,
     '../' + name,
     '../td/' + name,
+    '../td/css/' + name,
+    '../css/' + name,
     'firestore.rules',
     '../firestore.rules',
     'storage.rules',
@@ -48,6 +51,7 @@ function fnBody(src, name) {
 const src = readSrc('app.js');
 const html = readSrc('index.html');
 const rules = readSrc('firestore.rules');
+const css = readSrc('app.css');
 
 const box = fnBody(src, 'techNotesBoxHtml');
 assert(box.indexOf('Technician notes') !== -1, '1 technician notes heading');
@@ -106,6 +110,9 @@ eval(
   fnBody(src, 'techNotePayload') + '\n' +
   fnBody(src, 'techNotesNewestFirst') + '\n' +
   fnBody(src, 'techNoteAtLabel') + '\n' +
+  fnBody(src, 'techNoteFilesOnNote') + '\n' +
+  fnBody(src, 'techNoteFileIsImage') + '\n' +
+  fnBody(src, 'techNoteFilesHtml') + '\n' +
   fnBody(src, 'techNoteLogItemHtml') + '\n' +
   fnBody(src, 'techNoteLogHtml') + '\n' +
   'globalThis.__techNotePayload = techNotePayload;\n' +
@@ -145,7 +152,7 @@ const openLog = globalThis.__techNoteLogHtml([noon]);
 assert(openLog.indexOf('14 Oct, 13:00') !== -1, '6 saved note shows the date and the minute');
 assert(openLog.indexOf('gate left open') !== -1, '6 note text stays');
 assert(openLog.indexOf('14 Oct, 13:00') < openLog.indexOf('gate left open'), '6 time sits on the note');
-assert(itemFn.indexOf('file') === -1, '6 text notes log stays text');
+assert(fnBody(src, 'techNoteLogHtml').indexOf('techNotesNewestFirst') !== -1, '6 text log order stays newest first');
 assert(closed.indexOf('14 Oct, 13:00') === -1, '6 closed sheet does not list the time');
 assert(closed.indexOf('tech-note-item') === -1, '6 closed sheet does not list notes');
 print('ok 6 Poon Kit Tung open log shows 14 Oct, 13:00; closed log empty');
@@ -173,6 +180,39 @@ assert(fnBody(src, 'closeModal').indexOf('resume') === -1, '7 no resume after th
 assert(fnBody(src, 'closeModal').indexOf('uploadTechNoteFile') === -1, '7 close does not resume the upload');
 print('ok 7 Jenny Ho: save a note with one file; note in the log; file under technician_notes/{job_id}/');
 
+const jennyImg = {
+  author: jennyNote.author,
+  job_id: jennyNote.job_id,
+  text: jennyNote.text,
+  at: jennyNote.at,
+  file: { id: 'file-1', name: 'gate.jpg', size: 2048, type: 'image/jpeg', url: 'https://example.test/gate.jpg' }
+};
+const jennyPdf = {
+  author: jennyNote.author,
+  job_id: jennyNote.job_id,
+  text: 'quote on the door',
+  at: '2026-10-14T04:00:00.000Z',
+  file: { id: 'file-2', name: 'quote.pdf', size: 100, type: 'application/pdf', url: 'https://example.test/quote.pdf' }
+};
+const jennyOpen = globalThis.__techNoteLogHtml([jennyPdf, jennyImg]);
+assert(jennyOpen.indexOf('gate code 1234') !== -1, '8 Jenny Ho note text stays');
+assert(jennyOpen.indexOf('gate.jpg') !== -1 || jennyOpen.indexOf('tech-note-thumb') !== -1, '8 files from that job show');
+assert(jennyOpen.indexOf('class="tech-note-thumb"') !== -1, '8 image has a thumbnail');
+assert(jennyOpen.indexOf('src="https://example.test/gate.jpg"') !== -1, '8 thumbnail src');
+assert(jennyOpen.indexOf('download="gate.jpg"') !== -1, '8 tap downloads the file');
+assert(jennyOpen.indexOf('gate code 1234') < jennyOpen.indexOf('tech-note-thumb'), '8 files sit under their note');
+assert(jennyOpen.indexOf('quote.pdf') !== -1, '8 non-image is a name label');
+assert(jennyOpen.indexOf('class="tech-note-file-name"') !== -1, '8 label with the name');
+assert(jennyOpen.indexOf('download="quote.pdf"') !== -1, '8 tap downloads a non-image');
+assert(jennyOpen.indexOf('gate code 1234') < jennyOpen.indexOf('quote on the door'), '8 newest notes first');
+const loadFn = fnBody(src, 'loadTechNotes');
+assert(loadFn.indexOf('attachTechNoteFileUrls') !== -1, '8 open log loads file urls');
+assert(fnBody(src, 'techNoteFileUrl').indexOf('getDownloadURL') !== -1, '8 tap uses the download url');
+assert(fnBody(src, 'uploadTechNoteFile').indexOf("technician_notes/'") !== -1, '8 upload path stays');
+assert(css.indexOf('.tech-note-thumb') !== -1, '8 thumbnail css');
+assert(css.indexOf('.tech-note-file-name') !== -1, '8 name label css');
+print('ok 8 Jenny Ho open Notes: files show with thumbnails; tap downloads the file');
+
 const techBlock = rules.slice(rules.indexOf('match /technician_notes'), rules.indexOf('match /technician_notes') + 1200);
 assert(rules.indexOf('match /technician_notes/{noteId}') !== -1, '4 technician_notes rule');
 assert(techBlock.indexOf('isOffice()') !== -1 && techBlock.indexOf('isJosh()') !== -1, '4 office or Josh may read and write any');
@@ -191,10 +231,10 @@ assert(storageRules.indexOf('match /technician_notes/{jobId}/{fileId}') !== -1, 
 assert(storageRules.indexOf('The app does not deploy rules') !== -1, '4 Jeff publishes storage rules');
 print('ok 4b storage.rules: technician_notes/{jobId}/{fileId}');
 
-assert(html.indexOf('js/app.js?v=59') !== -1, '5 js cache');
-assert(html.indexOf('css/app.css?v=51') !== -1, '5 css cache');
+assert(html.indexOf('js/app.js?v=60') !== -1, '5 js cache');
+assert(html.indexOf('css/app.css?v=52') !== -1, '5 css cache');
 assert(html.indexOf('firebase-firestore-compat.js') !== -1, '5 Firebase compat on the page');
 assert(html.indexOf('firebase-storage-compat.js') !== -1, '5 Storage SDK on the page');
-print('ok 5 cache js/app.js?v=59');
+print('ok 5 cache js/app.js?v=60 css/app.css?v=52');
 
 print('ok tech-notes cases');

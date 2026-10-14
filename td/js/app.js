@@ -1641,15 +1641,12 @@ function openModal(j) {
     vanBtn.addEventListener('click', function (e) {
       e.preventDefault();
       e.stopPropagation();
-      const tab = window.open('about:blank', '_blank');
-      if (tab) tab.opener = null;
       copyText(vanText).then(function () {
         flashVanBtn(vanBtn, 'Copied', 'Copy van request');
       }).catch(function () {
         flashVanBtn(vanBtn, 'Copy failed', 'Copy van request');
       }).then(function () {
-        if (tab && !tab.closed) tab.location = vanDiscordChannel();
-        else window.open(vanDiscordChannel(), '_blank', 'noopener,noreferrer');
+        window.open(vanDiscordChannel(), '_blank', 'noopener,noreferrer');
       });
     });
   }

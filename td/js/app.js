@@ -1216,12 +1216,14 @@ function modalNotesHtml(j) {
 function techNotesBoxHtml() {
   return '<div id="techNotesBox" class="tech-notes-box">' +
     '<div class="tech-notes-box-bar">' +
-      '<p class="tech-notes-box-label">Technician notes</p>' +
-      '<button type="button" id="techNotesHistoryBtn" class="tech-notes-history-btn" aria-label="Notes history" aria-pressed="false">' +
-        '<svg class="tech-notes-history-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">' +
-          '<path fill="currentColor" d="M7 3h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3zm0 2a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12V5H7zm2.5 2.5h8v1.75h-8V7.5zm0 3.5h8V12.75h-8V11zm0 3.5h5.5V16.75H9.5V14.5z"/>' +
-        '</svg>' +
-      '</button>' +
+      '<div class="tech-notes-heading">' +
+        '<p class="tech-notes-box-label">Technician notes</p>' +
+        '<button type="button" id="techNotesHistoryBtn" class="tech-notes-history-btn" aria-label="Notes history" aria-pressed="false">' +
+          '<svg class="tech-notes-history-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">' +
+            '<path fill="currentColor" d="M7 3h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3zm0 2a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12V5H7zm2.5 2.5h8v1.75h-8V7.5zm0 3.5h8V12.75h-8V11zm0 3.5h5.5V16.75H9.5V14.5z"/>' +
+          '</svg>' +
+        '</button>' +
+      '</div>' +
     '</div>' +
     '<textarea id="techNotesText" class="tech-notes-text" rows="3"></textarea>' +
     '<input type="file" id="techNotesFile" class="tech-notes-file" multiple>' +

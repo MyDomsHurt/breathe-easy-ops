@@ -830,12 +830,15 @@ body.jobs-week-view #appRoot > .max-w-7xl.mx-auto.px-4.py-5 {
 .tech-notes-box-bar {
   display: flex;
   align-items: center;
-  gap: 8px;
   margin: 0 0 8px;
+}
+.tech-notes-heading {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 .tech-notes-box-label {
   margin: 0;
-  margin-right: auto;
   font-size: 12px;
   font-weight: 700;
   color: #64748b;
@@ -847,8 +850,7 @@ body.jobs-week-view #appRoot > .max-w-7xl.mx-auto.px-4.py-5 {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-left: auto;
-  padding: 4px;
+  padding: 2px;
   border: 0;
   border-radius: 8px;
   background: transparent;

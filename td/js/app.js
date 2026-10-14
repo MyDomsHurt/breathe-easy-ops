@@ -1318,6 +1318,70 @@ function techNoteAtLabel(at) {
   return map.day + ' ' + map.month + ', ' + hh + ':' + mm;
 }
 
+function techNoteStoragePath(jobId, fileId) {
+  return 'technician_notes/' + String(jobId) + '/' + String(fileId);
+}
+
+function techNoteFilesOnNote(note) {
+  const out = [];
+  if (note && note.file && note.file.id) out.push(note.file);
+  if (note && note.files && note.files.length) {
+    for (let i = 0; i < note.files.length; i++) {
+      if (note.files[i] && note.files[i].id) out.push(note.files[i]);
+    }
+  }
+  return out;
+}
+
+function techNoteFileIsImage(file) {
+  const type = String(file && file.type || '').toLowerCase();
+  if (type.indexOf('image/') === 0) return true;
+  const name = String(file && file.name || '').toLowerCase();
+  return /\.(jpe?g|png|gif|webp|heic|heif|bmp)$/i.test(name);
+}
+
+function techNoteFileUrl(jobId, fileId) {
+  const storage = techNotesStorage();
+  if (!storage || !jobId || !fileId) return Promise.resolve('');
+  return storage.ref(techNoteStoragePath(jobId, fileId)).getDownloadURL().catch(function () {
+    return '';
+  });
+}
+
+function attachTechNoteFileUrls(jobId, notes) {
+  const pending = [];
+  (notes || []).forEach(function (note) {
+    const id = (note && note.job_id) || jobId;
+    techNoteFilesOnNote(note).forEach(function (file) {
+      pending.push(techNoteFileUrl(id, file.id).then(function (url) {
+        file.url = url;
+      }));
+    });
+  });
+  return Promise.all(pending).then(function () { return notes; });
+}
+
+function techNoteFilesHtml(note) {
+  const files = techNoteFilesOnNote(note);
+  if (!files.length) return '';
+  let html = '<div class="tech-note-files">';
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const name = String(file && file.name || 'File');
+    const url = file && file.url ? String(file.url) : '';
+    const inner = (techNoteFileIsImage(file) && url)
+      ? '<img class="tech-note-thumb" src="' + esc(url) + '" alt="' + esc(name) + '">'
+      : '<span class="tech-note-file-name">' + esc(name) + '</span>';
+    if (url) {
+      html += '<a class="tech-note-file" href="' + esc(url) + '" download="' + esc(name) + '" target="_blank" rel="noopener noreferrer">' + inner + '</a>';
+    } else {
+      html += '<span class="tech-note-file">' + inner + '</span>';
+    }
+  }
+  html += '</div>';
+  return html;
+}
+
 function techNoteLogItemHtml(note) {
   const text = note && note.text != null ? String(note.text) : '';
   if (!text) return '';
@@ -1328,6 +1392,7 @@ function techNoteLogItemHtml(note) {
   return '<div class="tech-note-item" style="margin-top:8px;padding:8px 10px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc">' +
     timeHtml +
     esc(text) +
+    techNoteFilesHtml(note) +
   '</div>';
 }
 
@@ -1352,7 +1417,10 @@ function loadTechNotes(jobId, listEl) {
     snap.forEach(function (doc) {
       notes.push(doc.data() || {});
     });
-    listEl.innerHTML = techNoteLogHtml(notes);
+    return attachTechNoteFileUrls(String(jobId), notes).then(function (withUrls) {
+      if (!listEl || listEl.dataset.open !== '1') return;
+      listEl.innerHTML = techNoteLogHtml(withUrls);
+    });
   }).catch(function () {
     listEl.innerHTML = '';
   });

@@ -870,6 +870,39 @@ body.jobs-week-view #appRoot > .max-w-7xl.mx-auto.px-4.py-5 {
   border-radius: 8px;
   font: inherit;
 }
+.tech-note-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.tech-note-file {
+  display: block;
+  max-width: 100%;
+  text-decoration: none;
+  color: #075985;
+}
+.tech-note-thumb {
+  display: block;
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+}
+.tech-note-file-name {
+  display: inline-block;
+  max-width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  color: #075985;
+  word-break: break-all;
+}
 .van-copy-btn {
   display: inline-flex;
   align-items: center;

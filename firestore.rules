@@ -10,7 +10,8 @@ rules_version = '2';
 //   n.marie.lamb@gmail.com
 //   webhook@breathe-easyhk.com
 //   joshua@breathe-easyhk.com
-// Five leads: read only jobs where team_lead is their name. No write.
+// Five leads: read only jobs where team_lead is their name. No job write.
+// Leads may write technician_notes when team_lead matches.
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() {
@@ -57,6 +58,15 @@ service cloud.firestore {
 
     match /settings/{id} {
       allow read, write: if signedIn() && id == email();
+    }
+
+    match /technician_notes/{jobId} {
+      allow read: if isOffice() || isJosh()
+        || (isLead() && (resource == null || resource.data.team_lead == leadName()));
+      allow write: if isOffice() || isJosh()
+        || (isLead()
+            && request.resource.data.team_lead == leadName()
+            && (resource == null || resource.data.team_lead == leadName()));
     }
   }
 }

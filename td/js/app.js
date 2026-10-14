@@ -1209,12 +1209,91 @@ function modalNotesHtml(j) {
   return '<div class="modal-notes">' + esc(notes) + '</div>';
 }
 
+function techNotesBoxHtml() {
+  return '<div id="techNotesBox" style="margin-top:12px">' +
+    '<p style="margin:0 0 6px;font-size:12px;font-weight:700;color:#64748b;letter-spacing:.04em;text-transform:uppercase">Technician notes</p>' +
+    '<textarea id="techNotesText" rows="3" style="display:block;width:100%;min-height:72px;box-sizing:border-box;padding:8px 10px;border:1px solid #cbd5e1;border-radius:10px;font:inherit"></textarea>' +
+    '<button type="button" id="techNotesSave" style="margin-top:8px;min-height:40px;padding:0 14px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#334155;font:inherit;font-weight:600;cursor:pointer">Save</button>' +
+  '</div>';
+}
+
+function techNoteBy() {
+  if (typeof window !== 'undefined' && window.BE_AUTH_EMAIL) return String(window.BE_AUTH_EMAIL).toLowerCase();
+  try {
+    const u = firebase.auth().currentUser;
+    return u && u.email ? String(u.email).toLowerCase() : '';
+  } catch (err) {
+    return '';
+  }
+}
+
+function techNotePayload(job, text, by, at) {
+  const t = String(text == null ? '' : text).trim();
+  if (!t) return null;
+  return {
+    text: t,
+    by: String(by || '').trim().toLowerCase(),
+    at: at || new Date().toISOString(),
+    team_lead: String(job && job.team_lead || '')
+  };
+}
+
+function techNotesCol() {
+  if (typeof firebase === 'undefined' || typeof firebase.firestore !== 'function') return null;
+  if (!firebase.apps || !firebase.apps.length) return null;
+  return firebase.firestore().collection('technician_notes');
+}
+
+function loadTechNote(jobId, ta) {
+  const col = techNotesCol();
+  if (!col || !jobId || !ta) return;
+  col.doc(String(jobId)).get().then(function (snap) {
+    if (!snap.exists) return;
+    const data = snap.data() || {};
+    ta.value = data.text != null ? String(data.text) : '';
+  }).catch(function () {});
+}
+
+function writeTechNote(job, text, by) {
+  const payload = techNotePayload(job, text, by);
+  if (!payload) return Promise.resolve(null);
+  const col = techNotesCol();
+  const id = job && job.job_id;
+  if (!col || !id) return Promise.resolve(null);
+  return col.doc(String(id)).set(payload).then(function () { return payload; });
+}
+
+function bindTechNotes(job) {
+  const ta = document.getElementById('techNotesText');
+  const btn = document.getElementById('techNotesSave');
+  loadTechNote(job && job.job_id, ta);
+  if (!btn) return;
+  btn.addEventListener('click', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const text = ta ? ta.value : '';
+    if (!String(text || '').trim()) return;
+    const saveBtn = btn;
+    if (saveBtn.dataset.busy) return;
+    saveBtn.dataset.busy = '1';
+    writeTechNote(job, text, techNoteBy()).then(function (payload) {
+      if (payload) saveBtn.textContent = 'Saved';
+      else saveBtn.textContent = 'Save';
+    }).catch(function () {
+      saveBtn.textContent = 'Save failed';
+    }).then(function () {
+      delete saveBtn.dataset.busy;
+      setTimeout(function () { saveBtn.textContent = 'Save'; }, 900);
+    });
+  });
+}
+
 function modalBodyHtml(j, mapsRow) {
   const shownAddr = displayAddress(j && j.address, j && j.district);
   const addr = shownAddr
     ? '<div class="modal-address"><div class="modal-address-text">' + esc(shownAddr) + '</div>' + (mapsRow || '') + '</div>'
     : '';
-  return modalPhoneHtml(j) + addr + modalNotesHtml(j) +
+  return modalPhoneHtml(j) + addr + modalNotesHtml(j) + techNotesBoxHtml() +
     '<div class="van-copy-row">' +
       '<button type="button" id="copyVanBtn" class="van-copy-btn">Copy van request</button>' +
       '<button type="button" id="copyVanPinBtn" class="van-copy-btn van-copy-btn-quiet">Copy van request + pin</button>' +
@@ -1247,6 +1326,7 @@ function openModal(j) {
     ? '<div class="job-map-actions">' + mapBtns.join('') + '</div>'
     : '';
   document.getElementById('modalBody').innerHTML = modalBodyHtml(j, mapsRow);
+  bindTechNotes(j);
   const vanText = vanRequestText(j);
   const dirBtn = document.getElementById('jobDirBtn');
   if (dirBtn && dirUrl) {
@@ -1348,6 +1428,7 @@ function esc(str) {
 
 window.onAuthReady = function(user) {
   viewMode = 'date';
+  if (user && user.email) window.BE_AUTH_EMAIL = String(user.email).toLowerCase().trim();
   const lock = teamFromEmail(user && user.email);
   window.BE_LOCKED_TEAM = lock;
   currentFilters.team = lock || 'Matthew';

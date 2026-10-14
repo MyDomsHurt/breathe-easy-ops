@@ -66,7 +66,7 @@ assert(openBody.indexOf('Directions') !== -1, '2 Directions');
 assert(openBody.indexOf('District') === -1, '2 no district row');
 assert(openBody.indexOf('Job ID') === -1, '2 no job id');
 assert(openBody.indexOf('<dt') === -1, '2 not a form');
-assert(openBody.indexOf('technician') === -1, '2 no technician notes');
+assert(openBody.indexOf('bindTechNotes') !== -1, '2 technician notes load on open');
 assert(src.indexOf('function vanRequestText') !== -1, '2 vanRequestText stays');
 const cardBody = src.slice(src.indexOf('function jobCard'), src.indexOf('function bindCardClicks'));
 assert(cardBody.indexOf('compact-time') !== -1, '2 week card time stays');
@@ -88,6 +88,7 @@ eval(
   fnBody(src, 'modalChipsHtml') + '\n' +
   fnBody(src, 'modalPhoneHtml') + '\n' +
   fnBody(src, 'modalNotesHtml') + '\n' +
+  fnBody(src, 'techNotesBoxHtml') + '\n' +
   fnBody(src, 'modalBodyHtml') + '\n' +
   'globalThis.__modalDayLabel = modalDayLabel;\n' +
   'globalThis.__modalSubText = modalSubText;\n' +
@@ -125,7 +126,9 @@ assert(body.indexOf('Directions') !== -1, '3 Directions on the address');
 assert(body.indexOf('To next') !== -1, '3 keep To next');
 assert(body.indexOf('side gate') !== -1, '3 notes under the address');
 assert(body.indexOf('modal-address') < body.indexOf('modal-notes'), '3 notes sit under the address');
-assert(body.indexOf('do not show as technician notes') === -1, '3 no technician notes');
+assert(body.indexOf('Technician notes') !== -1, '3 technician notes box');
+assert(body.indexOf('side gate') < body.indexOf('Technician notes'), '3 technician notes under office notes');
+assert(body.indexOf('do not show as technician notes') === -1, '3 office notes stay job.notes');
 assert(body.indexOf('District') === -1, '3 no district row');
 assert(body.indexOf('2026-10-14-matthew-jenny') === -1, '3 no job id');
 assert(body.indexOf('copyVanBtn') !== -1, '3 copy van request');
@@ -136,8 +139,8 @@ assert(css.indexOf('.modal-chips') !== -1, '3 chips css');
 print('ok 3 Jenny Ho card: chips, phone, address, notes, one green van button');
 
 assert(html.indexOf('css/app.css?v=50') !== -1, '4 css cache');
-assert(html.indexOf('js/app.js?v=50') !== -1, '4 js cache');
+assert(html.indexOf('js/app.js?v=51') !== -1, '4 js cache');
 assert(html.indexOf('js/auth.js?v=4') !== -1, '4 auth cache stays');
-print('ok 4 cache css/app.css?v=50 js/app.js?v=50');
+print('ok 4 cache css/app.css?v=50 js/app.js?v=51');
 
 print('ok modal-sheet cases');

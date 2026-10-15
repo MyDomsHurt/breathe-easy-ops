@@ -98,7 +98,25 @@ assert(cardBody.indexOf('day-whos-on') === -1, '5 team line is not inside jobCar
 assert(src.indexOf('function vanRequestText') !== -1, '5 vanRequestText stays');
 assert(html.indexOf('js/auth.js?v=4') !== -1, '5 auth cache stays');
 assert(html.indexOf('css/app.css?v=55') !== -1, '5 css cache');
-assert(html.indexOf('js/app.js?v=67') !== -1, '5 js cache');
-print('ok 5 heading sits above the card, not inside it; cache v=55/v=67');
+assert(html.indexOf('js/app.js?v=68') !== -1, '5 js cache');
+print('ok 5 heading sits above the card, not inside it; cache v=55/v=68');
+
+const renderDateFn = fnBody(src, 'renderByDate');
+assert(renderDateFn.indexOf('pendingDayScroll') !== -1, '6 render only scrolls when the day or week changed');
+assert(renderDateFn.indexOf('shouldScroll') !== -1, '6 not on every render');
+assert(renderDateFn.indexOf('weekStripScrollLeft') !== -1, '6 jobs update keeps the current scroll');
+assert(renderDateFn.indexOf('container.scrollLeft = left') !== -1, '6 restore scroll position');
+const jobsChanged = src.slice(src.indexOf('window.BEOnJobsChanged'), src.indexOf('function bindWeekStripScroll'));
+assert(jobsChanged.indexOf('applyFilters') !== -1, '6 jobs still re-render');
+assert(jobsChanged.indexOf('scrollDayIntoView') === -1, '6 jobs change does not scroll to a day');
+assert(jobsChanged.indexOf('pendingDayScroll') === -1, '6 jobs change does not request a day scroll');
+assert(fnBody(src, 'selectRange').indexOf('pendingDayScroll = true') !== -1, '6 week range change scrolls');
+assert(fnBody(src, 'shiftDay').indexOf('scrollDayIntoView') !== -1, '6 day change still scrolls');
+assert(fnBody(src, 'bindEvents').indexOf("getElementById('rangeSelect')") !== -1, '6 week control stays');
+assert(fnBody(src, 'bindEvents').indexOf("getElementById('prevDay')") !== -1, '6 prev day stays');
+assert(fnBody(src, 'bindEvents').indexOf("getElementById('nextDay')") !== -1, '6 next day stays');
+assert(src.indexOf('function techNotesBoxHtml') !== -1, '6 notes block stays');
+assert(fnBody(src, 'uploadTechNoteFile').indexOf("technician_notes/'") !== -1, '6 notes upload path stays');
+print('ok 6 week strip keeps the day you scrolled to; jobs update does not snap back to today');
 
 print('ok day-list cases');

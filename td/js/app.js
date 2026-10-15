@@ -2,6 +2,8 @@
 
 let allJobs = [];
 let filtered = [];
+let pendingDayScroll = true;
+let weekStripScrollLeft = 0;
 let currentFilters = {
   month: 'all',
   team: 'Matthew',
@@ -451,6 +453,16 @@ window.BEOnJobsChanged = function (jobs) {
   applyFilters();
 };
 
+function bindWeekStripScroll(container) {
+  if (!container || container.dataset.weekScrollBound) return;
+  container.dataset.weekScrollBound = '1';
+  container.addEventListener('scroll', function () {
+    if (container.classList.contains('jobs-week-strip')) {
+      weekStripScrollLeft = container.scrollLeft;
+    }
+  }, { passive: true });
+}
+
 function buildTeamButtons() {
   const sidebar = document.getElementById('teamFilters');
   function fill(container, includeAll) {
@@ -629,6 +641,7 @@ function scrollDayIntoView(iso) {
   const target = container.querySelector('.day-section[data-date="' + iso + '"]');
   if (!target) return;
   target.scrollIntoView({ inline: 'start', block: 'nearest' });
+  weekStripScrollLeft = container.scrollLeft;
 }
 
 function focusedDayISO() {
@@ -685,6 +698,7 @@ function selectRange(range) {
   const dateSelect = document.getElementById('dateSelect');
   if (dateSelect) dateSelect.value = 'all';
   paintRangeButtons(range);
+  pendingDayScroll = true;
   applyFilters();
 }
 
@@ -699,6 +713,7 @@ function shiftDay(delta) {
     const dateSelect = document.getElementById('dateSelect');
     if (dateSelect) dateSelect.value = 'all';
     paintRangeButtons(range);
+    pendingDayScroll = true;
     applyFilters();
   } else {
     scrollDayIntoView(next);
@@ -1078,9 +1093,17 @@ function renderByDate(container) {
   }).join('');
   syncWeekStrip(container, dates.length);
   bindCardClicks();
+  bindWeekStripScroll(container);
+  const shouldScroll = pendingDayScroll;
+  pendingDayScroll = false;
+  const left = weekStripScrollLeft;
   requestAnimationFrame(function () {
     syncHeaderHeight();
-    scrollDayIntoView(currentFilters.day || todayISO());
+    if (shouldScroll) {
+      scrollDayIntoView(currentFilters.day || todayISO());
+    } else {
+      container.scrollLeft = left;
+    }
   });
 }
 

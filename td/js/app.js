@@ -167,20 +167,38 @@ function mapsDirHref(destRaw, originRaw) {
   return url;
 }
 
+function jobDateKey(j) {
+  return String(j && j.date || '').slice(0, 10);
+}
+
+function sameTeamLead(a, b) {
+  return String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
+}
+
 function nextJobSameDayLead(j) {
-  if (!j || !j.date || !j.team_lead) return null;
+  if (!j || !jobDateKey(j) || !String(j.team_lead || '').trim()) return null;
+  const date = jobDateKey(j);
+  const lead = String(j.team_lead || '').trim();
+  const id = String(j.job_id || '');
+  const mins = jobSortMinutes(j);
   const rows = (allJobs || []).filter(function (x) {
-    return x && !x.deleted && !isCrewNote(x)
-      && x.date === j.date
-      && x.team_lead === j.team_lead;
+    if (!x || x.deleted || isCrewNote(x)) return false;
+    if (typeof isPaintedDayJob === 'function' && !isPaintedDayJob(x)) return false;
+    if (jobDateKey(x) !== date) return false;
+    if (!sameTeamLead(x.team_lead, lead)) return false;
+    if (id && String(x.job_id || '') === id) return false;
+    return true;
   }).slice().sort(function (a, b) {
     const d = jobSortMinutes(a) - jobSortMinutes(b);
     if (d) return d;
     return String(a.job_id || '').localeCompare(String(b.job_id || ''));
   });
-  const idx = rows.findIndex(function (x) { return x.job_id === j.job_id; });
-  if (idx < 0) return null;
-  return rows[idx + 1] || null;
+  for (let i = 0; i < rows.length; i++) {
+    const m = jobSortMinutes(rows[i]);
+    if (m > mins) return rows[i];
+    if (m === mins && String(rows[i].job_id || '').localeCompare(id) > 0) return rows[i];
+  }
+  return null;
 }
 
 function formatMobile(raw) {

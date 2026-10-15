@@ -157,6 +157,9 @@ eval(
   fnBody(src, 'timeToMinutes') + '\n' +
   fnBody(src, 'jobSortMinutes') + '\n' +
   fnBody(src, 'isCrewNote') + '\n' +
+  fnBody(src, 'isPaintedDayJob') + '\n' +
+  fnBody(src, 'jobDateKey') + '\n' +
+  fnBody(src, 'sameTeamLead') + '\n' +
   fnBody(src, 'nextJobSameDayLead') + '\n' +
   'var allJobs = [];\n' +
   'globalThis.__mapsDirHref = mapsDirHref;\n' +
@@ -192,6 +195,61 @@ assert(officeDir.indexOf('https://www.google.com/maps/dir/?api=1&destination=') 
 assert(decodeURIComponent(officeDir).indexOf('Gravity, 29 Hing Yip Street') !== -1, '6 To Office goes to Gravity');
 assert(openBody.indexOf('Directions') === -1, '6 no Directions');
 print('ok 6 a job with a next shows Open Location and To next; a last job shows Open Location and To Office; no Directions');
+
+const paika = {
+  job_id: '2026-10-15-matthew-paika',
+  date: '2026-10-15',
+  team_lead: 'Matthew',
+  time: '10:00',
+  client_name: 'Paika Liu',
+  address: '6D Tower 2, The Visionary, Tung Chung (L-T)'
+};
+const katie = {
+  job_id: '2026-10-15-matthew-katie',
+  date: '2026-10-15',
+  team_lead: 'Matthew',
+  time: '11:00',
+  client_name: 'Katie',
+  address: '1/2 Floor, 62 Tai Hang Hau Road, Clear Water Bay'
+};
+const lobster = {
+  job_id: '2026-10-15-tiago-lobster',
+  date: '2026-10-15',
+  team_lead: 'Tiago',
+  time: '10:30',
+  client_name: 'Lobster Bay Villa',
+  address: 'Lobster Bay Villa, Sai Kung'
+};
+const paikaCrew = {
+  job_id: 'crew-2026-10-15-matthew',
+  date: '2026-10-15',
+  team_lead: 'Matthew',
+  time: '10:15',
+  client_name: 'Crew',
+  source: 'team-day-crew'
+};
+const paikaGone = {
+  job_id: '2026-10-15-matthew-gone',
+  date: '2026-10-15',
+  team_lead: 'Matthew',
+  time: '10:20',
+  client_name: 'Deleted',
+  deleted: true
+};
+globalThis.__setJobs([paika, lobster, paikaCrew, paikaGone, katie]);
+const nextOfPaika = globalThis.__nextJobSameDayLead(paika);
+assert(nextOfPaika && nextOfPaika.client_name === 'Katie', '6 Paika Liu next is Katie');
+assert(String(nextOfPaika.address).indexOf('62 Tai Hang Hau Road') !== -1, '6 Katie is 62 Tai Hang Hau Road');
+assert(nextOfPaika.client_name !== 'Lobster Bay Villa', '6 does not pick Lobster Bay Villa');
+assert(nextOfPaika.team_lead === 'Matthew', '6 does not pick another lead');
+const paikaToNext = globalThis.__mapsDirHref(nextOfPaika.address, paika.address);
+assert(decodeURIComponent(paikaToNext).indexOf('62 Tai Hang Hau Road') !== -1, '6 To next opens directions to Katie at Tai Hang Hau Road');
+assert(decodeURIComponent(paikaToNext).indexOf('Clear Water Bay') !== -1, '6 Clear Water Bay');
+assert(decodeURIComponent(paikaToNext).indexOf('Lobster Bay Villa') === -1, '6 To next does not open Lobster Bay Villa');
+assert(openBody.indexOf('>Open Location</a>') !== -1, '6 Open Location stays');
+assert(fnBody(src, 'mapsHref').indexOf('cleanAddressForMaps') !== -1, '6 Open Location stays on mapsHref');
+assert(src.indexOf('function tidyAddress') !== -1, '6 address cleaning stays');
+print('ok 6b Paika Liu To next is Katie at Tai Hang Hau Road, not Lobster Bay Villa');
 
 const poon = {
   client_name: 'Poon Kit Tung',
@@ -233,8 +291,8 @@ assert(css.indexOf('#059669') === -1, '5 not a green bar');
 print('ok 5 Poon Kit Tung shows the four blocks; time is large; van and pin sit side by side');
 
 assert(html.indexOf('css/app.css?v=55') !== -1, '4 css cache');
-assert(html.indexOf('js/app.js?v=68') !== -1, '4 js cache');
+assert(html.indexOf('js/app.js?v=69') !== -1, '4 js cache');
 assert(html.indexOf('js/auth.js?v=4') !== -1, '4 auth cache stays');
-print('ok 4 cache css/app.css?v=55 js/app.js?v=68');
+print('ok 4 cache css/app.css?v=55 js/app.js?v=69');
 
 print('ok modal-sheet cases');

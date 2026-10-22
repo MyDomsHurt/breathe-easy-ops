@@ -1155,6 +1155,33 @@ function jobsGridClass() {
   return 'grid gap-1.5';
 }
 
+function jobTypeOf(job) {
+  const t = String(job && job.job_type || '').toLowerCase().trim();
+  const mapped = t === 'service' ? 'cleaning' : t === 'collab' ? 'influencer' : t;
+  if (mapped === 'cleaning' || mapped === 'return' || mapped === 'inspection' || mapped === 'influencer' || mapped === 'other') {
+    return mapped;
+  }
+  if (job && (job.is_return === true || job.is_return === 'true')) return 'return';
+  const notes = String(job && job.notes || '').toLowerCase();
+  if (notes.indexOf('influencer') !== -1) return 'influencer';
+  return 'cleaning';
+}
+
+function compactTypeMark(job) {
+  const t = jobTypeOf(job);
+  if (t === 'return') return { label: 'Return', kind: 'return' };
+  if (t === 'influencer') return { label: 'Collab', kind: 'collab' };
+  if (t === 'inspection') return { label: 'Inspection', kind: 'inspection' };
+  if (t === 'other') return { label: 'Other', kind: 'other' };
+  return null;
+}
+
+function compactTypeBadge(job) {
+  const mark = compactTypeMark(job);
+  if (!mark) return '';
+  return '<span class="compact-type is-' + mark.kind + '">' + esc(mark.label) + '</span>';
+}
+
 function jobCard(j) {
   const hold = isTentative(j);
   const dist = DISTRICT_COLORS[j.district] || DISTRICT_FALLBACK;
@@ -1162,6 +1189,7 @@ function jobCard(j) {
   const unitsBit = liveAcsBadges(j.acs) || (j.acs
     ? '<span class="compact-units">' + esc(j.acs) + '</span>'
     : '');
+  const typeBit = compactTypeBadge(j);
   const shownMobile = formatMobile(j.mobile);
   const phoneBit = shownMobile
     ? '<p class="detailed-phone">' + esc(shownMobile) + '</p>'
@@ -1178,6 +1206,7 @@ function jobCard(j) {
       '<div class="compact-col compact-col-time">' +
         '<span class="compact-time">' + esc(displayTime(j)) + '</span>' +
         unitsBit +
+        typeBit +
       '</div>' +
       '<div class="compact-col compact-col-main">' +
         '<span class="compact-name">' + esc(j.client_name) + '</span>' +

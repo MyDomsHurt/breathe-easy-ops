@@ -1201,19 +1201,23 @@ function jobCard(j) {
     ? '<p class="compact-notes">' + esc(j.notes) + '</p>'
     : '';
   const left = hold ? '#ca8a04' : dist.border;
-  return '<article class="job-card job-card-detailed' + (hold ? ' is-tentative' : '') + '" data-id="' + esc(j.job_id) + '" style="border-left:4px solid ' + left + '">' +
+  const nameSpan = '<span class="compact-name">' + esc(j.client_name) + '</span>';
+  const nameRow = typeBit
+    ? '<div class="compact-name-row">' + nameSpan + '<span class="compact-pills">' + typeBit + '</span></div>'
+    : nameSpan;
+  return '<article class="job-card job-card-detailed' + (hold ? ' is-tentative' : '') + '" data-id="' + esc(j.job_id) + '" style="border-left:4px solid ' + left + ';--district-bar:' + left + '">' +
     '<div class="compact-row">' +
       '<div class="compact-col compact-col-time">' +
         '<span class="compact-time">' + esc(displayTime(j)) + '</span>' +
         unitsBit +
-        typeBit +
       '</div>' +
       '<div class="compact-col compact-col-main">' +
-        '<span class="compact-name">' + esc(j.client_name) + '</span>' +
+        nameRow +
         phoneBit +
         addrBit +
         notes1 +
       '</div>' +
+      '<div class="compact-col compact-col-meta">' + typeBit + '</div>' +
     '</div></article>';
 }
 

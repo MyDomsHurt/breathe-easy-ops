@@ -37,13 +37,19 @@ const cardBody = src.slice(cardAt, src.indexOf('function bindCardClicks'));
 assert(cardBody.indexOf('compact-time') !== -1, '1 time');
 assert(cardBody.indexOf('liveAcsBadges') !== -1, '1 unit chips');
 assert(cardBody.indexOf('compactTypeBadge') !== -1, '1 type badge');
-assert(cardBody.indexOf('unitsBit') < cardBody.indexOf('typeBit'), '1 type badge sits with the unit chips');
+assert(cardBody.indexOf('compact-name-row') !== -1, '1 name row');
+assert(cardBody.indexOf('compact-pills') !== -1, '1 type pill next to the name');
+assert(cardBody.indexOf('compact-col-time') !== -1, '1 time column');
+assert(cardBody.indexOf('compact-col-main') !== -1, '1 main column');
+assert(cardBody.indexOf('compact-col-meta') !== -1, '1 meta column');
+assert(cardBody.indexOf('unitsBit') !== -1, '1 units in time column');
+assert(cardBody.indexOf('compact-col-time') < cardBody.indexOf('compact-col-main'), '1 time then main');
+assert(cardBody.indexOf('compact-col-main') < cardBody.indexOf('compact-col-meta'), '1 main then meta');
 assert(cardBody.indexOf('compact-name') !== -1, '1 name');
 assert(cardBody.indexOf('detailed-phone') !== -1, '1 phone');
 assert(cardBody.indexOf('compact-addr') !== -1, '1 address');
 assert(cardBody.indexOf('compact-notes') !== -1, '1 note line');
 assert(cardBody.indexOf('detailed-notes2') === -1, '1 one note line');
-assert(cardBody.indexOf('compact-col-meta') === -1, '1 no stamp column');
 assert(cardBody.indexOf('compact-pay') === -1, '1 no pay stamp');
 assert(cardBody.indexOf('Unpaid') === -1, '1 no Unpaid');
 assert(cardBody.indexOf('Service') === -1, '1 no Service');
@@ -52,7 +58,7 @@ assert(cardBody.indexOf('job-card-detailed') !== -1, '1 white detailed card');
 assert(cardBody.indexOf('day-heading-date') === -1, '1 no date in jobCard');
 assert(cardBody.indexOf('day-whos-on') === -1, '1 no team line in jobCard');
 assert(cardBody.indexOf('formatDayHeading') === -1, '1 date stays out of jobCard');
-print('ok 1 jobCard is time, units, name, phone, address, one note');
+print('ok 1 jobCard is Booking three-column: time, units, name, type pill, phone, address, one note');
 
 const lunchAt = src.indexOf('function cardsWithLunch');
 const lunchBody = src.slice(lunchAt, src.indexOf('function dayLunchHtml'));
@@ -81,14 +87,14 @@ assert(css.indexOf('.day-section.is-closed') !== -1, '3 closed grey');
 assert(css.indexOf('#e8eef3') !== -1, '3 closed grey fill');
 assert(css.indexOf('#86efac') === -1, '3 today is not a green box');
 assert(css.indexOf('day-flag-tomorrow') === -1, '3 no tomorrow badge style');
-assert(css.indexOf('-webkit-line-clamp: 1') !== -1, '3 one note line');
+assert(css.indexOf('-webkit-line-clamp: 2') !== -1, '3 Booking note lines');
 print('ok 3 open white, closed grey, today marked, not a green box');
 
-assert(html.indexOf('css/app.css?v=56') !== -1, '4 css cache');
-assert(html.indexOf('js/app.js?v=70') !== -1, '4 js cache');
+assert(html.indexOf('css/app.css?v=57') !== -1, '4 css cache');
+assert(html.indexOf('js/app.js?v=71') !== -1, '4 js cache');
 assert(html.indexOf('Performance') === -1, '4 Performance stays gone');
 assert(html.indexOf('id="be-app-switch"') !== -1, '4 Live Schedule header');
-print('ok 4 cache css/app.css?v=56 js/app.js?v=70; no Performance');
+print('ok 4 cache css/app.css?v=57 js/app.js?v=71; no Performance');
 
 function fnBody(src, name) {
   const start = src.indexOf('function ' + name);
@@ -129,10 +135,15 @@ assert(globalThis.__compactTypeMark({ job_type: 'cleaning' }) == null, '5 cleani
 assert(css.indexOf('.compact-type.is-collab') !== -1, '5 Collab css');
 assert(css.indexOf('#7c3aed') !== -1, '5 Collab badge is purple');
 assert(css.indexOf('.compact-type.is-return') !== -1, '5 Return css');
+assert(css.indexOf('grid-template-columns: 5.5ch minmax(0, 1fr) max-content') !== -1, '5 three-column layout');
+assert(css.indexOf('.compact-name-row') !== -1, '5 name row');
+assert(css.indexOf('.compact-pills') !== -1, '5 pills next to the name');
+assert(css.indexOf('font-size: 18px') !== -1, '5 time 18px');
+assert(css.indexOf('font-size: 15px') !== -1, '5 name 15px');
 assert(src.indexOf('function techNotesBoxHtml') !== -1, '5 notes log stays');
 assert(src.indexOf('copyVanBtn') !== -1, '5 van button stays');
-assert(src.indexOf('day-header-sticky') !== -1, '5 day headers stay');
 assert(src.indexOf('function formatDayHeading') !== -1, '5 day heading stays');
-print('ok 5 week view: influencer shows purple Collab; return shows Return; badges match Booking');
+assert(src.indexOf('day-header-sticky') !== -1, '5 day headers stay');
+print('ok 5 week view: TD Collab matches Booking Collab; TD card matches Booking card');
 
 print('ok job-card cases');

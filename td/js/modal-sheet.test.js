@@ -290,9 +290,9 @@ assert(css.indexOf('width: auto') !== -1, '5 van not full width');
 assert(css.indexOf('#059669') === -1, '5 not a green bar');
 print('ok 5 Poon Kit Tung shows the four blocks; time is large; van and pin sit side by side');
 
-assert(html.indexOf('css/app.css?v=56') !== -1, '4 css cache');
-assert(html.indexOf('js/app.js?v=70') !== -1, '4 js cache');
+assert(html.indexOf('css/app.css?v=57') !== -1, '4 css cache');
+assert(html.indexOf('js/app.js?v=71') !== -1, '4 js cache');
 assert(html.indexOf('js/auth.js?v=4') !== -1, '4 auth cache stays');
-print('ok 4 cache css/app.css?v=56 js/app.js?v=70');
+print('ok 4 cache css/app.css?v=57 js/app.js?v=71');
 
 print('ok modal-sheet cases');

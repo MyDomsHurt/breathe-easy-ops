@@ -60,10 +60,10 @@ assert(cardBody.indexOf('compact-name') !== -1, 'jobCard name');
 assert(cardBody.indexOf('detailed-phone') !== -1, 'jobCard phone');
 assert(cardBody.indexOf('compact-addr') !== -1, 'jobCard address');
 assert(cardBody.indexOf('compact-notes') !== -1, 'jobCard note');
-assert(cardBody.indexOf('compact-col-meta') === -1, 'jobCard no stamp');
-assert(html.indexOf('js/app.js?v=70') !== -1, 'js cache');
-assert(html.indexOf('css/app.css?v=56') !== -1, 'css cache');
-print('ok 1 jobCard unchanged; js/app.js?v=70');
+assert(cardBody.indexOf('compact-pay') === -1, 'jobCard no pay stamp');
+assert(html.indexOf('js/app.js?v=71') !== -1, 'js cache');
+assert(html.indexOf('css/app.css?v=57') !== -1, 'css cache');
+print('ok 1 jobCard time/name/phone stay; js/app.js?v=71');
 
 const jobsJson = JSON.stringify([
   { job_id: '2026-10-08-matthew-1', date: '2026-10-08', team_lead: 'Matthew', time: '08:30', client_name: 'First' },

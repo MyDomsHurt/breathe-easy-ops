@@ -97,9 +97,9 @@ assert(cardBody.indexOf('day-heading-date') === -1, '5 date is not inside jobCar
 assert(cardBody.indexOf('day-whos-on') === -1, '5 team line is not inside jobCard');
 assert(src.indexOf('function vanRequestText') !== -1, '5 vanRequestText stays');
 assert(html.indexOf('js/auth.js?v=4') !== -1, '5 auth cache stays');
-assert(html.indexOf('css/app.css?v=55') !== -1, '5 css cache');
-assert(html.indexOf('js/app.js?v=69') !== -1, '5 js cache');
-print('ok 5 heading sits above the card, not inside it; cache v=55/v=69');
+assert(html.indexOf('css/app.css?v=56') !== -1, '5 css cache');
+assert(html.indexOf('js/app.js?v=70') !== -1, '5 js cache');
+print('ok 5 heading sits above the card, not inside it; cache v=56/v=70');
 
 const renderDateFn = fnBody(src, 'renderByDate');
 assert(renderDateFn.indexOf('pendingDayScroll') !== -1, '6 render only scrolls when the day or week changed');

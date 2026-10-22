@@ -72,8 +72,8 @@ assert(cardBody.indexOf('compact-addr') !== -1, '3 address');
 assert(cardBody.indexOf('compact-notes') !== -1, '3 one note');
 assert(cardBody.indexOf('compact-col-meta') === -1, '3 no stamp');
 assert(html.indexOf('Performance') === -1, '3 Performance stays gone');
-assert(html.indexOf('css/app.css?v=55') !== -1, '3 css cache');
-assert(html.indexOf('js/app.js?v=69') !== -1, '3 js cache');
-print('ok 3 jobCard unchanged; cache css/app.css?v=55 js/app.js?v=69; no Performance');
+assert(html.indexOf('css/app.css?v=56') !== -1, '3 css cache');
+assert(html.indexOf('js/app.js?v=70') !== -1, '3 js cache');
+print('ok 3 jobCard unchanged; cache css/app.css?v=56 js/app.js?v=70; no Performance');
 
 print('ok tech-bar cases');

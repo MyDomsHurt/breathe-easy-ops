@@ -546,6 +546,39 @@ body.jobs-week-view #appRoot > .max-w-7xl.mx-auto.px-4.py-5 {
   color: #334155;
   overflow-wrap: anywhere;
 }
+.job-card-detailed .compact-col-time .compact-type {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: auto;
+  max-width: none;
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+  padding: 1px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+  color: #fff;
+}
+.job-card-detailed .compact-type.is-return {
+  background: #d97706;
+  color: #fff;
+}
+.job-card-detailed .compact-type.is-collab {
+  background: #7c3aed;
+  color: #fff;
+}
+.job-card-detailed .compact-type.is-inspection {
+  background: #475569;
+  color: #fff;
+}
+.job-card-detailed .compact-type.is-other {
+  background: #94a3b8;
+  color: #fff;
+}
 .job-card-detailed .compact-col-main {
   display: flex;
   flex-direction: column;
